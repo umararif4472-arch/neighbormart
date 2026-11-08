@@ -110,6 +110,7 @@ class _ReportSheetState extends State<ReportSheet> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _reason,
             decoration: InputDecoration(
               labelText: 'Reason',

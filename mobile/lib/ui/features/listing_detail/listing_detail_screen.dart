@@ -91,31 +91,48 @@ class ListingDetailScreen extends StatelessWidget {
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Chip(label: Text(listingTypeLabel(listing))),
-                  const SizedBox(height: 4),
-                  // Section badge in the section's accent (Phase 7).
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: sectionAccentContainerOf(context, listing.section),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      kSectionLabel[listing.section] ?? '',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: sectionAccentOf(context, listing.section),
+              // Capped width: at very large text scales the chip /
+              // badge column must not crowd the title off the row —
+              // its labels ellipsize inside the cap instead.
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 150),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Chip(
+                      label: Text(
+                        listingTypeLabel(listing),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    // Section badge in the section's accent (Phase 7).
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: sectionAccentContainerOf(
+                          context,
+                          listing.section,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        kSectionLabel[listing.section] ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: sectionAccentOf(context, listing.section),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

@@ -464,6 +464,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
       ),
       const SizedBox(height: 14),
       DropdownButtonFormField<String>(
+        isExpanded: true,
         initialValue: _category,
         decoration: const InputDecoration(labelText: 'Category *'),
         items: kItemCategories
@@ -548,6 +549,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
       ),
       const SizedBox(height: 14),
       DropdownButtonFormField<String>(
+        isExpanded: true,
         initialValue: _pickupPref,
         decoration: const InputDecoration(labelText: 'Pickup preference'),
         items: const [

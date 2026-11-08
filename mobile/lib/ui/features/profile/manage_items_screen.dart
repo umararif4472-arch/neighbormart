@@ -97,8 +97,9 @@ class ManageItemsScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Text('Available for requests'),
-                  const Spacer(),
+                  // Flexible label: the text wraps instead of
+                  // pushing the switch off the card at big scales.
+                  const Expanded(child: Text('Available for requests')),
                   Switch(
                     value: item.availability == 'available',
                     activeThumbColor: Theme.of(context).colorScheme.secondary,

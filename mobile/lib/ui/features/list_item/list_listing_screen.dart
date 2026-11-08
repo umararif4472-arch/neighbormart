@@ -329,6 +329,7 @@ class _ListListingScreenState extends State<ListListingScreen> {
                 SizedBox(
                   width: 130,
                   child: DropdownButtonFormField<PriceUnit>(
+                    isExpanded: true,
                     initialValue: _unit,
                     decoration: const InputDecoration(labelText: 'Charged'),
                     items: const [
@@ -421,6 +422,7 @@ class _ListListingScreenState extends State<ListListingScreen> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<VehicleFuelType>(
+                  isExpanded: true,
                   initialValue: _fuel,
                   decoration: const InputDecoration(labelText: 'Fuel'),
                   items: VehicleFuelType.values
@@ -437,6 +439,7 @@ class _ListListingScreenState extends State<ListListingScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: DropdownButtonFormField<VehicleTransmission>(
+                  isExpanded: true,
                   initialValue: _gear,
                   decoration: const InputDecoration(labelText: 'Transmission'),
                   items: VehicleTransmission.values
@@ -466,6 +469,7 @@ class _ListListingScreenState extends State<ListListingScreen> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<PropertyType>(
+                  isExpanded: true,
                   initialValue: _propertyType,
                   decoration: const InputDecoration(labelText: 'Type *'),
                   items: PropertyType.values
@@ -485,6 +489,7 @@ class _ListListingScreenState extends State<ListListingScreen> {
               SizedBox(
                 width: 100,
                 child: DropdownButtonFormField<PropertyAreaUnit>(
+                  isExpanded: true,
                   initialValue: _areaUnit,
                   decoration: const InputDecoration(labelText: 'Unit'),
                   items: PropertyAreaUnit.values
@@ -537,6 +542,7 @@ class _ListListingScreenState extends State<ListListingScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: DropdownButtonFormField<int>(
+                  isExpanded: true,
                   initialValue: _slotMinutes,
                   decoration: const InputDecoration(labelText: 'Slot length'),
                   items: const [

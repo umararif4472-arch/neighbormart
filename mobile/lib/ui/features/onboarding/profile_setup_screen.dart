@@ -165,22 +165,34 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+              // The primary action takes the remaining width (full
+              // width on step 1) instead of a Spacer pushing two
+              // intrinsic-width buttons apart — at large text
+              // scales the pair no longer overflows the bar. The
+              // label sits in a FittedBox so it scales down rather
+              // than breaking out of the button.
               child: Row(
                 children: [
-                  if (_step > 0 || widget.editMode)
+                  if (_step > 0 || widget.editMode) ...[
                     OutlinedButton(
                       onPressed: _saving ? null : _back,
                       child: const Text('Back'),
                     ),
-                  const Spacer(),
-                  ElevatedButton(
-                    onPressed: _saving ? null : _next,
-                    child: Text(
-                      _saving
-                          ? 'Saving…'
-                          : _isLast
-                          ? (widget.editMode ? 'Save' : 'Finish')
-                          : 'Continue',
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _saving ? null : _next,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _saving
+                              ? 'Saving…'
+                              : _isLast
+                              ? (widget.editMode ? 'Save' : 'Finish')
+                              : 'Continue',
+                        ),
+                      ),
                     ),
                   ),
                 ],

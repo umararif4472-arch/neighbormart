@@ -126,6 +126,10 @@ class _FilterSheetState extends State<_FilterSheet> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 4, 12, 4),
+              // Title + close only: a "Clear all" text button in
+              // this row overflowed it at large text scales on
+              // narrow phones. It lives at the top of the scroll
+              // area below instead, right-aligned on its own row.
               child: Row(
                 children: [
                   Expanded(
@@ -133,10 +137,6 @@ class _FilterSheetState extends State<_FilterSheet> {
                       'Filters',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
-                  ),
-                  TextButton(
-                    onPressed: _draft.activeCount == 0 ? null : _clearAll,
-                    child: const Text('Clear all'),
                   ),
                   IconButton(
                     tooltip: 'Close',
@@ -149,10 +149,17 @@ class _FilterSheetState extends State<_FilterSheet> {
             const Divider(height: 1),
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _draft.activeCount == 0 ? null : _clearAll,
+                        child: const Text('Clear all'),
+                      ),
+                    ),
                     _sectionTitle(context, 'Listing type'),
                     Wrap(
                       spacing: 8,
