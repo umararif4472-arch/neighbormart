@@ -1,15 +1,25 @@
 import 'dart:math' as math;
 
-/// Exact port of web src/utils/trustScore.ts
+/// Exact port of web src/utils/trustScore.ts — the Phase 2 formula.
+///
+/// Weights (sum 100):
+///   on-time returns 30 · reviews 25 · completed deals 15 ·
+///   verification 10 (phone 4 + email 3 + ID 3) · account age 5 ·
+///   responsiveness 15.
+///
+/// The completed-deals factor is what lets sellers and renters build
+/// trust without ever borrowing: deals finished in ANY role count.
 class TrustBreakdown {
   final int onTimeReturns;
   final int reviews;
+  final int completedDeals;
   final int verification;
   final int accountAge;
   final int responsiveness;
   const TrustBreakdown({
     required this.onTimeReturns,
     required this.reviews,
+    required this.completedDeals,
     required this.verification,
     required this.accountAge,
     required this.responsiveness,
@@ -33,6 +43,8 @@ class TrustHistory {
   final List<int> reviewRatings; // ratings 1-5 received
   final bool phoneVerified;
   final bool emailVerified;
+  final bool idVerified;
+  final int completedDeals;
   final int accountAgeDays;
   final double responseRate;
   const TrustHistory({
@@ -41,18 +53,25 @@ class TrustHistory {
     required this.reviewRatings,
     required this.phoneVerified,
     required this.emailVerified,
+    this.idVerified = false,
+    this.completedDeals = 0,
     required this.accountAgeDays,
     required this.responseRate,
   });
 }
 
-const int kOnTimeMax = 40;
+const int kOnTimeMax = 30;
 const int kOnTimeVolumeFullAt = 8;
 const int kReviewsMax = 25;
 const int kReviewsCountedMax = 10;
-const int kPerVerifiedField = 5;
-const int kAccountAgeMax = 10;
-const int kAccountAgeDaysPerPoint = 73;
+const int kDealsMax = 15;
+const int kDealsFullAt = 20;
+const int kVerificationMax = 10;
+const int kPhonePoints = 4;
+const int kEmailPoints = 3;
+const int kIdPoints = 3;
+const int kAccountAgeMax = 5;
+const int kAccountAgeDaysPerPoint = 146;
 const int kResponsivenessMax = 15;
 
 double _clampD(double v, double lo, double hi) => math.min(hi, math.max(lo, v));
@@ -104,9 +123,14 @@ TrustScoreResult calculateTrustScore(TrustHistory history) {
   final reviews = ((reviewCount / kReviewsCountedMax) * (avg / 5) * kReviewsMax)
       .round();
 
+  final completedDeals =
+      (_clampD(history.completedDeals / kDealsFullAt, 0, 1) * kDealsMax)
+          .round();
+
   final verification =
-      (history.phoneVerified ? kPerVerifiedField : 0) +
-      (history.emailVerified ? kPerVerifiedField : 0);
+      (history.phoneVerified ? kPhonePoints : 0) +
+      (history.emailVerified ? kEmailPoints : 0) +
+      (history.idVerified ? kIdPoints : 0);
 
   final accountAge = math.min(
     (history.accountAgeDays / kAccountAgeDaysPerPoint).round(),
@@ -117,7 +141,12 @@ TrustScoreResult calculateTrustScore(TrustHistory history) {
       (_clampD(history.responseRate, 0, 1) * kResponsivenessMax).round();
 
   final total = _clampI(
-    onTime + reviews + verification + accountAge + responsiveness,
+    onTime +
+        reviews +
+        completedDeals +
+        verification +
+        accountAge +
+        responsiveness,
     0,
     100,
   );
@@ -127,6 +156,7 @@ TrustScoreResult calculateTrustScore(TrustHistory history) {
     breakdown: TrustBreakdown(
       onTimeReturns: onTime,
       reviews: reviews,
+      completedDeals: completedDeals,
       verification: verification,
       accountAge: accountAge,
       responsiveness: responsiveness,

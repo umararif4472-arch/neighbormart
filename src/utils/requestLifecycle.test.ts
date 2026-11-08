@@ -19,7 +19,7 @@ const iso = (date: string) => new Date(date).toISOString()
 function request(overrides: Partial<BorrowRequest>): BorrowRequest {
   return {
     id: 'r1',
-    itemId: 'i1',
+    listingId: 'i1',
     borrowerId: 'u-borrower',
     period: { start: '2026-09-01T00:00:00', end: '2026-09-04T00:00:00' },
     note: '',
@@ -170,31 +170,31 @@ describe('findScheduleConflicts (overlapping pending requests)', () => {
   const requests = [
     request({
       id: 'a',
-      itemId: 'i-pasta',
+      listingId: 'i-pasta',
       status: 'pending',
       period: { start: '2026-09-07T00:00:00', end: '2026-09-09T00:00:00' },
     }),
     request({
       id: 'b',
-      itemId: 'i-pasta',
+      listingId: 'i-pasta',
       status: 'pending',
       period: { start: '2026-09-08T00:00:00', end: '2026-09-10T00:00:00' },
     }),
     request({
       id: 'c',
-      itemId: 'i-pasta',
+      listingId: 'i-pasta',
       status: 'pending',
       period: { start: '2026-09-20T00:00:00', end: '2026-09-22T00:00:00' },
     }),
     request({
       id: 'd',
-      itemId: 'i-other',
+      listingId: 'i-other',
       status: 'pending',
       period: { start: '2026-09-08T00:00:00', end: '2026-09-10T00:00:00' },
     }),
     request({
       id: 'e',
-      itemId: 'i-pasta',
+      listingId: 'i-pasta',
       status: 'declined',
       period: { start: '2026-09-07T00:00:00', end: '2026-09-09T00:00:00' },
     }),

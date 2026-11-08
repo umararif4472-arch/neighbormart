@@ -1,38 +1,64 @@
-import type { Item, ItemCategory, ItemFilters, LatLng } from '@/types'
+import type { ItemCategory, ItemListing, LatLng, Listing, ListingFilters } from '@/types'
 import { haversineKm } from './distance'
 
 /**
- * Pure item filtering — the exact same logic runs client-side (through
- * useFilteredItems) and "server-side" inside the item service, so behavior
- * can never drift between the two.
+ * Pure listing filtering — the exact same logic runs client-side (through
+ * useFilteredListings) and "server-side" inside the listing service, so
+ * behavior can never drift between the two.
+ *
+ * Cross-section fields (query, section, type, status, distance) filter
+ * every listing; the category filter only exists on item listings, so
+ * selecting any category narrows the result to matching items (the
+ * browse UI only offers categories inside the items section anyway).
  */
-export function filterItems(
-  items: readonly Item[],
-  filters: ItemFilters,
+export function filterListings(
+  listings: readonly Listing[],
+  filters: ListingFilters,
   origin: LatLng | null,
-): Item[] {
+): Listing[] {
   const query = filters.query.trim().toLowerCase()
-  return items.filter((item) => {
-    if (filters.categories.length > 0 && !filters.categories.includes(item.category)) return false
-    if (filters.availability !== 'all' && item.availability !== filters.availability) return false
+  return listings.filter((listing) => {
+    if (filters.section !== 'all' && listing.section !== filters.section) return false
+    if (filters.listingType !== 'all' && listing.listingType !== filters.listingType) return false
+    if (filters.status !== 'all' && listing.status !== filters.status) return false
+    if (filters.categories.length > 0) {
+      if (listing.section !== 'items') return false
+      if (!filters.categories.includes(listing.details.category)) return false
+    }
     if (origin && filters.maxDistanceKm != null) {
-      if (haversineKm(origin, item.location) > filters.maxDistanceKm) return false
+      if (haversineKm(origin, listing.location) > filters.maxDistanceKm) return false
     }
     if (query) {
-      const haystack = `${item.title} ${item.description} ${item.category}`.toLowerCase()
+      const haystack =
+        `${listing.title} ${listing.description} ${searchableDetails(listing)}`.toLowerCase()
       if (!haystack.includes(query)) return false
     }
     return true
   })
 }
 
-/** Category counts for the browse header chips. */
+/** Extra searchable text per section (category, make/model, property type, sports). */
+function searchableDetails(listing: Listing): string {
+  switch (listing.section) {
+    case 'items':
+      return listing.details.category
+    case 'vehicles':
+      return `${listing.details.make} ${listing.details.model}`
+    case 'properties':
+      return listing.details.propertyType
+    case 'arenas':
+      return listing.details.sportTypes.join(' ')
+  }
+}
+
+/** Category counts for the items-section browse header chips. */
 export function countByCategory(
-  items: readonly Item[],
+  listings: readonly ItemListing[],
 ): Array<{ category: ItemCategory; count: number }> {
   const counts = new Map<ItemCategory, number>()
-  for (const item of items) {
-    counts.set(item.category, (counts.get(item.category) ?? 0) + 1)
+  for (const listing of listings) {
+    const category = listing.details.category
+    counts.set(category, (counts.get(category) ?? 0) + 1)
   }
   return [...counts.entries()].map(([category, count]) => ({ category, count }))
 }

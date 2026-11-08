@@ -1,7 +1,7 @@
-import type { AppNotification, BorrowRequest, Item, Message, Review, User } from '@/types'
+import type { AppNotification, BorrowRequest, Listing, Message, Review, User } from '@/types'
 import { ApiError } from './errors'
 import {
-  seedItems,
+  seedListings,
   seedMessages,
   seedNotifications,
   seedRequests,
@@ -19,7 +19,7 @@ import {
  */
 interface Database {
   users: User[]
-  items: Item[]
+  listings: Listing[]
   requests: BorrowRequest[]
   reviews: Review[]
   notifications: AppNotification[]
@@ -30,7 +30,7 @@ function createDatabase(): Database {
   const users = seedUsers()
   return {
     users,
-    items: seedItems(users),
+    listings: seedListings(users),
     requests: seedRequests(),
     reviews: seedReviews(),
     notifications: seedNotifications(),
@@ -63,11 +63,11 @@ export function clone<T>(value: T): T {
 
 // --- Internal lookup helpers (throw typed errors) ------------------------
 
-export function findItem(itemId: string): Item {
-  const item = db.items.find((i) => i.id === itemId)
-  if (!item)
-    throw new ApiError('not-found', 'That item doesn\u2019t exist — it may have been removed.')
-  return item
+export function findListing(listingId: string): Listing {
+  const listing = db.listings.find((l) => l.id === listingId)
+  if (!listing)
+    throw new ApiError('not-found', 'That listing doesn\u2019t exist — it may have been removed.')
+  return listing
 }
 
 export function findRequest(requestId: string): BorrowRequest {

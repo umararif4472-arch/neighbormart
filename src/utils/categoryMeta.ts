@@ -1,5 +1,5 @@
 import { ITEM_CATEGORIES } from '@/types'
-import type { ItemCategory } from '@/types'
+import type { ItemCategory, Listing, ListingSection } from '@/types'
 
 /**
  * Friendly emoji + one-line blurb per category. One source of truth for
@@ -27,3 +27,23 @@ export const CATEGORY_OPTIONS = ITEM_CATEGORIES.map((category) => ({
   value: category,
   label: `${CATEGORY_META[category].emoji} ${category}`,
 }))
+
+/** Emoji + blurb per marketplace section (home tiles, fallbacks, filters). */
+export const SECTION_META: Record<ListingSection, { emoji: string; label: string; blurb: string }> =
+  {
+    items: { emoji: '🧰', label: 'Items & Tools', blurb: 'Borrow, rent, or buy tools and gear' },
+    vehicles: { emoji: '🚗', label: 'Vehicles', blurb: 'Cars, bikes, and vans — rent or buy' },
+    properties: { emoji: '🏠', label: 'Properties', blurb: 'Homes, rooms, plots, and shops' },
+    arenas: {
+      emoji: '🏟️',
+      label: 'Sports Arenas & Venues',
+      blurb: 'Courts, turfs, grounds, and halls',
+    },
+  }
+
+/** The fallback-tile emoji for any listing (category-aware for items). */
+export function listingEmoji(listing: Listing): string {
+  return listing.section === 'items'
+    ? categoryEmoji(listing.details.category)
+    : SECTION_META[listing.section].emoji
+}

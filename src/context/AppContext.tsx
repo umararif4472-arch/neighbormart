@@ -7,12 +7,12 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { AppNotification, BorrowRequest, Item, Message, Review, User } from '@/types'
+import type { AppNotification, BorrowRequest, Listing, Message, Review, User } from '@/types'
 import { upsertById } from '@/utils/collections'
 import {
   toErrorMessage,
   authApi,
-  itemsApi,
+  listingsApi,
   notificationsApi,
   requestsApi,
   reviewsApi,
@@ -21,7 +21,7 @@ import {
 
 /**
  * Global app state (single source of truth for cross-feature data):
- * current user, users, items, requests, reviews, notifications, and
+ * current user, users, listings, requests, reviews, notifications, and
  * per-request message threads. Trust scores are NEVER stored — they are
  * derived on demand from users + reviews via the pure calculator.
  */
@@ -33,7 +33,7 @@ import {
 interface HydrationPayload {
   currentUser: User
   users: User[]
-  items: Item[]
+  listings: Listing[]
   requests: BorrowRequest[]
   reviews: Review[]
   notifications: AppNotification[]
@@ -43,7 +43,7 @@ interface AppState {
   hydration: { phase: 'loading' | 'ready' | 'error'; message: string | null }
   currentUser: User | null
   users: User[]
-  items: Item[]
+  listings: Listing[]
   requests: BorrowRequest[]
   reviews: Review[]
   notifications: AppNotification[]
@@ -54,8 +54,8 @@ type Action =
   | { type: 'HYDRATE_START' }
   | { type: 'HYDRATE_SUCCESS'; payload: HydrationPayload }
   | { type: 'HYDRATE_ERROR'; message: string }
-  | { type: 'ITEMS_SET'; items: Item[] }
-  | { type: 'ITEMS_UPSERTED'; items: Item[] }
+  | { type: 'LISTINGS_SET'; listings: Listing[] }
+  | { type: 'LISTINGS_UPSERTED'; listings: Listing[] }
   | { type: 'REQUESTS_UPSERTED'; requests: BorrowRequest[] }
   | { type: 'USERS_UPSERTED'; users: User[] }
   | { type: 'REVIEWS_APPENDED'; reviews: Review[] }
@@ -69,7 +69,7 @@ const initialState: AppState = {
   hydration: { phase: 'loading', message: null },
   currentUser: null,
   users: [],
-  items: [],
+  listings: [],
   requests: [],
   reviews: [],
   notifications: [],
@@ -91,10 +91,10 @@ function appReducer(state: AppState, action: Action): AppState {
     }
     case 'HYDRATE_ERROR':
       return { ...state, hydration: { phase: 'error', message: action.message } }
-    case 'ITEMS_SET':
-      return { ...state, items: action.items }
-    case 'ITEMS_UPSERTED':
-      return { ...state, items: upsertById(state.items, action.items) }
+    case 'LISTINGS_SET':
+      return { ...state, listings: action.listings }
+    case 'LISTINGS_UPSERTED':
+      return { ...state, listings: upsertById(state.listings, action.listings) }
     case 'REQUESTS_UPSERTED':
       return { ...state, requests: upsertById(state.requests, action.requests) }
     case 'USERS_UPSERTED':
@@ -161,9 +161,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         const currentUser = await authApi.getSessionUser()
-        const [users, items, requests, reviews, notifications] = await Promise.all([
+        const [users, listings, requests, reviews, notifications] = await Promise.all([
           usersApi.getUsers(),
-          itemsApi.getItems(),
+          listingsApi.getListings(),
           requestsApi.getRequestsForUser(currentUser.id),
           reviewsApi.getReviews(),
           notificationsApi.getNotifications(currentUser.id),
@@ -171,7 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (alive) {
           dispatch({
             type: 'HYDRATE_SUCCESS',
-            payload: { currentUser, users, items, requests, reviews, notifications },
+            payload: { currentUser, users, listings, requests, reviews, notifications },
           })
         }
       } catch (error) {

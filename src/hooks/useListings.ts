@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useApp } from '@/context/AppContext'
-import { itemsApi, toErrorMessage } from '@/services'
+import { listingsApi, toErrorMessage } from '@/services'
 
 /**
- * Item data access — stale-while-revalidate style:
+ * Listing data access — stale-while-revalidate style:
  *  - First mount: fetch through the service (real async path) and sync the
  *    result into context, showing skeletons while loading.
- *  - Remounts: serve cached items from context instantly and refresh in the
- *    background. New listings created anywhere in the app appear because
- *    context stays synced.
+ *  - Remounts: serve cached listings from context instantly and refresh in
+ *    the background. New listings created anywhere in the app appear
+ *    because context stays synced.
  */
-export function useItems() {
+export function useListings() {
   const { state, dispatch } = useApp()
   const [fetching, setFetching] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,11 +21,11 @@ export function useItems() {
     setFetching(true)
     setError(null)
 
-    itemsApi
-      .getItems()
-      .then((items) => {
+    listingsApi
+      .getListings()
+      .then((listings) => {
         if (!alive) return
-        dispatch({ type: 'ITEMS_SET', items })
+        dispatch({ type: 'LISTINGS_SET', listings })
         setFetching(false)
       })
       .catch((err: unknown) => {
@@ -42,8 +42,8 @@ export function useItems() {
   const reload = useCallback(() => setNonce((n) => n + 1), [])
 
   return {
-    items: state.items,
-    loading: fetching && state.items.length === 0,
+    listings: state.listings,
+    loading: fetching && state.listings.length === 0,
     error,
     reload,
   }

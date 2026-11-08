@@ -51,17 +51,17 @@ export function RequestCard({
         busy && 'opacity-60',
         className,
       )}
-      aria-label={`${view.itemTitle} — ${statusMeta.label}`}
+      aria-label={`${view.listingTitle} — ${statusMeta.label}`}
     >
       <div className="flex items-start gap-3">
         <Avatar name={counterpartName} src={counterpartAvatar} size="sm" className="mt-0.5" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Link
-              to={`/item/${request.itemId}`}
+              to={`/item/${request.listingId}`}
               className="truncate font-display text-sm font-bold text-bark hover:text-terracotta-700"
             >
-              {view.itemTitle}
+              {view.listingTitle}
             </Link>
             <Badge tone={statusMeta.tone} dot>
               {statusMeta.label}

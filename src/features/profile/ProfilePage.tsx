@@ -10,7 +10,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TrustBadge, TrustMeter } from '@/components/ui/Trust'
-import { ItemCard } from '@/components/items/ItemCard'
+import { ListingCard } from '@/components/listings/ListingCard'
 import { ReviewsList } from '@/components/reviews/ReviewsList'
 import { MapPinIcon } from '@/components/icons'
 
@@ -28,8 +28,8 @@ export function ProfilePage() {
   const origin = state.currentUser?.homeLocation ?? null
 
   const userListings = useMemo(
-    () => state.items.filter((item) => item.ownerId === user?.id),
-    [state.items, user],
+    () => state.listings.filter((listing) => listing.ownerId === user?.id),
+    [state.listings, user],
   )
   const ownerTiers = useTrustTiers(state.users)
   const reviewsAboutUser = useMemo(
@@ -155,13 +155,13 @@ export function ProfilePage() {
           </p>
         ) : (
           <ul className="grid list-none grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {userListings.map((item) => (
-              <li key={item.id}>
-                <ItemCard
-                  item={item}
+            {userListings.map((listing) => (
+              <li key={listing.id}>
+                <ListingCard
+                  listing={listing}
                   owner={user}
                   ownerTier={ownerTiers[user.id] ?? null}
-                  distanceKm={origin ? haversineKm(origin, item.location) : null}
+                  distanceKm={origin ? haversineKm(origin, listing.location) : null}
                 />
               </li>
             ))}

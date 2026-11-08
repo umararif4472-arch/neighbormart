@@ -23,14 +23,19 @@ class TrustExplainerScreen extends StatelessWidget {
         'Stars your neighbors leave after a borrow. The 10 most recent reviews count, weighted by their average rating.',
       ),
       (
+        'Completed deals',
+        kDealsMax,
+        'Deals finished in any role — borrows returned, items lent, things sold, rentals hosted. This is how sellers and car or vehicle owners build trust without borrowing. Full marks at $kDealsFullAt deals.',
+      ),
+      (
         'Responsiveness',
         kResponsivenessMax,
         'Do you answer your neighbors? A share of the requests and messages you respond to.',
       ),
       (
         'Verified profile',
-        kPerVerifiedField * 2,
-        'Five points each for a verified phone number and a verified email address.',
+        kVerificationMax,
+        'Four points for a verified phone number, three for a verified email, and three for a government ID check.',
       ),
       (
         'Account age',
@@ -54,7 +59,7 @@ class TrustExplainerScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'The five ingredients',
+            'The six ingredients',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
@@ -110,6 +115,7 @@ class TrustExplainerScreen extends StatelessWidget {
               breakdown: const TrustBreakdown(
                 onTimeReturns: 0,
                 reviews: 0,
+                completedDeals: 0,
                 verification: 0,
                 accountAge: 0,
                 responsiveness: 0,

@@ -20,7 +20,7 @@ import { isoHoursAgo } from '@/utils/dates'
 interface ReviewSeed {
   id: string
   requestId: string
-  itemId: string
+  listingId: string
   reviewerId: string
   revieweeId: string
   reviewerRole: Review['reviewerRole']
@@ -35,7 +35,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-1',
     requestId: 'req-h1',
-    itemId: 'i-drone',
+    listingId: 'i-drone',
     reviewerId: 'u-marcus',
     revieweeId: 'u-tom',
     reviewerRole: 'borrower',
@@ -47,7 +47,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-2',
     requestId: 'req-h2',
-    itemId: 'i-kayak',
+    listingId: 'i-kayak',
     reviewerId: 'u-priya',
     revieweeId: 'u-tom',
     reviewerRole: 'borrower',
@@ -59,7 +59,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-3',
     requestId: 'req-h3',
-    itemId: 'i-washer',
+    listingId: 'i-washer',
     reviewerId: 'u-nina',
     revieweeId: 'u-tom',
     reviewerRole: 'borrower',
@@ -71,7 +71,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-4',
     requestId: 'req-h4',
-    itemId: 'i-karaoke',
+    listingId: 'i-karaoke',
     reviewerId: 'u-priya',
     revieweeId: 'u-joan',
     reviewerRole: 'borrower',
@@ -83,7 +83,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-5',
     requestId: 'req-h5',
-    itemId: 'i-sewing',
+    listingId: 'i-sewing',
     reviewerId: 'u-marcus',
     revieweeId: 'u-joan',
     reviewerRole: 'borrower',
@@ -94,7 +94,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-6',
     requestId: 'req-h6',
-    itemId: 'i-karaoke',
+    listingId: 'i-karaoke',
     reviewerId: 'u-sana',
     revieweeId: 'u-joan',
     reviewerRole: 'borrower',
@@ -106,7 +106,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-7',
     requestId: 'req-h7',
-    itemId: 'i-tennis',
+    listingId: 'i-tennis',
     reviewerId: 'u-joan',
     revieweeId: 'u-priya',
     reviewerRole: 'borrower',
@@ -117,7 +117,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-8',
     requestId: 'req-h8',
-    itemId: 'i-carpet',
+    listingId: 'i-carpet',
     reviewerId: 'u-tom',
     revieweeId: 'u-priya',
     reviewerRole: 'borrower',
@@ -128,7 +128,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-9',
     requestId: 'req-h9',
-    itemId: 'i-tennis',
+    listingId: 'i-tennis',
     reviewerId: 'u-marcus',
     revieweeId: 'u-priya',
     reviewerRole: 'borrower',
@@ -139,7 +139,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-10',
     requestId: 'req-h9',
-    itemId: 'i-tennis',
+    listingId: 'i-tennis',
     reviewerId: 'u-priya',
     revieweeId: 'u-marcus',
     reviewerRole: 'lender',
@@ -151,7 +151,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-11',
     requestId: 'req-h10',
-    itemId: 'i-tent',
+    listingId: 'i-tent',
     reviewerId: 'u-leo',
     revieweeId: 'u-marcus',
     reviewerRole: 'borrower',
@@ -163,7 +163,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-12',
     requestId: 'req-h11',
-    itemId: 'i-tent',
+    listingId: 'i-tent',
     reviewerId: 'u-joan',
     revieweeId: 'u-marcus',
     reviewerRole: 'borrower',
@@ -174,7 +174,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-13',
     requestId: 'req-h12',
-    itemId: 'i-saw',
+    listingId: 'i-saw',
     reviewerId: 'u-diego',
     revieweeId: 'u-marcus',
     reviewerRole: 'borrower',
@@ -187,7 +187,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-14',
     requestId: 'req-h13',
-    itemId: 'i-cider',
+    listingId: 'i-cider',
     reviewerId: 'u-priya',
     revieweeId: 'u-sana',
     reviewerRole: 'borrower',
@@ -198,7 +198,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-15',
     requestId: 'req-h14',
-    itemId: 'i-canner',
+    listingId: 'i-canner',
     reviewerId: 'u-marcus',
     revieweeId: 'u-sana',
     reviewerRole: 'borrower',
@@ -209,7 +209,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-16',
     requestId: 'req-h15',
-    itemId: 'i-cider',
+    listingId: 'i-cider',
     reviewerId: 'u-joan',
     revieweeId: 'u-sana',
     reviewerRole: 'borrower',
@@ -221,7 +221,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-17',
     requestId: 'req-h16',
-    itemId: 'i-snowboard',
+    listingId: 'i-snowboard',
     reviewerId: 'u-priya',
     revieweeId: 'u-diego',
     reviewerRole: 'borrower',
@@ -233,7 +233,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-18',
     requestId: 'req-h17',
-    itemId: 'i-snowboard',
+    listingId: 'i-snowboard',
     reviewerId: 'u-joan',
     revieweeId: 'u-diego',
     reviewerRole: 'borrower',
@@ -246,7 +246,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-19',
     requestId: 'req-h18',
-    itemId: 'i-lights',
+    listingId: 'i-lights',
     reviewerId: 'u-priya',
     revieweeId: 'u-nina',
     reviewerRole: 'borrower',
@@ -257,7 +257,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-20',
     requestId: 'req-h18',
-    itemId: 'i-lights',
+    listingId: 'i-lights',
     reviewerId: 'u-nina',
     revieweeId: 'u-priya',
     reviewerRole: 'lender',
@@ -269,7 +269,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-21',
     requestId: 'req-h19',
-    itemId: 'i-projector',
+    listingId: 'i-projector',
     reviewerId: 'u-maya',
     revieweeId: 'u-leo',
     reviewerRole: 'borrower',
@@ -282,7 +282,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-22',
     requestId: 'req-h20',
-    itemId: 'i-drill',
+    listingId: 'i-drill',
     reviewerId: 'u-leo',
     revieweeId: 'u-maya',
     reviewerRole: 'borrower',
@@ -293,7 +293,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-23',
     requestId: 'req-done-washer',
-    itemId: 'i-washer',
+    listingId: 'i-washer',
     reviewerId: 'u-tom',
     revieweeId: 'u-maya',
     reviewerRole: 'lender',
@@ -304,7 +304,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-24',
     requestId: 'req-done-mixer',
-    itemId: 'i-mixer',
+    listingId: 'i-mixer',
     reviewerId: 'u-nina',
     revieweeId: 'u-maya',
     reviewerRole: 'borrower',
@@ -316,7 +316,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-25',
     requestId: 'req-h21',
-    itemId: 'i-pasta',
+    listingId: 'i-pasta',
     reviewerId: 'u-priya',
     revieweeId: 'u-maya',
     reviewerRole: 'borrower',
@@ -328,7 +328,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-26',
     requestId: 'req-h21',
-    itemId: 'i-pasta',
+    listingId: 'i-pasta',
     reviewerId: 'u-maya',
     revieweeId: 'u-priya',
     reviewerRole: 'lender',
@@ -340,7 +340,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-27',
     requestId: 'req-h22',
-    itemId: 'i-mixer',
+    listingId: 'i-mixer',
     reviewerId: 'u-sana',
     revieweeId: 'u-maya',
     reviewerRole: 'borrower',
@@ -352,7 +352,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-28',
     requestId: 'req-h22',
-    itemId: 'i-mixer',
+    listingId: 'i-mixer',
     reviewerId: 'u-maya',
     revieweeId: 'u-sana',
     reviewerRole: 'lender',
@@ -365,7 +365,7 @@ const SEEDS: ReviewSeed[] = [
   {
     id: 'rev-29',
     requestId: 'req-done-mixer',
-    itemId: 'i-mixer',
+    listingId: 'i-mixer',
     reviewerId: 'u-maya',
     revieweeId: 'u-nina',
     reviewerRole: 'lender',
@@ -379,7 +379,7 @@ export function seedReviews(): Review[] {
   return SEEDS.map((seed) => ({
     id: seed.id,
     requestId: seed.requestId,
-    itemId: seed.itemId,
+    listingId: seed.listingId,
     reviewerId: seed.reviewerId,
     revieweeId: seed.revieweeId,
     reviewerRole: seed.reviewerRole,

@@ -39,7 +39,7 @@ export function createNotification(
   type: NotificationType,
   title: string,
   body: string,
-  refs: { requestId?: string; itemId?: string } = {},
+  refs: { requestId?: string; listingId?: string } = {},
 ): AppNotification {
   const notification: AppNotification = {
     id: nextId('ntf'),
@@ -48,7 +48,7 @@ export function createNotification(
     title,
     body,
     requestId: refs.requestId,
-    itemId: refs.itemId,
+    listingId: refs.listingId,
     read: false,
     createdAt: new Date().toISOString(),
   }

@@ -1,18 +1,19 @@
 import { useState } from 'react'
 import { cn } from '@/utils/cn'
-import { ItemPhoto } from './ItemPhoto'
+import { ListingPhoto } from './ListingPhoto'
 
 export interface PhotoGalleryProps {
   photos: string[]
   alt: string
-  category: string
+  /** Fallback-tile emoji when a photo is missing. */
+  emoji: string
 }
 
 /**
  * Photo gallery with real keyboard navigation (thumbnail buttons),
  * graceful with 0, 1, or N photos.
  */
-export function PhotoGallery({ photos, alt, category }: PhotoGalleryProps) {
+export function PhotoGallery({ photos, alt, emoji }: PhotoGalleryProps) {
   const [selected, setSelected] = useState(0)
   const hasMultiple = photos.length > 1
   const activeIndex = Math.min(selected, Math.max(0, photos.length - 1))
@@ -21,10 +22,10 @@ export function PhotoGallery({ photos, alt, category }: PhotoGalleryProps) {
 
   if (photos.length === 0) {
     return (
-      <ItemPhoto
+      <ListingPhoto
         src={undefined}
         alt={alt}
-        category={category}
+        emoji={emoji}
         className="aspect-[4/3] w-full rounded-3xl border border-bark/10"
         emojiClassName="text-6xl"
       />
@@ -33,10 +34,10 @@ export function PhotoGallery({ photos, alt, category }: PhotoGalleryProps) {
 
   return (
     <figure className="flex flex-col gap-3">
-      <ItemPhoto
+      <ListingPhoto
         src={main}
         alt={`${alt} — photo ${activeIndex + 1} of ${photos.length}`}
-        category={category}
+        emoji={emoji}
         className="aspect-[4/3] w-full rounded-3xl border border-bark/10"
       />
       {hasMultiple && (
@@ -59,7 +60,7 @@ export function PhotoGallery({ photos, alt, category }: PhotoGalleryProps) {
                   : 'border-transparent opacity-70 hover:opacity-100',
               )}
             >
-              <ItemPhoto src={photo} alt="" category={category} className="h-16 w-20" />
+              <ListingPhoto src={photo} alt="" emoji={emoji} className="h-16 w-20" />
             </button>
           ))}
         </div>

@@ -1,13 +1,15 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
-import { useItems } from '@/hooks/useItems'
+import { useListings } from '@/hooks/useListings'
+import { LISTING_SECTIONS } from '@/types'
+import { SECTION_META } from '@/utils/categoryMeta'
 import { useTrustTiers } from '@/hooks/useTrustTiers'
 import { findById } from '@/utils/collections'
 import { haversineKm } from '@/utils/distance'
 import { Button } from '@/components/ui/Button'
 import { ItemCardSkeleton } from '@/components/ui/Skeleton'
-import { ItemCard } from '@/components/items/ItemCard'
+import { ListingCard } from '@/components/listings/ListingCard'
 import { TrustTierLadder } from '@/components/ui/Trust'
 import { cn } from '@/utils/cn'
 
@@ -31,21 +33,28 @@ const HOW_IT_WORKS = [
 
 /**
  * / — the pitch: why buy when a neighbor already owns one?
- * Live feed pulls real (mock-service) items so the page is alive on load.
+ * Section tiles route into browse; the live feed pulls real
+ * (mock-service) listings from every section so the page is alive.
  */
 export function LandingPage() {
   const { state } = useApp()
-  const { items, loading } = useItems()
+  const { listings, loading } = useListings()
   const currentUser = state.currentUser
   const origin = currentUser?.homeLocation ?? null
   const ownerTiers = useTrustTiers(state.users)
 
-  // "Fresh on the block" — the 3 newest listings, nearest-first ordering
-  // is Browse's job; here we just show what's new.
-  const freshItems = useMemo(
-    () => [...items].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 3),
-    [items],
+  // "Fresh on the block" — the 3 newest listings across all sections;
+  // nearest-first ordering is Browse's job, here we just show what's new.
+  const freshListings = useMemo(
+    () =>
+      [...listings].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 3),
+    [listings],
   )
+  const sectionCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const l of listings) counts.set(l.section, (counts.get(l.section) ?? 0) + 1)
+    return counts
+  }, [listings])
 
   return (
     <div className="flex flex-col gap-16">
@@ -55,7 +64,7 @@ export function LandingPage() {
           <p className="inline-flex w-fit items-center gap-2 rounded-full border border-moss-300 bg-moss-50 px-3 py-1 text-xs font-semibold text-moss-800">
             <span aria-hidden>📍</span>
             {currentUser ? `${currentUser.neighborhood} & nearby` : 'Your neighborhood'}
-            {items.length > 0 && ` · ${items.length} items shared`}
+            {listings.length > 0 && ` · ${listings.length} listings near you`}
           </p>
           <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-bark sm:text-5xl">
             Why buy it when your{' '}
@@ -83,7 +92,7 @@ export function LandingPage() {
 
         {/* Fanned photo collage from real listings */}
         <div aria-hidden className="relative hidden h-80 lg:block">
-          {items.slice(0, 3).map((item, index) => {
+          {listings.slice(0, 3).map((item, index) => {
             const photo = item.photos[0]
             const rotations = [-6, 3, -2]
             const offsets = ['left-4 top-6', 'left-40 top-16 z-10', 'left-20 top-40']
@@ -107,6 +116,41 @@ export function LandingPage() {
             )
           })}
         </div>
+      </section>
+
+      {/* Section entry tiles — the four marketplace sections */}
+      <section aria-labelledby="sections" className="flex flex-col gap-6">
+        <div>
+          <h2 id="sections" className="font-display text-2xl font-extrabold text-bark sm:text-3xl">
+            Four sections, one neighborhood
+          </h2>
+          <p className="mt-1 text-sm text-bark-light">
+            Borrow, rent, buy, or sell — pick a section and start exploring.
+          </p>
+        </div>
+        <ul className="grid list-none grid-cols-2 gap-4 lg:grid-cols-4">
+          {LISTING_SECTIONS.map((section) => (
+            <li key={section}>
+              <Link
+                to={section === 'items' ? '/browse' : `/browse?section=${section}`}
+                className="flex h-full flex-col gap-2 rounded-3xl border border-bark/10 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-terracotta-600"
+              >
+                <span aria-hidden className="text-3xl">
+                  {SECTION_META[section].emoji}
+                </span>
+                <span className="font-display text-base font-bold text-bark">
+                  {SECTION_META[section].label}
+                </span>
+                <span className="text-xs leading-relaxed text-bark-light">
+                  {SECTION_META[section].blurb}
+                </span>
+                <span className="mt-auto pt-1 text-xs font-semibold text-terracotta-700">
+                  {sectionCounts.get(section) ?? 0} listings →
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* How it works */}
@@ -155,14 +199,14 @@ export function LandingPage() {
               Fresh on the block
             </h2>
             <p className="mt-1 text-sm text-bark-light">
-              Real items your neighbors are sharing right now.
+              Real listings your neighbors have posted right now.
             </p>
           </div>
           <Link
             to="/browse"
             className="text-sm font-semibold text-terracotta-700 underline-offset-4 hover:underline"
           >
-            See all {items.length} items →
+            See all items →
           </Link>
         </div>
         {loading ? (
@@ -175,15 +219,15 @@ export function LandingPage() {
               ))}
             </ul>
           </div>
-        ) : freshItems.length > 0 ? (
+        ) : freshListings.length > 0 ? (
           <ul className="grid list-none grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {freshItems.map((item) => (
-              <li key={item.id}>
-                <ItemCard
-                  item={item}
-                  owner={findById(state.users, item.ownerId)}
-                  ownerTier={ownerTiers[item.ownerId] ?? null}
-                  distanceKm={origin ? haversineKm(origin, item.location) : null}
+            {freshListings.map((listing) => (
+              <li key={listing.id}>
+                <ListingCard
+                  listing={listing}
+                  owner={findById(state.users, listing.ownerId)}
+                  ownerTier={ownerTiers[listing.ownerId] ?? null}
+                  distanceKm={origin ? haversineKm(origin, listing.location) : null}
                 />
               </li>
             ))}
@@ -210,8 +254,8 @@ export function LandingPage() {
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-bark-light sm:text-base">
               No payment processing, no deposits held hostage. Instead, every neighbor earns a trust
-              score from on-time returns, honest reviews, a verified profile, and simply being
-              responsive. Lend to the tiers you&apos;re comfortable with.
+              score from on-time returns, completed deals, honest reviews, a verified profile, and
+              simply being responsive. Deal with the tiers you&apos;re comfortable with.
             </p>
           </div>
           <TrustTierLadder />

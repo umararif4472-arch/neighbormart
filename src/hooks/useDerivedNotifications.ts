@@ -20,7 +20,7 @@ export function useDerivedNotifications() {
     return buildNotificationFeed({
       userId: currentUser.id,
       requests: state.requests,
-      items: state.items,
+      listings: state.listings,
       users: state.users,
       reviews: state.reviews,
       storedNotifications: state.notifications,
@@ -29,7 +29,7 @@ export function useDerivedNotifications() {
   }, [
     currentUser,
     state.requests,
-    state.items,
+    state.listings,
     state.users,
     state.reviews,
     state.notifications,

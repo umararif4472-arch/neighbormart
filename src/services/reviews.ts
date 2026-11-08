@@ -38,10 +38,10 @@ export async function getReviewsForUser(userId: string): Promise<Review[]> {
   return clone(list)
 }
 
-export async function getReviewsForItem(itemId: string): Promise<Review[]> {
+export async function getReviewsForListing(listingId: string): Promise<Review[]> {
   await simulateLatency(80, 250)
   const list = getStore()
-    .reviews.filter((r) => r.itemId === itemId)
+    .reviews.filter((r) => r.listingId === listingId)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
   return clone(list)
 }
@@ -52,24 +52,24 @@ export async function createReview(input: CreateReviewInput): Promise<ReviewMuta
   const request = findRequest(input.requestId)
   const reviewer = findUser(input.reviewerId)
 
-  // The state machine owns the rule: reviews happen once the item is back
+  // The state machine owns the rule: reviews happen once the listing is back
   // ("returned", or "reviewed" pre-transition — the duplicate check below
   // makes a second review impossible in practice).
   if (request.status !== 'returned' && request.status !== 'reviewed') {
-    throw new ApiError('conflict', 'You can review once the item has been returned.')
+    throw new ApiError('conflict', 'You can review once the listing has been returned.')
   }
 
-  // Determine the other party from the request (lender = item owner).
-  const item = getStore().items.find((i) => i.id === request.itemId)
-  if (!item) throw new ApiError('not-found', 'The borrowed item no longer exists.')
+  // Determine the other party from the request (lender = listing owner).
+  const listing = getStore().listings.find((l) => l.id === request.listingId)
+  if (!listing) throw new ApiError('not-found', 'The borrowed listing no longer exists.')
 
   const isBorrower = request.borrowerId === reviewer.id
-  const isLender = item.ownerId === reviewer.id
+  const isLender = listing.ownerId === reviewer.id
   if (!isBorrower && !isLender) {
     throw new ApiError('forbidden', 'Only the two neighbors in this borrow can review it.')
   }
 
-  const revieweeId = isBorrower ? item.ownerId : request.borrowerId
+  const revieweeId = isBorrower ? listing.ownerId : request.borrowerId
 
   // EDGE CASE: one review per party per request — enforced here in one
   // place, so a double attempt gets a clear error instead of a duplicate.
@@ -92,7 +92,7 @@ export async function createReview(input: CreateReviewInput): Promise<ReviewMuta
   const review: Review = {
     id: nextId('rev'),
     requestId: request.id,
-    itemId: item.id,
+    listingId: listing.id,
     reviewerId: reviewer.id,
     revieweeId,
     reviewerRole: isBorrower ? 'borrower' : 'lender',
@@ -111,8 +111,8 @@ export async function createReview(input: CreateReviewInput): Promise<ReviewMuta
     reviewee.id,
     'review-received',
     'You got a review',
-    `${reviewer.name} left you ${rating} star${rating === 1 ? '' : 's'} on "${item.title}".`,
-    { requestId: request.id, itemId: item.id },
+    `${reviewer.name} left you ${rating} star${rating === 1 ? '' : 's'} on "${listing.title}".`,
+    { requestId: request.id, listingId: listing.id },
   )
 
   return { review: clone(review), request: updatedRequest, notifications: [notification] }

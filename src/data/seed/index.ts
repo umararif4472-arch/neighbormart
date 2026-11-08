@@ -4,7 +4,7 @@
  * computed at app start, keeping "due tomorrow"-style demo flows alive.
  */
 export { seedUsers } from './users'
-export { seedItems } from './items'
+export { seedListings } from './listings'
 export { seedRequests } from './requests'
 export { seedReviews } from './reviews'
 export { seedNotifications } from './notifications'

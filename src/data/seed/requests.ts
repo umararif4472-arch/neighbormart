@@ -19,7 +19,7 @@ import { isoHoursAgo, localDateFromToday } from '@/utils/dates'
 
 interface RequestSeed {
   id: string
-  itemId: string
+  listingId: string
   borrowerId: string
   /** Whole-day period offsets from today: [start, end]. */
   period: [number, number]
@@ -37,7 +37,7 @@ const LIVE: RequestSeed[] = [
   {
     // Incoming, pending: Diego wants Maya's pasta roller.
     id: 'req-in-pasta-diego',
-    itemId: 'i-pasta',
+    listingId: 'i-pasta',
     borrowerId: 'u-diego',
     period: [2, 4],
     note: 'Making ravioli for my daughter\u2019s birthday — I\u2019ll return it scrubbed and fed (the machine, not me).',
@@ -48,7 +48,7 @@ const LIVE: RequestSeed[] = [
     // Incoming, pending: Nina wants the SAME pasta roller for OVERLAPPING
     // days — the dashboard surfaces this conflict before Maya approves both.
     id: 'req-in-pasta-nina',
-    itemId: 'i-pasta',
+    listingId: 'i-pasta',
     borrowerId: 'u-nina',
     period: [3, 5],
     note: 'Fresh fettuccine for a dinner party — I\u2019ll bring the roller back sparkling.',
@@ -58,7 +58,7 @@ const LIVE: RequestSeed[] = [
   {
     // Outgoing, pending: Maya wants Tom's kayak.
     id: 'req-out-kayak',
-    itemId: 'i-kayak',
+    listingId: 'i-kayak',
     borrowerId: 'u-maya',
     period: [3, 5],
     note: 'First flatwater paddle of the season — I\u2019ll bring snacks for the car ride.',
@@ -70,7 +70,7 @@ const LIVE: RequestSeed[] = [
     // tomorrow — the due-soon demo. Returning it on time levels Maya up to
     // Community Pillar (her trust score sits 2 points below the threshold).
     id: 'req-active-karaoke',
-    itemId: 'i-karaoke',
+    listingId: 'i-karaoke',
     borrowerId: 'u-maya',
     period: [-2, 1],
     note: 'Block-party warm-up at our place — you\u2019re invited, obviously.',
@@ -82,7 +82,7 @@ const LIVE: RequestSeed[] = [
     // Incoming, active and OVERDUE: Priya has had Maya's drill for five
     // extra days — the escalation demo (contact / report an issue).
     id: 'req-overdue-drill',
-    itemId: 'i-drill',
+    listingId: 'i-drill',
     borrowerId: 'u-priya',
     period: [-8, -5],
     note: 'Hanging shelves — this\u2019ll take a weekend, tops. (Famous last words.)',
@@ -94,7 +94,7 @@ const LIVE: RequestSeed[] = [
     // Outgoing, returned: Maya borrowed Tom's washer. Tom reviewed her; she
     // hasn't reviewed yet → the "pending review" sub-state with a CTA.
     id: 'req-done-washer',
-    itemId: 'i-washer',
+    listingId: 'i-washer',
     borrowerId: 'u-maya',
     period: [-9, -7],
     note: 'The patio has gone full moss. I\u2019ll return it rinsed.',
@@ -107,7 +107,7 @@ const LIVE: RequestSeed[] = [
     // Incoming, reviewed: Nina borrowed Maya's mixer — both sides reviewed,
     // fully terminal. Also the "you got a review" derived notification.
     id: 'req-done-mixer',
-    itemId: 'i-mixer',
+    listingId: 'i-mixer',
     borrowerId: 'u-nina',
     period: [-20, -18],
     note: 'Birthday cake layers — three of them. Wish me luck.',
@@ -119,7 +119,7 @@ const LIVE: RequestSeed[] = [
   {
     // Incoming, declined: Sana asked about the mixer during a busy weekend.
     id: 'req-declined-mixer',
-    itemId: 'i-mixer',
+    listingId: 'i-mixer',
     borrowerId: 'u-sana',
     period: [-15, -13],
     note: 'Cookie marathon for the school bake sale!',
@@ -131,7 +131,7 @@ const LIVE: RequestSeed[] = [
 
 /**
  * Historical borrows backing the seeded reviews. Each entry is
- * [id, itemId, borrowerId, createdHoursAgo, status].
+ * [id, listingId, borrowerId, createdHoursAgo, status].
  *
  *   - h19/h20 involve Maya: h19 is reviewed by Maya only (Leo still owes
  *     one → visible "waiting" state), h20 is reviewed by Leo only (Maya
@@ -168,7 +168,7 @@ const HISTORICAL: Array<[string, string, string, number, BorrowRequest['status']
 export function seedRequests(): BorrowRequest[] {
   const live: BorrowRequest[] = LIVE.map((seed) => ({
     id: seed.id,
-    itemId: seed.itemId,
+    listingId: seed.listingId,
     borrowerId: seed.borrowerId,
     period: { start: localDateFromToday(seed.period[0]), end: localDateFromToday(seed.period[1]) },
     note: seed.note,
@@ -184,13 +184,13 @@ export function seedRequests(): BorrowRequest[] {
   }))
 
   const historical: BorrowRequest[] = HISTORICAL.map(
-    ([id, itemId, borrowerId, createdHoursAgo, status]) => {
+    ([id, listingId, borrowerId, createdHoursAgo, status]) => {
       // Derive a plausible 2–4 day borrow window ending well before today.
       const endOffset = -Math.ceil(createdHoursAgo / 24) + 3
       const startOffset = endOffset - 2
       return {
         id,
-        itemId,
+        listingId,
         borrowerId,
         period: { start: localDateFromToday(startOffset), end: localDateFromToday(endOffset) },
         note: '',

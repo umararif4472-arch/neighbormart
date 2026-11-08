@@ -70,7 +70,7 @@ describe('step validators', () => {
       ...VALID_DRAFT,
       maxDurationDays: 0,
       depositAmount: -5,
-      dailyFee: 999,
+      dailyFee: 50001,
       pickupInstructions: 'hi',
     })
     expect(bad.maxDurationDays).toBeDefined()

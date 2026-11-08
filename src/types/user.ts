@@ -7,6 +7,7 @@ export type TrustTierName = 'New Neighbor' | 'Reliable' | 'Trusted' | 'Community
 export interface TrustBreakdown {
   onTimeReturns: number
   reviews: number
+  completedDeals: number
   verification: number
   accountAge: number
   responsiveness: number
@@ -33,6 +34,14 @@ export interface TrustHistory {
   reviewsReceived: ReadonlyArray<{ rating: number }>
   phoneVerified: boolean
   emailVerified: boolean
+  /** Government/CNIC-style ID check — the strongest verification signal. */
+  idVerified: boolean
+  /**
+   * Deals the user completed in ANY role: borrows returned, lends
+   * completed, items sold, rentals hosted. Sellers and renters build
+   * trust through deals, not only through returns.
+   */
+  completedDeals: number
   /** Days since the user joined. */
   accountAgeDays: number
   /** Share of messages/requests the user responded to, 0–1. */
@@ -48,10 +57,14 @@ export interface UserBadge {
   earnedAt: ISODateString
 }
 
-/** Borrow/lend counters kept up to date by the service layer. */
+/** Deal counters kept up to date by the service layer. */
 export interface UserStats {
   successfulLends: number
   successfulBorrows: number
+  /** Deals completed as the seller. */
+  salesCompleted: number
+  /** Deals completed as the owner of a rented listing (car, room, arena…). */
+  rentalsHosted: number
   onTimeReturns: number
   lateReturns: number
 }
@@ -61,11 +74,14 @@ export interface User {
   name: string
   avatarUrl: string
   bio: string
+  /** City the user is based in (listings inherit it on publish). */
+  city: string
   neighborhood: string
   homeLocation: LatLng
   joinedAt: ISODateString
   phoneVerified: boolean
   emailVerified: boolean
+  idVerified: boolean
   /** 0–1 */
   responseRate: number
   /** Average response time in minutes ("typically replies in ~45 min"). */

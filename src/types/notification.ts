@@ -24,7 +24,7 @@ export interface AppNotification {
   title: string
   body: string
   requestId?: string
-  itemId?: string
+  listingId?: string
   read: boolean
   createdAt: ISODateString
 }

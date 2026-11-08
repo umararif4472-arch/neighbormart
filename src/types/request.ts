@@ -31,11 +31,11 @@ export interface BorrowPeriod {
 
 export interface BorrowRequest {
   id: string
-  itemId: string
+  listingId: string
   borrowerId: string
   /**
-   * The lender is item.ownerId. Deliberately NOT stored on the request so
-   * ownership can never drift out of sync with the item.
+   * The lender is listing.ownerId. Deliberately NOT stored on the request
+   * so ownership can never drift out of sync with the listing.
    */
   period: BorrowPeriod
   /** Free-text note from the borrower to the lender. */

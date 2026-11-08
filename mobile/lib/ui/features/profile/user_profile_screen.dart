@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/trust_score.dart';
 import '../../../core/widgets/reviews_list.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/user.dart';
@@ -125,12 +126,17 @@ class UserProfileScreen extends StatelessWidget {
                     _Bar(
                       label: 'On-time returns',
                       points: trust.breakdown.onTimeReturns,
-                      max: 40,
+                      max: kOnTimeMax,
                     ),
                     _Bar(
                       label: 'Reviews',
                       points: trust.breakdown.reviews,
-                      max: 25,
+                      max: kReviewsMax,
+                    ),
+                    _Bar(
+                      label: 'Completed deals',
+                      points: trust.breakdown.completedDeals,
+                      max: kDealsMax,
                     ),
                     _Bar(
                       label: 'Verified profile',
@@ -140,7 +146,7 @@ class UserProfileScreen extends StatelessWidget {
                     _Bar(
                       label: 'Account age',
                       points: trust.breakdown.accountAge,
-                      max: 10,
+                      max: kAccountAgeMax,
                     ),
                     _Bar(
                       label: 'Responsiveness',

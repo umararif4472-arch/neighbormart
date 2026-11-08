@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/trust_score.dart';
 import '../../../core/widgets/reviews_list.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
@@ -194,12 +195,17 @@ class ItemDetailScreen extends StatelessWidget {
                     _BreakdownRow(
                       label: 'On-time returns',
                       points: trust.breakdown.onTimeReturns,
-                      max: 40,
+                      max: kOnTimeMax,
                     ),
                     _BreakdownRow(
                       label: 'Reviews',
                       points: trust.breakdown.reviews,
-                      max: 25,
+                      max: kReviewsMax,
+                    ),
+                    _BreakdownRow(
+                      label: 'Completed deals',
+                      points: trust.breakdown.completedDeals,
+                      max: kDealsMax,
                     ),
                     _BreakdownRow(
                       label: 'Verified profile',
@@ -209,7 +215,7 @@ class ItemDetailScreen extends StatelessWidget {
                     _BreakdownRow(
                       label: 'Account age',
                       points: trust.breakdown.accountAge,
-                      max: 10,
+                      max: kAccountAgeMax,
                     ),
                     _BreakdownRow(
                       label: 'Responsiveness',

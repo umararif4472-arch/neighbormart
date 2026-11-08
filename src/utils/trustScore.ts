@@ -48,29 +48,38 @@ export const TRUST_TIERS: readonly TrustTier[] = [
 
 /**
  * How the score is built — max total 100. THE ACTUAL FORMULA (the /trust
- * explainer renders these same numbers):
+ * explainer renders these same numbers). Extended in Phase 2 so sellers
+ * and renters — not just borrowers — build trust:
  *
- *   1. On-time return rate  ×  40 pts, scaled by volume
+ *   1. On-time return rate  ×  30 pts, scaled by volume
  *        rate = onTimeReturns / totalReturns (a no-return history is neutral,
  *        not zero — see onTimeRatePoints)
  *        volume = min(totalReturns, 8) / 8   (full weight at 8 returns)
- *        points = 40 × rate × volume
+ *        points = 30 × rate × volume
  *        A LATE RETURN is the only thing that can subtract: it lowers the
  *        rate AND the volume still grows — on-time vs late visibly differs.
  *   2. Reviews: 25 pts — count (cap 10) × average rating / 5.
- *   3. Verified profile: 10 pts (5 phone + 5 email).
- *   4. Account age: 10 pts (~1 pt per 73 days, full at ~2 years).
- *   5. Responsiveness: 15 pts × response rate.
+ *   3. Completed deals: 15 pts — deals finished in ANY role (borrows
+ *        returned, lends completed, sales, rentals hosted), full at 20.
+ *        This is the factor that lets a seller or a car owner build a
+ *        score without ever borrowing anything.
+ *   4. Verified profile: 10 pts (4 phone + 3 email + 3 ID).
+ *   5. Account age: 5 pts (~1 pt per 146 days, full at ~2 years).
+ *   6. Responsiveness: 15 pts × response rate.
  */
 export const TRUST_WEIGHTS = {
-  ON_TIME_MAX: 40,
+  ON_TIME_MAX: 30,
   ON_TIME_VOLUME_FULL_AT: 8, // returns needed for full volume weight
   REVIEWS_MAX: 25,
   REVIEWS_COUNTED_MAX: 10, // only the 10 most recent count
-  VERIFICATION_MAX: 10, // 5 per verified field (phone/email)
-  PER_VERIFIED_FIELD: 5,
-  ACCOUNT_AGE_MAX: 10,
-  ACCOUNT_AGE_DAYS_PER_POINT: 73, // full marks at ~2 years
+  DEALS_MAX: 15,
+  DEALS_FULL_AT: 20, // completed deals (any role) for full deal points
+  VERIFICATION_MAX: 10, // split across phone / email / ID below
+  PHONE_POINTS: 4,
+  EMAIL_POINTS: 3,
+  ID_POINTS: 3,
+  ACCOUNT_AGE_MAX: 5,
+  ACCOUNT_AGE_DAYS_PER_POINT: 146, // full marks at ~2 years
   RESPONSIVENESS_MAX: 15,
 } as const
 
@@ -113,28 +122,38 @@ export function calculateTrustScore(history: TrustHistory): TrustScoreResult {
     (reviewCount / TRUST_WEIGHTS.REVIEWS_COUNTED_MAX) * (avgRating / 5) * TRUST_WEIGHTS.REVIEWS_MAX,
   )
 
-  // 3. Verified profile info.
-  const verification =
-    (history.phoneVerified ? TRUST_WEIGHTS.PER_VERIFIED_FIELD : 0) +
-    (history.emailVerified ? TRUST_WEIGHTS.PER_VERIFIED_FIELD : 0)
+  // 3. Completed deals in any role — the seller/renter on-ramp to trust.
+  const completedDeals = Math.round(
+    clamp(history.completedDeals / TRUST_WEIGHTS.DEALS_FULL_AT, 0, 1) * TRUST_WEIGHTS.DEALS_MAX,
+  )
 
-  // 4. Account age — slowly earned, slowly maxed.
+  // 4. Verified profile info (ID is the strongest single signal).
+  const verification =
+    (history.phoneVerified ? TRUST_WEIGHTS.PHONE_POINTS : 0) +
+    (history.emailVerified ? TRUST_WEIGHTS.EMAIL_POINTS : 0) +
+    (history.idVerified ? TRUST_WEIGHTS.ID_POINTS : 0)
+
+  // 5. Account age — slowly earned, slowly maxed.
   const accountAge = Math.min(
     Math.round(history.accountAgeDays / TRUST_WEIGHTS.ACCOUNT_AGE_DAYS_PER_POINT),
     TRUST_WEIGHTS.ACCOUNT_AGE_MAX,
   )
 
-  // 5. Responsiveness — do you answer your neighbors?
+  // 6. Responsiveness — do you answer your neighbors?
   const responsiveness = Math.round(
     clamp(history.responseRate, 0, 1) * TRUST_WEIGHTS.RESPONSIVENESS_MAX,
   )
 
-  const total = clamp(onTimeReturns + reviews + verification + accountAge + responsiveness, 0, 100)
+  const total = clamp(
+    onTimeReturns + reviews + completedDeals + verification + accountAge + responsiveness,
+    0,
+    100,
+  )
 
   return {
     total,
     tierName: tierForScore(total).name,
-    breakdown: { onTimeReturns, reviews, verification, accountAge, responsiveness },
+    breakdown: { onTimeReturns, reviews, completedDeals, verification, accountAge, responsiveness },
   }
 }
 
@@ -168,6 +187,12 @@ export function buildTrustHistory(
     reviewsReceived: reviewsReceived.map((r) => ({ rating: r.rating })),
     phoneVerified: user.phoneVerified,
     emailVerified: user.emailVerified,
+    idVerified: user.idVerified,
+    completedDeals:
+      user.stats.successfulLends +
+      user.stats.successfulBorrows +
+      user.stats.salesCompleted +
+      user.stats.rentalsHosted,
     accountAgeDays: Math.max(0, daysBetween(user.joinedAt, now)),
     responseRate: user.responseRate,
   }

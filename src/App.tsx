@@ -5,7 +5,7 @@ import { Layout } from '@/components/layout/Layout'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { LandingPage } from '@/features/landing/LandingPage'
 import { BrowsePage } from '@/features/browse/BrowsePage'
-import { ItemDetailPage } from '@/features/item-detail/ItemDetailPage'
+import { ListingDetailPage } from '@/features/listing-detail/ListingDetailPage'
 import { ListItemPage } from '@/features/list-item/ListItemPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { MessagesPage } from '@/features/messages/MessagesPage'
@@ -57,10 +57,10 @@ export default function App() {
           }
         />
         <Route
-          path="item/:id"
+          path="listing/:id"
           element={
             <ErrorBoundary>
-              <ItemDetailPage />
+              <ListingDetailPage />
             </ErrorBoundary>
           }
         />

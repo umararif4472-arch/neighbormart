@@ -9,25 +9,41 @@ class UserStats {
   final int successfulBorrows;
   final int onTimeReturns;
   final int lateReturns;
+
+  /// Deals completed as the seller (Phase 2 trust extension).
+  final int salesCompleted;
+
+  /// Deals completed as the owner of a rented listing.
+  final int rentalsHosted;
   const UserStats({
     required this.successfulLends,
     required this.successfulBorrows,
     required this.onTimeReturns,
     required this.lateReturns,
+    this.salesCompleted = 0,
+    this.rentalsHosted = 0,
   });
   UserStats copyWith({
     int? successfulLends,
     int? successfulBorrows,
     int? onTimeReturns,
     int? lateReturns,
+    int? salesCompleted,
+    int? rentalsHosted,
   }) {
     return UserStats(
       successfulLends: successfulLends ?? this.successfulLends,
       successfulBorrows: successfulBorrows ?? this.successfulBorrows,
       onTimeReturns: onTimeReturns ?? this.onTimeReturns,
       lateReturns: lateReturns ?? this.lateReturns,
+      salesCompleted: salesCompleted ?? this.salesCompleted,
+      rentalsHosted: rentalsHosted ?? this.rentalsHosted,
     );
   }
+
+  /// Deals finished in ANY role — feeds the trust score's deals factor.
+  int get completedDeals =>
+      successfulLends + successfulBorrows + salesCompleted + rentalsHosted;
 }
 
 class UserBadge {
@@ -49,11 +65,17 @@ class AppUser {
   final String email;
   final String password;
   final String bio;
+
+  /// City the user is based in (listings inherit it on publish).
+  final String city;
   final String neighborhood;
   final LatLng homeLocation;
   final DateTime joinedAt;
   final bool phoneVerified;
   final bool emailVerified;
+
+  /// Government/CNIC-style ID check — strongest verification signal.
+  final bool idVerified;
   final double responseRate;
   final int avgResponseMinutes;
   final UserStats stats;
@@ -64,11 +86,13 @@ class AppUser {
     this.email = '',
     this.password = '',
     required this.bio,
+    this.city = '',
     required this.neighborhood,
     required this.homeLocation,
     required this.joinedAt,
     required this.phoneVerified,
     required this.emailVerified,
+    this.idVerified = false,
     required this.responseRate,
     required this.avgResponseMinutes,
     required this.stats,
@@ -81,6 +105,7 @@ class AppUser {
     String? neighborhood,
     bool? phoneVerified,
     bool? emailVerified,
+    bool? idVerified,
   }) {
     return AppUser(
       id: id,
@@ -88,11 +113,13 @@ class AppUser {
       email: email,
       password: password,
       bio: bio ?? this.bio,
+      city: city,
       neighborhood: neighborhood ?? this.neighborhood,
       homeLocation: homeLocation,
       joinedAt: joinedAt,
       phoneVerified: phoneVerified ?? this.phoneVerified,
       emailVerified: emailVerified ?? this.emailVerified,
+      idVerified: idVerified ?? this.idVerified,
       responseRate: responseRate,
       avgResponseMinutes: avgResponseMinutes,
       stats: stats ?? this.stats,

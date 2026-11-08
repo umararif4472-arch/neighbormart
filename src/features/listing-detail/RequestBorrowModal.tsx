@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import type { BorrowRequest, Item, User } from '@/types'
+import type { BorrowRequest, ItemListing, User } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { useMyRequests } from '@/hooks/useRequests'
 import { dateInputToIso, formatDateRange, todayInputValue } from '@/utils/dates'
@@ -12,7 +12,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { CheckIcon } from '@/components/icons'
 
 export interface RequestBorrowModalProps {
-  item: Item
+  listing: ItemListing
   owner: User
   open: boolean
   onClose: () => void
@@ -27,7 +27,7 @@ export interface RequestBorrowModalProps {
  * surfaced in the form. On success the modal switches to a success view,
  * and the request is already in context for the dashboard.
  */
-export function RequestBorrowModal({ item, owner, open, onClose }: RequestBorrowModalProps) {
+export function RequestBorrowModal({ listing, owner, open, onClose }: RequestBorrowModalProps) {
   const { state } = useApp()
   const { sendRequest, toErrorMessage } = useMyRequests()
   const currentUser = state.currentUser
@@ -60,8 +60,8 @@ export function RequestBorrowModal({ item, owner, open, onClose }: RequestBorrow
 
   // Validation errors (computed live; shown once the user submits).
   const validation = useMemo(
-    () => validateBorrowPeriod(startInput, endInput, item.borrowTerms.maxDurationDays),
-    [startInput, endInput, item.borrowTerms.maxDurationDays],
+    () => validateBorrowPeriod(startInput, endInput, listing.details.maxDurationDays),
+    [startInput, endInput, listing.details.maxDurationDays],
   )
   const noteError = submitted ? validateNote(note) : undefined
   const durationDays = borrowDurationFromInputs(startInput, endInput)
@@ -81,7 +81,7 @@ export function RequestBorrowModal({ item, owner, open, onClose }: RequestBorrow
     setSending(true)
     try {
       const request = await sendRequest({
-        itemId: item.id,
+        listingId: listing.id,
         borrowerId: currentUser.id,
         period: { start: startIso, end: endIso },
         note,
@@ -97,7 +97,7 @@ export function RequestBorrowModal({ item, owner, open, onClose }: RequestBorrow
   return (
     <Modal open={open} onClose={onClose} title={success ? 'Request sent' : `Request to borrow`}>
       {success ? (
-        <SuccessView item={item} owner={owner} request={success} onClose={onClose} />
+        <SuccessView listing={listing} owner={owner} request={success} onClose={onClose} />
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           {/* Owner + item context */}
@@ -128,8 +128,8 @@ export function RequestBorrowModal({ item, owner, open, onClose }: RequestBorrow
             error={submitted ? validation.errors.end : undefined}
             hint={
               durationDays != null
-                ? `That's a ${durationDays}-day borrow (max ${item.borrowTerms.maxDurationDays}).`
-                : `This item can be borrowed for up to ${item.borrowTerms.maxDurationDays} days.`
+                ? `That's a ${durationDays}-day borrow (max ${listing.details.maxDurationDays}).`
+                : `This item can be borrowed for up to ${listing.details.maxDurationDays} days.`
             }
           />
           {submitted && validation.errors.duration && (
@@ -172,12 +172,12 @@ export function RequestBorrowModal({ item, owner, open, onClose }: RequestBorrow
 }
 
 function SuccessView({
-  item,
+  listing,
   owner,
   request,
   onClose,
 }: {
-  item: Item
+  listing: ItemListing
   owner: User
   request: BorrowRequest
   onClose: () => void
@@ -198,7 +198,7 @@ function SuccessView({
         </p>
       </div>
       <p className="rounded-2xl bg-terracotta-50 px-4 py-2 text-sm font-semibold text-bark">
-        {item.title} · {formatDateRange(request.period.start, request.period.end)}
+        {listing.title} · {formatDateRange(request.period.start, request.period.end)}
       </p>
       <div className="flex gap-2">
         <Link to="/dashboard" onClick={onClose}>

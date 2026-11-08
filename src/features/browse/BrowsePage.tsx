@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import type { ListingSection } from '@/types'
+import { LISTING_SECTIONS } from '@/types'
+import { SECTION_META } from '@/utils/categoryMeta'
 import { useApp } from '@/context/AppContext'
-import { useItems } from '@/hooks/useItems'
-import { useFilteredItems, type SortMode } from '@/hooks/useFilteredItems'
+import { useListings } from '@/hooks/useListings'
+import { useFilteredListings, type SortMode } from '@/hooks/useFilteredListings'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useTrustTiers } from '@/hooks/useTrustTiers'
 import { findById } from '@/utils/collections'
@@ -9,7 +13,7 @@ import { haversineKm } from '@/utils/distance'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/Button'
 import { BrowseGridSkeleton } from '@/components/ui/Skeleton'
-import { ItemCard } from '@/components/items/ItemCard'
+import { ListingCard } from '@/components/listings/ListingCard'
 import { ListIcon, MapPinIcon } from '@/components/icons'
 import { cn } from '@/utils/cn'
 import {
@@ -18,18 +22,25 @@ import {
   hasActiveFilters,
   type BrowseFilterState,
 } from './FilterBar'
-import { ItemMap } from './ItemMap'
+import { ListingMap } from './ListingMap'
 
 /**
- * /browse — the neighborhood's shared garage.
+ * /browse — Items & Tools, the neighborhood's shared garage.
  *
  * List and map views share ONE filter state, so toggling between them
  * preserves everything. Search is debounced; filtering runs inside
- * useFilteredItems (no inline .filter() in JSX).
+ * useFilteredListings (no inline .filter() in JSX). The other sections
+ * get their own browse pages in Phase 5; this page is scoped to
+ * section: 'items'.
  */
 export function BrowsePage() {
   const { state } = useApp()
-  const { items, loading, error, reload } = useItems()
+  const [searchParams] = useSearchParams()
+  const sectionParam = searchParams.get('section')
+  const section: ListingSection = LISTING_SECTIONS.includes(sectionParam as ListingSection)
+    ? (sectionParam as ListingSection)
+    : 'items'
+  const { listings, loading, error, reload } = useListings()
   const currentUser = state.currentUser
   const origin = currentUser?.homeLocation ?? null
 
@@ -41,17 +52,23 @@ export function BrowsePage() {
   const debouncedQuery = useDebouncedValue(filters.query, 250)
   const searching = debouncedQuery !== filters.query
 
-  const itemFilters = useMemo(
+  const listingFilters = useMemo(
     () => ({
       query: debouncedQuery,
+      section,
+      listingType: 'all' as const,
       categories: filters.categories,
       maxDistanceKm: filters.radiusKm,
-      availability: filters.availability,
+      status: filters.status,
     }),
-    [debouncedQuery, filters.categories, filters.radiusKm, filters.availability],
+    [debouncedQuery, filters.categories, filters.radiusKm, filters.status, section],
   )
 
-  const visible = useFilteredItems(items, itemFilters, origin, sort)
+  const visible = useFilteredListings(listings, listingFilters, origin, sort)
+  const sectionCount = useMemo(
+    () => listings.filter((l) => l.section === section).length,
+    [listings, section],
+  )
 
   // Precompute owner tiers in one batch for the whole grid.
   const owners = useMemo(() => state.users, [state.users])
@@ -67,12 +84,14 @@ export function BrowsePage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-extrabold text-bark sm:text-3xl">
-            Browse nearby
+            {section === 'items' ? 'Browse nearby' : SECTION_META[section].label}
           </h1>
           <p className="mt-1 text-sm text-bark-light">
-            {currentUser
-              ? `Around ${currentUser.neighborhood} — your neighbors' shared garage.`
-              : "Your neighbors' shared garage."}
+            {section === 'items'
+              ? currentUser
+                ? `Around ${currentUser.neighborhood} — tools, gear, and party kit from neighbors.`
+                : 'Tools, gear, and party kit from neighbors.'
+              : SECTION_META[section].blurb}
           </p>
         </div>
 
@@ -114,8 +133,9 @@ export function BrowsePage() {
         onPatch={patchFilters}
         onReset={resetFilters}
         resultCount={visible.length}
-        totalCount={items.length}
+        totalCount={sectionCount}
         searching={searching}
+        showCategories={section === 'items'}
       />
 
       {/* Loading / error / empty / grid */}
@@ -134,14 +154,14 @@ export function BrowsePage() {
           action={<Button onClick={reload}>Try again</Button>}
         />
       ) : view === 'map' ? (
-        <ItemMap
-          items={visible}
+        <ListingMap
+          listings={visible}
           usersById={usersById}
           origin={origin}
           radiusKm={filters.radiusKm}
           className="aspect-[4/3] max-h-[560px] w-full sm:aspect-[16/9]"
         />
-      ) : items.length === 0 ? (
+      ) : sectionCount === 0 ? (
         <EmptyState
           emoji="📦"
           title="Nothing listed nearby yet"
@@ -167,7 +187,7 @@ export function BrowsePage() {
         <>
           <div className="flex items-center justify-between gap-2">
             <p aria-live="polite" className="text-xs font-medium text-bark-light">
-              Showing {visible.length} of {items.length} items
+              Showing {visible.length} of {sectionCount} listings
             </p>
             <label
               htmlFor="sort-by"
@@ -186,13 +206,13 @@ export function BrowsePage() {
             </label>
           </div>
           <ul className="grid list-none grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visible.map((item) => (
-              <li key={item.id}>
-                <ItemCard
-                  item={item}
-                  owner={usersById(item.ownerId)}
-                  ownerTier={ownerTiers[item.ownerId] ?? null}
-                  distanceKm={origin ? haversineKm(origin, item.location) : null}
+            {visible.map((listing) => (
+              <li key={listing.id}>
+                <ListingCard
+                  listing={listing}
+                  owner={usersById(listing.ownerId)}
+                  ownerTier={ownerTiers[listing.ownerId] ?? null}
+                  distanceKm={origin ? haversineKm(origin, listing.location) : null}
                 />
               </li>
             ))}

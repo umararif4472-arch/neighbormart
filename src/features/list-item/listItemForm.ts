@@ -84,7 +84,7 @@ function validateOptionalMoney(value: number | '', label: string, max: number): 
   const n = Number(value)
   if (!Number.isFinite(n)) return `${label} must be a number.`
   if (n < 0) return `${label} can't be negative — leave it empty to skip.`
-  if (n > max) return `${label} must be $${max} or less.`
+  if (n > max) return `${label} must be Rs ${max.toLocaleString('en-PK')} or less.`
   return undefined
 }
 
@@ -127,9 +127,9 @@ export function validateTermsStep(draft: ListItemDraft): Partial<Record<DraftFie
   ) {
     errors.maxDurationDays = 'Max borrow duration must be a whole number of days (1–60).'
   }
-  const depositError = validateOptionalMoney(draft.depositAmount, 'Deposit', 500)
+  const depositError = validateOptionalMoney(draft.depositAmount, 'Deposit', 200_000)
   if (depositError) errors.depositAmount = depositError
-  const feeError = validateOptionalMoney(draft.dailyFee, 'Daily fee', 100)
+  const feeError = validateOptionalMoney(draft.dailyFee, 'Daily fee', 50_000)
   if (feeError) errors.dailyFee = feeError
   const instructions = draft.pickupInstructions.trim()
   if (instructions.length < 5) {

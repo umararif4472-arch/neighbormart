@@ -36,13 +36,16 @@ export function Badge({ tone = 'neutral', children, className, dot }: BadgeProps
   )
 }
 
-/** Availability → badge tone, one source for cards, detail, and map pins. */
-export function availabilityTone(availability: string): BadgeTone {
-  switch (availability) {
-    case 'available':
+/** Listing status → badge tone, one source for cards, detail, and map pins. */
+export function listingStatusTone(status: string): BadgeTone {
+  switch (status) {
+    case 'active':
       return 'success'
-    case 'borrowed':
+    case 'rented':
+    case 'reserved':
       return 'warning'
+    case 'sold':
+      return 'terracotta'
     default:
       return 'neutral'
   }

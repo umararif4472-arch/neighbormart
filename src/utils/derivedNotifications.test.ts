@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { AppNotification, BorrowRequest, Item, Review, User } from '@/types'
+import type { AppNotification, BorrowRequest, ItemListing, Review, User } from '@/types'
 import { buildNotificationFeed } from './derivedNotifications'
 
 /**
@@ -14,52 +14,68 @@ const me: User = {
   name: 'Maya Chen',
   avatarUrl: '',
   bio: '',
+  city: 'Lahore',
   neighborhood: '',
   homeLocation: { lat: 0, lng: 0 },
   joinedAt: '2025-01-01',
   phoneVerified: true,
   emailVerified: true,
+  idVerified: false,
   responseRate: 0.9,
   avgResponseMinutes: 30,
-  stats: { successfulLends: 5, successfulBorrows: 5, onTimeReturns: 4, lateReturns: 1 },
+  stats: {
+    successfulLends: 5,
+    successfulBorrows: 5,
+    salesCompleted: 0,
+    rentalsHosted: 0,
+    onTimeReturns: 4,
+    lateReturns: 1,
+  },
   badges: [],
 }
 
 const other: User = { ...me, id: 'u-other', name: 'Tom Alvarez' }
 const nina: User = { ...me, id: 'u-nina', name: 'Nina Kowalski' }
 
-const myItem: Item = {
+const myItem: ItemListing = {
   id: 'i-mine',
   ownerId: 'u-me',
+  section: 'items',
+  listingType: 'borrow',
   title: 'Cordless Drill',
   description: '',
-  category: 'Tools',
-  condition: '',
+  price: 0,
+  currency: 'PKR',
+  priceUnit: 'fixed',
+  negotiable: false,
   photos: [],
-  location: { lat: 0, lng: 0 },
-  availability: 'available',
-  borrowTerms: {
-    maxDurationDays: 7,
+  location: { lat: 0, lng: 0, city: 'Lahore', area: '' },
+  status: 'active',
+  createdAt: '2026-01-01',
+  updatedAt: '2026-01-01',
+  views: 0,
+  details: {
+    category: 'Tools',
+    condition: '',
     depositAmount: null,
-    dailyFee: null,
+    maxDurationDays: 7,
     pickupPreference: 'either',
     pickupInstructions: 'Porch',
   },
-  createdAt: '2026-01-01',
 }
 
-const theirItem: Item = {
+const theirItem: ItemListing = {
   ...myItem,
   id: 'i-theirs',
   ownerId: 'u-other',
   title: 'Karaoke Machine',
-  availability: 'borrowed',
+  status: 'rented',
 }
 
 function request(overrides: Partial<BorrowRequest> = {}): BorrowRequest {
   return {
     id: 'r1',
-    itemId: 'i-mine',
+    listingId: 'i-mine',
     borrowerId: 'u-other',
     period: { start: '2026-09-06T00:00:00', end: '2026-09-08T00:00:00' },
     note: '',
@@ -77,7 +93,7 @@ function run(requests: BorrowRequest[], reviews: Review[] = [], stored: AppNotif
   return buildNotificationFeed({
     userId: 'u-me',
     requests,
-    items: [myItem, theirItem],
+    listings: [myItem, theirItem],
     users: [me, other, nina],
     reviews,
     storedNotifications: stored,
@@ -96,7 +112,7 @@ describe('buildNotificationFeed — lifecycle projection', () => {
   })
 
   it('outgoing pending → informational waiting notice', () => {
-    const outgoing = request({ itemId: 'i-theirs', borrowerId: 'u-me' })
+    const outgoing = request({ listingId: 'i-theirs', borrowerId: 'u-me' })
     const { feed } = run([outgoing])
     const item = feed.find((n) => n.id === 'dnf-r1-pending-out')
     expect(item?.kind).toBe('info')
@@ -108,7 +124,7 @@ describe('buildNotificationFeed — lifecycle projection', () => {
     const lenderFeed = run([incoming]).feed
     expect(lenderFeed.find((n) => n.id === 'dnf-r1-approved')?.kind).toBe('action')
 
-    const outgoing = request({ itemId: 'i-theirs', borrowerId: 'u-me', status: 'approved' })
+    const outgoing = request({ listingId: 'i-theirs', borrowerId: 'u-me', status: 'approved' })
     const borrowerFeed = run([outgoing]).feed
     const notice = borrowerFeed.find((n) => n.id === 'dnf-r1-approved')
     expect(notice?.kind).toBe('info')
@@ -117,7 +133,7 @@ describe('buildNotificationFeed — lifecycle projection', () => {
 
   it('declined → notice for the borrower only', () => {
     const outgoing = request({
-      itemId: 'i-theirs',
+      listingId: 'i-theirs',
       borrowerId: 'u-me',
       status: 'declined',
       respondedAt: '2026-09-04T11:00:00.000Z',
@@ -162,7 +178,7 @@ describe('buildNotificationFeed — lifecycle projection', () => {
       {
         id: 'rev-1',
         requestId: 'r1',
-        itemId: 'i-mine',
+        listingId: 'i-mine',
         reviewerId: 'u-me',
         revieweeId: 'u-other',
         reviewerRole: 'lender',
@@ -181,7 +197,7 @@ describe('buildNotificationFeed — lifecycle projection', () => {
     const review: Review = {
       id: 'rev-9',
       requestId: 'r-x',
-      itemId: 'i-mine',
+      listingId: 'i-mine',
       reviewerId: 'u-nina',
       revieweeId: 'u-me',
       reviewerRole: 'borrower',
@@ -205,7 +221,7 @@ describe('buildNotificationFeed — lifecycle projection', () => {
         title: 'New message from Tom',
         body: '…',
         requestId: 'r1',
-        itemId: 'i-mine',
+        listingId: 'i-mine',
         read: false,
         createdAt: '2026-09-05T10:00:00.000Z',
       },
@@ -222,7 +238,7 @@ describe('buildNotificationFeed — lifecycle projection', () => {
     const incoming = request() // action, older createdAt
     const overdue = request({
       id: 'r2',
-      itemId: 'i-theirs',
+      listingId: 'i-theirs',
       borrowerId: 'u-me',
       status: 'active',
       dueAt: '2026-09-01T00:00:00',

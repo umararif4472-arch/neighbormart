@@ -93,9 +93,10 @@ export function ReportIssueModal({ view, open, onClose }: ReportIssueModalProps)
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <p className="text-sm leading-relaxed text-bark-light">
-            About the <span className="font-semibold text-bark">{view.itemTitle}</span> borrow with{' '}
-            <span className="font-semibold text-bark">{view.counterpartName}</span>. This flags the
-            request and lets them know something needs sorting — it doesn&apos;t cancel anything.
+            About the <span className="font-semibold text-bark">{view.listingTitle}</span> borrow
+            with <span className="font-semibold text-bark">{view.counterpartName}</span>. This flags
+            the request and lets them know something needs sorting — it doesn&apos;t cancel
+            anything.
           </p>
 
           <fieldset className="flex flex-col gap-2">

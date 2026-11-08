@@ -1,99 +1,176 @@
 import { describe, expect, it } from 'vitest'
-import type { Item } from '@/types'
-import { countByCategory, filterItems } from './filters'
+import type { ItemListing, Listing, VehicleListing } from '@/types'
+import { EMPTY_LISTING_FILTERS } from '@/types'
+import { countByCategory, filterListings } from './filters'
 
-function makeItem(overrides: Partial<Item>): Item {
-  return {
+function makeItemListing(overrides: Partial<ItemListing> = {}): ItemListing {
+  const base: ItemListing = {
     id: 'i-test',
     ownerId: 'u-maya',
+    section: 'items',
+    listingType: 'borrow',
     title: 'Cordless Drill',
     description: 'A drill.',
-    category: 'Tools',
-    condition: 'Good',
+    price: 0,
+    currency: 'PKR',
+    priceUnit: 'fixed',
+    negotiable: false,
     photos: [],
-    location: { lat: 45.5, lng: -122.6 },
-    availability: 'available',
-    borrowTerms: {
-      maxDurationDays: 7,
+    location: { lat: 31.5, lng: 74.35, city: 'Lahore', area: 'DHA Phase 5' },
+    status: 'active',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    views: 0,
+    details: {
+      category: 'Tools',
+      condition: 'Good',
       depositAmount: null,
-      dailyFee: null,
+      maxDurationDays: 7,
       pickupPreference: 'either',
       pickupInstructions: 'Porch pickup',
     },
-    createdAt: '2026-01-01T00:00:00.000Z',
-    ...overrides,
   }
+  return { ...base, ...overrides }
 }
 
-const ORIGIN = { lat: 45.5, lng: -122.6 }
+function makeVehicle(overrides: Partial<VehicleListing> = {}): VehicleListing {
+  const base: VehicleListing = {
+    id: 'v-test',
+    ownerId: 'u-tom',
+    section: 'vehicles',
+    listingType: 'rent',
+    title: 'Toyota Corolla 2020',
+    description: 'Clean family sedan.',
+    price: 8000,
+    currency: 'PKR',
+    priceUnit: 'day',
+    negotiable: false,
+    photos: [],
+    location: { lat: 31.5, lng: 74.35, city: 'Lahore', area: 'Gulberg' },
+    status: 'active',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    views: 0,
+    details: {
+      make: 'Toyota',
+      model: 'Corolla',
+      year: 2020,
+      mileageKm: 62000,
+      fuelType: 'petrol',
+      transmission: 'automatic',
+      condition: 'Good',
+      withDriver: false,
+      registrationCity: 'Lahore',
+    },
+  }
+  return { ...base, ...overrides }
+}
+
+const ORIGIN = { lat: 31.5, lng: 74.35 }
 
 // ~1.1 km north and ~4.4 km south of ORIGIN
-const nearItem = makeItem({ id: 'near', location: { lat: 45.51, lng: -122.6 } })
-const farItem = makeItem({ id: 'far', location: { lat: 45.46, lng: -122.6 } })
-const tent = makeItem({
+const nearItem = makeItemListing({
+  id: 'near',
+  location: { ...ORIGIN, lat: 31.51, city: 'Lahore', area: 'DHA' },
+})
+const farItem = makeItemListing({
+  id: 'far',
+  location: { ...ORIGIN, lat: 31.46, city: 'Lahore', area: 'DHA' },
+})
+const tent = makeItemListing({
   id: 'tent',
   title: '6-Person Tent',
   description: 'Camping tent.',
-  category: 'Outdoor & Camping',
-  location: { lat: 45.51, lng: -122.6 },
+  details: {
+    category: 'Outdoor & Camping',
+    condition: 'Good',
+    depositAmount: null,
+    maxDurationDays: 14,
+    pickupPreference: 'pickup',
+    pickupInstructions: 'Garage pickup',
+  },
 })
-const borrowedDrill = makeItem({ id: 'borrowed', availability: 'borrowed' })
+const rentedDrill = makeItemListing({ id: 'rented', status: 'rented' })
+const corolla = makeVehicle({ id: 'corolla' })
 
-const items = [nearItem, farItem, tent, borrowedDrill]
+const listings: Listing[] = [nearItem, farItem, tent, rentedDrill, corolla]
 
-const baseFilters = { query: '', categories: [], maxDistanceKm: null, availability: 'all' as const }
-
-describe('filterItems', () => {
+describe('filterListings', () => {
   it('returns everything with default filters', () => {
-    expect(filterItems(items, baseFilters, ORIGIN)).toHaveLength(4)
+    expect(filterListings(listings, EMPTY_LISTING_FILTERS, ORIGIN)).toHaveLength(5)
   })
 
-  it('filters by category', () => {
-    const result = filterItems(items, { ...baseFilters, categories: ['Tools'] }, ORIGIN)
-    expect(result.every((item) => item.category === 'Tools')).toBe(true)
-    expect(result).toHaveLength(3)
-  })
-
-  it('supports multiple categories', () => {
-    const result = filterItems(
-      items,
-      { ...baseFilters, categories: ['Tools', 'Outdoor & Camping'] },
+  it('filters by section', () => {
+    const result = filterListings(
+      listings,
+      { ...EMPTY_LISTING_FILTERS, section: 'vehicles' },
       ORIGIN,
     )
-    expect(result).toHaveLength(4)
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('corolla')
   })
 
-  it('filters by availability', () => {
-    const result = filterItems(items, { ...baseFilters, availability: 'borrowed' }, ORIGIN)
+  it('filters by listing type', () => {
+    const result = filterListings(
+      listings,
+      { ...EMPTY_LISTING_FILTERS, listingType: 'rent' },
+      ORIGIN,
+    )
     expect(result).toHaveLength(1)
-    expect(result[0].id).toBe('borrowed')
+    expect(result[0].id).toBe('corolla')
+  })
+
+  it('filters by category within the items section', () => {
+    const result = filterListings(
+      listings,
+      { ...EMPTY_LISTING_FILTERS, categories: ['Tools'] },
+      ORIGIN,
+    )
+    expect(result).toHaveLength(3)
+    expect(result.every((l) => l.section === 'items')).toBe(true)
+  })
+
+  it('filters by status', () => {
+    const result = filterListings(listings, { ...EMPTY_LISTING_FILTERS, status: 'rented' }, ORIGIN)
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('rented')
   })
 
   it('filters by radius around the origin', () => {
-    const result = filterItems(items, { ...baseFilters, maxDistanceKm: 2 }, ORIGIN)
-    expect(result.some((item) => item.id === 'near')).toBe(true)
-    expect(result.some((item) => item.id === 'far')).toBe(false)
+    const result = filterListings(listings, { ...EMPTY_LISTING_FILTERS, maxDistanceKm: 2 }, ORIGIN)
+    expect(result.some((l) => l.id === 'near')).toBe(true)
+    expect(result.some((l) => l.id === 'far')).toBe(false)
   })
 
   it('ignores radius when origin is null (no location yet)', () => {
-    const result = filterItems(items, { ...baseFilters, maxDistanceKm: 2 }, null)
-    expect(result).toHaveLength(4)
+    const result = filterListings(listings, { ...EMPTY_LISTING_FILTERS, maxDistanceKm: 2 }, null)
+    expect(result).toHaveLength(5)
   })
 
-  it('matches query against title, description, and category', () => {
-    expect(filterItems(items, { ...baseFilters, query: 'tent' }, ORIGIN)).toHaveLength(1)
-    expect(filterItems(items, { ...baseFilters, query: 'DRILL' }, ORIGIN)).toHaveLength(3) // title match, case-insensitive
-    expect(filterItems(items, { ...baseFilters, query: 'camping' }, ORIGIN)).toHaveLength(1) // category match
-    expect(filterItems(items, { ...baseFilters, query: 'unicycle' }, ORIGIN)).toHaveLength(0)
+  it('matches query against title, description, category, and vehicle make', () => {
+    expect(
+      filterListings(listings, { ...EMPTY_LISTING_FILTERS, query: 'tent' }, ORIGIN),
+    ).toHaveLength(1)
+    expect(
+      filterListings(listings, { ...EMPTY_LISTING_FILTERS, query: 'DRILL' }, ORIGIN),
+    ).toHaveLength(3)
+    expect(
+      filterListings(listings, { ...EMPTY_LISTING_FILTERS, query: 'camping' }, ORIGIN),
+    ).toHaveLength(1)
+    expect(
+      filterListings(listings, { ...EMPTY_LISTING_FILTERS, query: 'toyota' }, ORIGIN),
+    ).toHaveLength(1)
+    expect(
+      filterListings(listings, { ...EMPTY_LISTING_FILTERS, query: 'unicycle' }, ORIGIN),
+    ).toHaveLength(0)
   })
 })
 
 describe('countByCategory', () => {
-  it('counts items per category', () => {
-    const counts = countByCategory(items)
-    const tools = counts.find((c) => c.category === 'Tools')
-    const outdoor = counts.find((c) => c.category === 'Outdoor & Camping')
-    expect(tools?.count).toBe(3)
-    expect(outdoor?.count).toBe(1)
+  it('counts item listings per category', () => {
+    const itemListings = listings.filter((l): l is ItemListing => l.section === 'items')
+    const counts = countByCategory(itemListings)
+    expect(counts.find((c) => c.category === 'Tools')?.count).toBe(3)
+    expect(counts.find((c) => c.category === 'Outdoor & Camping')?.count).toBe(1)
   })
 })

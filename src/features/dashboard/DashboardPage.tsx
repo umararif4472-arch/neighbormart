@@ -7,7 +7,7 @@ import { useDerivedNotifications } from '@/hooks/useDerivedNotifications'
 import { useTrustScore } from '@/hooks/useTrustScore'
 import { relativeTime } from '@/utils/dates'
 import { Avatar } from '@/components/ui/Avatar'
-import { Badge } from '@/components/ui/Badge'
+import { Badge, listingStatusTone } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TrustBadge } from '@/components/ui/Trust'
@@ -76,9 +76,9 @@ export function DashboardPage() {
   const [reviewTarget, setReviewTarget] = useState<RequestView | null>(null)
   const [issueTarget, setIssueTarget] = useState<RequestView | null>(null)
 
-  const myItems = useMemo(
-    () => state.items.filter((item) => item.ownerId === state.currentUser?.id),
-    [state.items, state.currentUser],
+  const myListings = useMemo(
+    () => state.listings.filter((listing) => listing.ownerId === state.currentUser?.id),
+    [state.listings, state.currentUser],
   )
 
   async function runAction(id: string, action: () => Promise<unknown>) {
@@ -216,9 +216,9 @@ export function DashboardPage() {
           <section aria-label="Your items" className="flex flex-col gap-3">
             <h2 className="font-display text-lg font-bold text-bark">
               Your listings{' '}
-              <span className="text-sm font-medium text-bark-light">({myItems.length})</span>
+              <span className="text-sm font-medium text-bark-light">({myListings.length})</span>
             </h2>
-            {myItems.length === 0 ? (
+            {myListings.length === 0 ? (
               <EmptyState
                 emoji="🧰"
                 title="Nothing listed yet"
@@ -231,24 +231,15 @@ export function DashboardPage() {
               />
             ) : (
               <ul className="grid list-none grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-                {myItems.map((item) => (
+                {myListings.map((item) => (
                   <li key={item.id}>
                     <Link
-                      to={`/item/${item.id}`}
+                      to={`/listing/${item.id}`}
                       className="flex h-full flex-col justify-between gap-2 rounded-3xl border border-bark/10 bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <p className="line-clamp-2 text-xs font-semibold text-bark">{item.title}</p>
-                      <Badge
-                        tone={
-                          item.availability === 'available'
-                            ? 'success'
-                            : item.availability === 'borrowed'
-                              ? 'warning'
-                              : 'neutral'
-                        }
-                        dot
-                      >
-                        {item.availability === 'borrowed' ? 'Out' : item.availability}
+                      <Badge tone={listingStatusTone(item.status)} dot>
+                        {item.status === 'rented' ? 'Out' : item.status}
                       </Badge>
                     </Link>
                   </li>

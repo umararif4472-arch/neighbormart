@@ -33,12 +33,12 @@ export function MessagesPage() {
   // Threads = requests (mine) that have a message thread.
   const threads = state.requests
     .map((request) => {
-      const item = findById(state.items, request.itemId)
+      const listing = findById(state.listings, request.listingId)
       const counterpartId =
-        request.borrowerId === state.currentUser?.id ? item?.ownerId : request.borrowerId
+        request.borrowerId === state.currentUser?.id ? listing?.ownerId : request.borrowerId
       const counterpart = findById(state.users, counterpartId)
       const messages = state.messagesByRequest[request.id] ?? []
-      return { request, itemTitle: item?.title ?? 'Item', counterpart, messages }
+      return { request, listingTitle: listing?.title ?? 'Listing', counterpart, messages }
     })
     .filter((thread) => thread.messages.length > 0)
 
@@ -60,7 +60,7 @@ export function MessagesPage() {
         />
       ) : (
         <ul className="flex list-none flex-col gap-2">
-          {threads.map(({ request, itemTitle, counterpart, messages }) => {
+          {threads.map(({ request, listingTitle, counterpart, messages }) => {
             const last = messages[messages.length - 1]
             return (
               <li key={request.id}>
@@ -75,7 +75,7 @@ export function MessagesPage() {
                   />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-bark">
-                      {counterpart?.name ?? 'A neighbor'} · {itemTitle}
+                      {counterpart?.name ?? 'A neighbor'} · {listingTitle}
                     </p>
                     <p className="truncate text-xs text-bark-light">{last?.body}</p>
                   </div>
@@ -102,9 +102,9 @@ function ThreadView({ requestId }: { requestId: string }) {
   const endRef = useRef<HTMLDivElement>(null)
 
   const request = findById(state.requests, requestId)
-  const item = findById(state.items, request?.itemId)
+  const listing = findById(state.listings, request?.listingId)
   const counterpartId =
-    request?.borrowerId === state.currentUser?.id ? item?.ownerId : request?.borrowerId
+    request?.borrowerId === state.currentUser?.id ? listing?.ownerId : request?.borrowerId
   const counterpart = findById(state.users, counterpartId)
   const me = state.currentUser
 
@@ -166,7 +166,7 @@ function ThreadView({ requestId }: { requestId: string }) {
             {counterpart?.name ?? 'A neighbor'}
           </p>
           <p className="truncate text-xs text-bark-light">
-            About {item?.title ?? 'an item'} · {formatDate(request.period.start)}
+            About {listing?.title ?? 'a listing'} · {formatDate(request.period.start)}
           </p>
         </div>
         <Badge tone={statusMeta.tone} dot>

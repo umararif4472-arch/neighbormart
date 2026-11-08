@@ -1,17 +1,18 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import type { Item } from '@/types'
+import type { ItemListing } from '@/types'
 import { ITEM_CATEGORIES } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { useListItemDraft } from './useListItemDraft'
-import { itemsApi, toErrorMessage } from '@/services'
-import { CATEGORY_META } from '@/utils/categoryMeta'
+import { listingsApi, toErrorMessage } from '@/services'
+import { CATEGORY_META, categoryEmoji } from '@/utils/categoryMeta'
+import { formatMoney } from '@/utils/money'
 import { cn } from '@/utils/cn'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { ItemPhoto } from '@/components/items/ItemPhoto'
+import { ListingPhoto } from '@/components/listings/ListingPhoto'
 import { CheckIcon, ChevronLeftIcon, XIcon, CameraIcon } from '@/components/icons'
 import { LIST_ITEM_STEPS, MAX_PHOTOS, type DraftField, type ListItemDraft } from './listItemForm'
 
@@ -22,7 +23,7 @@ import { LIST_ITEM_STEPS, MAX_PHOTOS, type DraftField, type ListItemDraft } from
  * useState per field. Each step validates before "Next" with visible
  * inline errors. Progress persists to localStorage, so leaving mid-form
  * and coming back restores the draft (with a notice + "start over").
- * Publishing goes through itemsApi.createItem → shared mock store →
+ * Publishing goes through listingsApi.createItemListing → shared mock store →
  * context, so the new listing appears everywhere immediately.
  */
 export function ListItemPage() {
@@ -31,7 +32,7 @@ export function ListItemPage() {
   const { state: form, dispatch: dispatchForm, discard, publishSucceeded } = useListItemDraft()
   const [publishing, setPublishing] = useState(false)
   const [publishError, setPublishError] = useState<string | null>(null)
-  const [published, setPublished] = useState<Item | null>(null)
+  const [published, setPublished] = useState<ItemListing | null>(null)
 
   const step = LIST_ITEM_STEPS[form.stepIndex]
   const draft = form.draft
@@ -63,7 +64,7 @@ export function ListItemPage() {
     setPublishing(true)
     setPublishError(null)
     try {
-      const item = await itemsApi.createItem({
+      const item = await listingsApi.createItemListing({
         ownerId: owner.id,
         title: draft.title,
         description: draft.description,
@@ -76,8 +77,8 @@ export function ListItemPage() {
         pickupPreference: draft.pickupPreference,
         pickupInstructions: draft.pickupInstructions,
       })
-      // Single item created → sync context once; every reader sees it.
-      dispatch({ type: 'ITEMS_UPSERTED', items: [item] })
+      // Single listing created → sync context once; every reader sees it.
+      dispatch({ type: 'LISTINGS_UPSERTED', listings: [item] })
       publishSucceeded()
       setPublished(item)
     } catch (error) {
@@ -108,22 +109,22 @@ export function ListItemPage() {
         </div>
         <div className="flex w-full max-w-sm flex-col gap-3 rounded-3xl border border-bark/10 bg-white p-4 text-left shadow-sm">
           <div className="flex gap-3">
-            <ItemPhoto
+            <ListingPhoto
               src={published.photos[0]}
               alt={published.title}
-              category={published.category}
+              emoji={categoryEmoji(published.details.category)}
               className="h-16 w-16 rounded-2xl"
             />
             <div className="min-w-0">
               <p className="truncate font-display font-bold text-bark">{published.title}</p>
               <p className="text-xs text-bark-light">
-                {CATEGORY_META[published.category].emoji} {published.category} · up to{' '}
-                {published.borrowTerms.maxDurationDays} days
+                {CATEGORY_META[published.details.category].emoji} {published.details.category} · up
+                to {published.details.maxDurationDays} days
               </p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Link to={`/item/${published.id}`} className="flex-1">
+            <Link to={`/listing/${published.id}`} className="flex-1">
               <Button variant="secondary" className="w-full">
                 View listing
               </Button>
@@ -134,8 +135,8 @@ export function ListItemPage() {
               onClick={() => {
                 const shareData = {
                   title: 'NeighborMart',
-                  text: `My ${published.title} is now free to borrow from neighbors — check it out!`,
-                  url: `${window.location.origin}/item/${published.id}`,
+                  text: `My ${published.title} is now listed on NeighborMart — check it out!`,
+                  url: `${window.location.origin}/listing/${published.id}`,
                 }
                 // Best-effort share: native share sheet or clipboard copy.
                 if (navigator.share) {
@@ -486,10 +487,10 @@ function TermsStep({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField
-          label="Deposit ($, optional)"
+          label="Deposit (Rs, optional)"
           type="number"
           min={0}
-          max={500}
+          max={200000}
           value={draft.depositAmount}
           placeholder="0"
           hint="Refunded on return. Leave empty for none."
@@ -499,10 +500,10 @@ function TermsStep({
           error={fieldError(errors, showErrors, 'depositAmount')}
         />
         <TextField
-          label="Daily fee ($, optional)"
+          label="Daily fee (Rs, optional)"
           type="number"
           min={0}
-          max={100}
+          max={50000}
           value={draft.dailyFee}
           placeholder="0"
           hint="Most items are free — leave empty."
@@ -560,11 +561,13 @@ function PreviewStep({
           'Deposit',
           draft.depositAmount === '' || draft.depositAmount === 0
             ? 'None'
-            : `$${draft.depositAmount}`,
+            : formatMoney(draft.depositAmount, 'PKR'),
         ],
         [
           'Daily fee',
-          draft.dailyFee === '' || draft.dailyFee === 0 ? 'Free' : `$${draft.dailyFee}`,
+          draft.dailyFee === '' || draft.dailyFee === 0
+            ? 'Free'
+            : `${formatMoney(draft.dailyFee, 'PKR')}/day`,
         ],
       ] as const,
     [draft],
@@ -578,10 +581,10 @@ function PreviewStep({
       </p>
 
       <article className="flex flex-col gap-3 overflow-hidden rounded-3xl border border-bark/10 bg-white shadow-sm">
-        <ItemPhoto
+        <ListingPhoto
           src={draft.photos[0]}
           alt={draft.title}
-          category={draft.category}
+          emoji={categoryEmoji(draft.category)}
           className="aspect-[4/3] w-full"
           emojiClassName="text-6xl"
         />

@@ -6,7 +6,7 @@ export type ReviewerRole = 'lender' | 'borrower'
 export interface Review {
   id: string
   requestId: string
-  itemId: string
+  listingId: string
   reviewerId: string
   revieweeId: string
   reviewerRole: ReviewerRole

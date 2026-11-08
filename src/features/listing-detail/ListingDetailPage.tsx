@@ -2,34 +2,39 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { useAsync } from '@/hooks/useAsync'
-import { itemsApi, requestsApi } from '@/services'
+import { listingsApi, requestsApi } from '@/services'
+import type { Listing } from '@/types'
 import { findById } from '@/utils/collections'
 import { formatDate } from '@/utils/dates'
 import { haversineKm } from '@/utils/distance'
+import { formatMoney, formatPrice } from '@/utils/money'
+import { listingEmoji, SECTION_META } from '@/utils/categoryMeta'
 import { isOverdue } from '@/utils/requestLifecycle'
-import { Badge, availabilityTone } from '@/components/ui/Badge'
+import { Badge, listingStatusTone } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { PhotoGallery } from '@/components/items/PhotoGallery'
+import { PhotoGallery } from '@/components/listings/PhotoGallery'
 import { ReviewsList } from '@/components/reviews/ReviewsList'
 import { ChevronLeftIcon } from '@/components/icons'
-import { OwnerCard, BorrowTermsCard, AVAILABILITY_LABEL } from './ItemSubcomponents'
+import { ListingTermsCard, OwnerCard, SectionFactsCard, STATUS_LABEL } from './ListingSubcomponents'
 import { RequestBorrowModal } from './RequestBorrowModal'
 import { cn } from '@/utils/cn'
 
 /**
- * /item/:id — photo gallery, description, terms, owner trust card,
- * reviews, and the request-to-borrow flow.
+ * /listing/:id — photo gallery, description, facts/terms, owner trust
+ * card, reviews, and (items section) the request-to-borrow flow.
  *
- * Edge cases handled deliberately (per spec):
+ * Edge cases handled deliberately:
  *  - bad/missing id → friendly 404-style empty state, no crash
- *  - your own item → "This is your item" (no request button)
+ *  - your own listing → "This is your listing" (no request button)
  *  - zero reviews → "No reviews yet" state
- *  - borrowed/unavailable → request flow disabled with the reason
+ *  - out-now/paused items → request flow disabled with the reason
  *    (expected-back date when an active/approved request exists)
+ *  - vehicles/properties/arenas → full facts render today; their booking
+ *    flows arrive with the Phase 5 section experiences.
  */
-export function ItemDetailPage() {
+export function ListingDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { state } = useApp()
   const currentUser = state.currentUser
@@ -37,35 +42,41 @@ export function ItemDetailPage() {
 
   const [requestOpen, setRequestOpen] = useState(false)
 
-  // Item loads through the service (real async path, missing id → null).
-  const itemQuery = useAsync(() => itemsApi.getItemById(id ?? ''), [id])
-  const item = itemQuery.data
+  // Listing loads through the service (real async path, missing id → null).
+  const listingQuery = useAsync(() => listingsApi.getListingById(id ?? ''), [id])
+  const listing = listingQuery.data
+  const isItem = listing?.section === 'items'
 
-  // Active borrow info for "expected back" (service = source of truth).
-  const borrowQuery = useAsync(() => requestsApi.getRequestsForItem(id ?? ''), [id])
+  // Active borrow info for "expected back" (items flow; service = source of truth).
+  const borrowQuery = useAsync(() => requestsApi.getRequestsForListing(id ?? ''), [id])
   const activeBorrow = useMemo(
     () => borrowQuery.data?.find((r) => r.status === 'active' || r.status === 'approved') ?? null,
     [borrowQuery.data],
   )
 
-  const owner = item ? findById(state.users, item.ownerId) : undefined
-  const isOwnItem = Boolean(item && currentUser && item.ownerId === currentUser.id)
+  const owner = listing ? findById(state.users, listing.ownerId) : undefined
+  const isOwnListing = Boolean(listing && currentUser && listing.ownerId === currentUser.id)
 
-  // Reviews about this item (from context — stays live after new reviews).
-  const itemReviews = useMemo(
+  // Reviews about this listing (from context — stays live after new reviews).
+  const listingReviews = useMemo(
     () =>
-      item
+      listing
         ? state.reviews
-            .filter((r) => r.itemId === item.id)
+            .filter((r) => r.listingId === listing.id)
             .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
         : [],
-    [state.reviews, item],
+    [state.reviews, listing],
   )
 
   // --- Loading -------------------------------------------------------------
-  if (itemQuery.loading) {
+  if (listingQuery.loading) {
     return (
-      <div className="flex flex-col gap-6" aria-busy="true" role="status" aria-label="Loading item">
+      <div
+        className="flex flex-col gap-6"
+        aria-busy="true"
+        role="status"
+        aria-label="Loading listing"
+      >
         <Skeleton className="h-5 w-32" />
         <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           <div className="flex flex-col gap-4">
@@ -82,15 +93,15 @@ export function ItemDetailPage() {
     )
   }
 
-  // --- Missing item (bad id or service error) ------------------------------
-  if (!item) {
+  // --- Missing listing (bad id or service error) -----------------------------
+  if (!listing) {
     return (
       <EmptyState
         emoji="🧭"
-        title="This item wandered off the block"
+        title="This listing wandered off the block"
         message={
-          itemQuery.error
-            ? itemQuery.error
+          listingQuery.error
+            ? listingQuery.error
             : "We couldn't find that listing — it may have been removed by its owner."
         }
         action={
@@ -103,8 +114,10 @@ export function ItemDetailPage() {
     )
   }
 
-  // --- CTA state machine (own item / unavailable / borrowed / available) ----
-  const cta = resolveCta({ item, isOwnItem, activeBorrow })
+  // --- CTA state machine (own / out now / paused / section / available) -----
+  const cta = resolveCta({ listing, isOwnListing, activeBorrow })
+  const condition =
+    listing.section === 'items' || listing.section === 'vehicles' ? listing.details.condition : null
 
   return (
     <div className="flex flex-col gap-8">
@@ -126,22 +139,22 @@ export function ItemDetailPage() {
                   Overdue — expected back {formatDate(activeBorrow.dueAt!)}
                 </Badge>
               ) : (
-                <Badge tone={availabilityTone(item.availability)} dot>
-                  {AVAILABILITY_LABEL[item.availability]}
+                <Badge tone={listingStatusTone(listing.status)} dot>
+                  {STATUS_LABEL[listing.status]}
                 </Badge>
               )}
-              <Badge tone="terracotta">{item.category}</Badge>
-              {activeBorrow?.dueAt &&
-                item.availability === 'borrowed' &&
-                !isOverdue(activeBorrow) && (
-                  <Badge tone="neutral">Expected back {formatDate(activeBorrow.dueAt)}</Badge>
-                )}
+              <Badge tone="terracotta">
+                {isItem ? listing.details.category : SECTION_META[listing.section].label}
+              </Badge>
+              {activeBorrow?.dueAt && listing.status === 'rented' && !isOverdue(activeBorrow) && (
+                <Badge tone="neutral">Expected back {formatDate(activeBorrow.dueAt)}</Badge>
+              )}
             </div>
             <h1 className="font-display text-2xl font-extrabold leading-tight text-bark sm:text-3xl">
-              {item.title}
+              {listing.title}
             </h1>
             <p className="text-sm text-bark-light">
-              Shared by{' '}
+              Listed by{' '}
               {owner ? (
                 <Link
                   to={`/profile/${owner.id}`}
@@ -152,42 +165,49 @@ export function ItemDetailPage() {
               ) : (
                 'a neighbor'
               )}
-              {origin ? ` · ${item.location ? formatDistanceFrom(origin, item) : ''}` : ''}
+              {origin ? ` · ${formatDistanceFrom(origin, listing)}` : ''} · {listing.location.area},{' '}
+              {listing.location.city}
             </p>
           </div>
 
-          <PhotoGallery photos={item.photos} alt={item.title} category={item.category} />
+          <PhotoGallery photos={listing.photos} alt={listing.title} emoji={listingEmoji(listing)} />
 
-          <section aria-labelledby="about-item" className="flex flex-col gap-3">
-            <h2 id="about-item" className="font-display text-lg font-bold text-bark">
-              About this item
+          <section aria-labelledby="about-listing" className="flex flex-col gap-3">
+            <h2 id="about-listing" className="font-display text-lg font-bold text-bark">
+              About this listing
             </h2>
             <p className="whitespace-pre-line text-sm leading-relaxed text-bark-light">
-              {item.description}
+              {listing.description}
             </p>
-            <p className="rounded-2xl border border-bark/10 bg-white p-3 text-sm text-bark">
-              <span className="font-semibold">Condition: </span>
-              {item.condition}
-            </p>
+            {condition && (
+              <p className="rounded-2xl border border-bark/10 bg-white p-3 text-sm text-bark">
+                <span className="font-semibold">Condition: </span>
+                {condition}
+              </p>
+            )}
           </section>
 
-          <section aria-labelledby="item-reviews" className="flex flex-col gap-3">
-            <h2 id="item-reviews" className="font-display text-lg font-bold text-bark">
+          <section aria-labelledby="listing-reviews" className="flex flex-col gap-3">
+            <h2 id="listing-reviews" className="font-display text-lg font-bold text-bark">
               What neighbors say{' '}
-              <span className="text-sm font-medium text-bark-light">({itemReviews.length})</span>
+              <span className="text-sm font-medium text-bark-light">({listingReviews.length})</span>
             </h2>
             <ReviewsList
-              reviews={itemReviews}
+              reviews={listingReviews}
               usersById={(reviewerId) => findById(state.users, reviewerId)}
               emptyTitle="No reviews yet"
-              emptyMessage="The first borrower sets the tone — borrow it and tell the block how it went."
+              emptyMessage="The first deal sets the tone — be the first and tell the block how it went."
             />
           </section>
         </div>
 
-        {/* Right: terms + owner + CTA (sticky on desktop) */}
+        {/* Right: terms/facts + owner + CTA (sticky on desktop) */}
         <div className="flex flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
-          <BorrowTermsCard item={item} origin={origin} />
+          {isItem ? (
+            <ListingTermsCard listing={listing} origin={origin} />
+          ) : (
+            <SectionFactsCard listing={listing} />
+          )}
           {owner && <OwnerCard owner={owner} />}
 
           {/* CTA (desktop) */}
@@ -214,13 +234,11 @@ export function ItemDetailPage() {
       >
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-bark">{item.title}</p>
+            <p className="truncate text-sm font-semibold text-bark">{listing.title}</p>
             <p className="text-xs font-medium text-moss-700">
-              {item.borrowTerms.dailyFee != null
-                ? `$${item.borrowTerms.dailyFee}/day`
-                : 'Free to borrow'}
-              {item.borrowTerms.depositAmount != null
-                ? ` · $${item.borrowTerms.depositAmount} deposit`
+              {formatPrice(listing)}
+              {isItem && listing.details.depositAmount != null
+                ? ` · ${formatMoney(listing.details.depositAmount, listing.currency)} deposit`
                 : ''}
             </p>
           </div>
@@ -232,9 +250,9 @@ export function ItemDetailPage() {
         </div>
       </div>
 
-      {owner && currentUser && !isOwnItem && (
+      {owner && currentUser && !isOwnListing && isItem && (
         <RequestBorrowModal
-          item={item}
+          listing={listing}
           owner={owner}
           open={requestOpen}
           onClose={() => setRequestOpen(false)}
@@ -250,40 +268,47 @@ type CtaState =
   { kind: 'request'; label: 'Request to borrow' } | { kind: 'notice'; label: string; hint?: string }
 
 /**
- * Pure CTA resolver — the edge cases from the spec live here, testable.
- * Borrowed items show the expected-back date when the data exists.
+ * Pure CTA resolver — the edge cases live here, testable.
+ * Out-now items show the expected-back date when the data exists.
  */
 function resolveCta(input: {
-  item: { availability: 'available' | 'borrowed' | 'unavailable' }
-  isOwnItem: boolean
+  listing: Listing
+  isOwnListing: boolean
   activeBorrow: { status: string; dueAt: string | null } | null
 }): CtaState {
-  const { item, isOwnItem, activeBorrow } = input
+  const { listing, isOwnListing, activeBorrow } = input
 
-  if (isOwnItem) {
+  if (isOwnListing) {
     return {
       kind: 'notice',
-      label: 'This is your item',
-      hint: 'It’s in your lending list — manage requests from your dashboard.',
+      label: 'This is your listing',
+      hint: 'Manage requests and deals from your dashboard.',
     }
   }
-  if (item.availability === 'borrowed') {
+  if (listing.section !== 'items') {
+    return {
+      kind: 'notice',
+      label: `${SECTION_META[listing.section].label} — booking opens soon`,
+      hint: 'This section gets its own booking flow in the next phase. Message the owner from their profile in the meantime.',
+    }
+  }
+  if (listing.status === 'rented') {
     const overdue = activeBorrow != null && isOverdue(activeBorrow)
     return {
       kind: 'notice',
       label: overdue
-        ? `Borrowed — overdue, was due ${activeBorrow?.dueAt ? formatDate(activeBorrow.dueAt) : 'recently'}`
+        ? `Out now — overdue, was due ${activeBorrow?.dueAt ? formatDate(activeBorrow.dueAt) : 'recently'}`
         : activeBorrow?.dueAt
-          ? `Borrowed — expected back ${formatDate(activeBorrow.dueAt)}`
-          : 'Borrowed right now',
+          ? `Out now — expected back ${formatDate(activeBorrow.dueAt)}`
+          : 'Out with a neighbor right now',
       hint: 'Check back after it’s returned, or browse similar items nearby.',
     }
   }
-  if (item.availability === 'unavailable') {
+  if (listing.status !== 'active') {
     return {
       kind: 'notice',
       label: 'Not taking requests right now',
-      hint: 'The owner has paused requests for this item.',
+      hint: 'The owner has paused requests for this listing.',
     }
   }
   return { kind: 'request', label: 'Request to borrow' }
@@ -303,8 +328,8 @@ function CtaNotice({ cta }: { cta: CtaState & { kind: 'notice' } }) {
 
 function formatDistanceFrom(
   origin: { lat: number; lng: number },
-  item: { location: { lat: number; lng: number } },
+  listing: { location: { lat: number; lng: number } },
 ): string {
-  const km = haversineKm(origin, item.location)
+  const km = haversineKm(origin, listing.location)
   return km < 1 ? `${Math.round(km * 1000)} m away` : `${km.toFixed(1)} km away`
 }

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import type { BorrowRequest, EffectiveRequestStatus, Item, User } from '@/types'
+import type { BorrowRequest, EffectiveRequestStatus, Listing, User } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { useNow } from './useNow'
 import { requestsApi, reviewsApi, toErrorMessage } from '@/services'
@@ -17,7 +17,7 @@ import {
  * Views (incoming/outgoing, grouped by EFFECTIVE status — including the
  * derived "overdue") are computed here through the state machine, so no
  * component duplicates status logic. Every action calls the service, then
- * syncs all affected entities (request, item, users) into context in one
+ * syncs all affected entities (request, listing, users) into context in one
  * dispatch sequence — fully live, no refresh anywhere.
  */
 
@@ -26,15 +26,15 @@ export interface RequestView {
   /** Stored status + derived overdue. */
   effective: EffectiveRequestStatus
   statusMeta: (typeof STATUS_META)[EffectiveRequestStatus]
-  /** Always defined — views without an item are filtered out. */
-  item: Item
-  itemTitle: string
-  itemPhoto: string | null
+  /** Always defined — views without a listing are filtered out. */
+  listing: Listing
+  listingTitle: string
+  listingPhoto: string | null
   /** The other party in this request. */
   counterpart: User | undefined
   counterpartName: string
   counterpartAvatar: string | undefined
-  /** Schedule conflicts with other PENDING requests on the same item. */
+  /** Schedule conflicts with other PENDING requests on the same listing. */
   conflicts: ReturnType<typeof findScheduleConflicts>
   /** Review progress once returned. */
   review: ReturnType<typeof getReviewProgress> | null
@@ -44,32 +44,32 @@ export interface RequestView {
 
 function buildView(
   request: BorrowRequest,
-  items: readonly Item[],
+  listings: readonly Listing[],
   users: readonly User[],
   requests: readonly BorrowRequest[],
   reviews: readonly import('@/types').Review[],
   now: Date,
   currentUserId: string,
 ): RequestView | null {
-  const item = findById(items, request.itemId)
-  if (!item) return null
+  const listing = findById(listings, request.listingId)
+  if (!listing) return null
   const isBorrower = request.borrowerId === currentUserId
-  const counterpart = findById(users, isBorrower ? item.ownerId : request.borrowerId)
+  const counterpart = findById(users, isBorrower ? listing.ownerId : request.borrowerId)
   const effective = effectiveStatus(request, now)
   const reviewsForRequest = reviews.filter((r) => r.requestId === request.id)
 
   const review =
     request.status === 'returned' || request.status === 'reviewed'
-      ? getReviewProgress(reviewsForRequest, item.ownerId, request.borrowerId)
+      ? getReviewProgress(reviewsForRequest, listing.ownerId, request.borrowerId)
       : null
 
   return {
     request,
     effective,
     statusMeta: STATUS_META[effective],
-    item,
-    itemTitle: item.title,
-    itemPhoto: item.photos[0] ?? null,
+    listing,
+    listingTitle: listing.title,
+    listingPhoto: listing.photos[0] ?? null,
     counterpart,
     counterpartName: counterpart?.name ?? 'A neighbor',
     counterpartAvatar: counterpart?.avatarUrl,
@@ -94,7 +94,7 @@ export function useMyRequests() {
       .map((request) =>
         buildView(
           request,
-          state.items,
+          state.listings,
           state.users,
           state.requests,
           state.reviews,
@@ -103,11 +103,11 @@ export function useMyRequests() {
         ),
       )
       .filter((view): view is RequestView => view !== null)
-  }, [state.requests, state.items, state.users, state.reviews, now, currentUser])
+  }, [state.requests, state.listings, state.users, state.reviews, now, currentUser])
 
   const incoming = useMemo(() => {
     if (!currentUser) return []
-    return allViews.filter((view) => view.item.ownerId === currentUser.id)
+    return allViews.filter((view) => view.listing.ownerId === currentUser.id)
   }, [allViews, currentUser])
 
   const outgoing = useMemo(() => {
@@ -119,7 +119,7 @@ export function useMyRequests() {
   const applyResult = useCallback(
     (result: requestsApi.RequestMutationResult) => {
       dispatch({ type: 'REQUESTS_UPSERTED', requests: [result.request] })
-      if (result.item) dispatch({ type: 'ITEMS_UPSERTED', items: [result.item] })
+      if (result.listing) dispatch({ type: 'LISTINGS_UPSERTED', listings: [result.listing] })
       if (result.users.length > 0) dispatch({ type: 'USERS_UPSERTED', users: result.users })
       if (result.notifications.length > 0) {
         dispatch({ type: 'NOTIFICATIONS_APPENDED', notifications: result.notifications })

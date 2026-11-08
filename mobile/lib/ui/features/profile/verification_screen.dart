@@ -19,7 +19,7 @@ class VerificationScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
           const Text(
-            'Verified details earn trust points — 5 for your phone and 5 for your email. They also reassure neighbors before a first lend.',
+            'Verified details earn trust points — 4 for your phone, 3 for your email, and 3 more for a government ID check. They also reassure neighbors before a first lend or sale.',
           ),
           const SizedBox(height: 8),
           Text(

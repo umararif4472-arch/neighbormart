@@ -99,10 +99,11 @@ export function TrustMeter({ score, showBreakdown = false, className }: TrustMet
       {showBreakdown && (
         <dl className="mt-1 flex flex-col gap-1 text-xs">
           {[
-            ['On-time returns', score.breakdown.onTimeReturns, 40],
+            ['On-time returns', score.breakdown.onTimeReturns, 30],
             ['Reviews from neighbors', score.breakdown.reviews, 25],
+            ['Completed deals', score.breakdown.completedDeals, 15],
             ['Verified profile', score.breakdown.verification, 10],
-            ['Account age', score.breakdown.accountAge, 10],
+            ['Account age', score.breakdown.accountAge, 5],
             ['Responsiveness', score.breakdown.responsiveness, 15],
           ].map(([label, value, max]) => (
             <div key={label as string} className="flex items-center justify-between gap-3">

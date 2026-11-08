@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { Item, User } from '@/types'
+import type { Listing, ListingStatus, User } from '@/types'
 import { cn } from '@/utils/cn'
 import { createProjection, type ProjectedPoint } from '@/utils/mapProjection'
-import { categoryEmoji } from '@/utils/categoryMeta'
+import { listingEmoji, SECTION_META } from '@/utils/categoryMeta'
 import { formatDistance, haversineKm } from '@/utils/distance'
-import { ItemPhoto } from '@/components/items/ItemPhoto'
-import { Badge, availabilityTone } from '@/components/ui/Badge'
+import { ListingPhoto } from '@/components/listings/ListingPhoto'
+import { Badge, listingStatusTone } from '@/components/ui/Badge'
 
-export interface ItemMapProps {
-  items: Item[]
+export interface ListingMapProps {
+  listings: Listing[]
   usersById: (id: string) => User | undefined
   origin: { lat: number; lng: number } | null
   /** Radius filter in km (draws the truthful ring + clips pins). */
@@ -24,7 +24,7 @@ export interface ItemMapProps {
  * with uniform scale, so relative pin distances and the radius ring match
  * real-world km (see utils/mapProjection.ts, unit-tested).
  *
- * Clicking a pin selects it and opens a preview card linking to the item.
+ * Clicking a pin selects it and opens a preview card linking to the listing.
  * Fully keyboard accessible: pins are real <button> elements.
  */
 
@@ -42,29 +42,29 @@ const STREETS = [
 
 const MAP_BOUNDS = { width: 800, height: 600, padding: 48 }
 
-export function ItemMap({ items, usersById, origin, radiusKm, className }: ItemMapProps) {
+export function ListingMap({ listings, usersById, origin, radiusKm, className }: ListingMapProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const projection = useMemo(
     () =>
       createProjection(
-        items.map((i) => i.location),
+        listings.map((l) => l.location),
         origin,
         MAP_BOUNDS,
         radiusKm,
       ),
-    [items, origin, radiusKm],
+    [listings, origin, radiusKm],
   )
 
   const placed = useMemo(() => {
-    return items.map((item) => ({
-      item,
-      point: projection.project(item.location),
-      distanceKm: origin ? haversineKm(origin, item.location) : null,
+    return listings.map((listing) => ({
+      listing,
+      point: projection.project(listing.location),
+      distanceKm: origin ? haversineKm(origin, listing.location) : null,
     }))
-  }, [items, projection, origin])
+  }, [listings, projection, origin])
 
-  const selected = placed.find((p) => p.item.id === selectedId) ?? null
+  const selected = placed.find((p) => p.listing.id === selectedId) ?? null
   const originPoint = origin ? projection.project(origin) : null
 
   return (
@@ -78,7 +78,7 @@ export function ItemMap({ items, usersById, origin, radiusKm, className }: ItemM
         viewBox={`0 0 ${MAP_BOUNDS.width} ${MAP_BOUNDS.height}`}
         preserveAspectRatio="none"
         role="img"
-        aria-label={`Neighborhood map showing ${items.length} items${radiusKm ? ` within ${radiusKm} km` : ''}`}
+        aria-label={`Neighborhood map showing ${listings.length} listings${radiusKm ? ` within ${radiusKm} km` : ''}`}
         className="block h-full w-full"
       >
         {/* Canvas */}
@@ -151,15 +151,15 @@ export function ItemMap({ items, usersById, origin, radiusKm, className }: ItemM
           Buttons must NOT live inside <svg> (they collapse to 0×0 there);
           percentage coordinates align with the projection because the SVG
           stretches to fill this relative wrapper (preserveAspectRatio="none"). */}
-      {placed.map(({ item, point, distanceKm }) => (
+      {placed.map(({ listing, point, distanceKm }) => (
         <PinButton
-          key={item.id}
-          emoji={categoryEmoji(item.category)}
+          key={listing.id}
+          emoji={listingEmoji(listing)}
           point={point}
-          selected={item.id === selectedId}
-          dimmed={item.availability === 'unavailable'}
-          label={`${item.title} — ${item.availability}${distanceKm != null ? `, ${formatDistance(distanceKm)} away` : ''}`}
-          onClick={() => setSelectedId((prev) => (prev === item.id ? null : item.id))}
+          selected={listing.id === selectedId}
+          dimmed={listing.status === 'paused'}
+          label={`${listing.title} — ${STATUS_LABEL[listing.status]}${distanceKm != null ? `, ${formatDistance(distanceKm)} away` : ''}`}
+          onClick={() => setSelectedId((prev) => (prev === listing.id ? null : listing.id))}
         />
       ))}
 
@@ -169,14 +169,14 @@ export function ItemMap({ items, usersById, origin, radiusKm, className }: ItemM
           <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-terracotta-600 bg-white" />
           You
         </span>
-        <span>Pins show items near you — tap one for details</span>
+        <span>Pins show listings near you — tap one for details</span>
       </div>
 
       {/* Selected-item preview card */}
       {selected && (
         <MapPreviewCard
-          item={selected.item}
-          owner={usersById(selected.item.ownerId)}
+          listing={selected.listing}
+          owner={usersById(selected.listing.ownerId)}
           distanceKm={selected.distanceKm}
           onClose={() => setSelectedId(null)}
         />
@@ -235,13 +235,22 @@ function PinButton({
 }
 
 /** Bottom-sheet-style preview card over the map. */
+const STATUS_LABEL: Record<ListingStatus, string> = {
+  active: 'Available',
+  reserved: 'Reserved',
+  rented: 'Out now',
+  sold: 'Sold',
+  paused: 'Paused',
+  removed: 'Removed',
+}
+
 function MapPreviewCard({
-  item,
+  listing,
   owner,
   distanceKm,
   onClose,
 }: {
-  item: Item
+  listing: Listing
   owner: User | undefined
   distanceKm: number | null
   onClose: () => void
@@ -249,27 +258,27 @@ function MapPreviewCard({
   return (
     <div
       role="dialog"
-      aria-label={`${item.title} preview`}
+      aria-label={`${listing.title} preview`}
       className="absolute inset-x-3 bottom-3 z-30 flex gap-3 rounded-3xl border border-bark/10 bg-white p-3 shadow-xl"
     >
       <Link
-        to={`/item/${item.id}`}
+        to={`/listing/${listing.id}`}
         className="shrink-0 overflow-hidden rounded-2xl focus-visible:outline-2 focus-visible:outline-terracotta-600"
       >
-        <ItemPhoto
-          src={item.photos[0]}
-          alt={item.title}
-          category={item.category}
+        <ListingPhoto
+          src={listing.photos[0]}
+          alt={listing.title}
+          emoji={listingEmoji(listing)}
           className="h-20 w-20"
         />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-start justify-between gap-2">
           <Link
-            to={`/item/${item.id}`}
+            to={`/listing/${listing.id}`}
             className="font-display text-sm font-semibold leading-snug text-bark hover:text-terracotta-700 focus-visible:outline-2 focus-visible:outline-terracotta-600"
           >
-            {item.title}
+            {listing.title}
           </Link>
           <button
             type="button"
@@ -281,20 +290,18 @@ function MapPreviewCard({
           </button>
         </div>
         <p className="truncate text-xs text-bark-light">
-          {item.category}
+          {listing.section === 'items'
+            ? listing.details.category
+            : SECTION_META[listing.section].label}
           {owner ? ` · ${owner.name}` : ''}
           {distanceKm != null ? ` · ${formatDistance(distanceKm)}` : ''}
         </p>
         <div className="mt-auto flex items-center gap-2">
-          <Badge tone={availabilityTone(item.availability)} dot>
-            {item.availability === 'available'
-              ? 'Available'
-              : item.availability === 'borrowed'
-                ? 'Borrowed'
-                : 'Unavailable'}
+          <Badge tone={listingStatusTone(listing.status)} dot>
+            {STATUS_LABEL[listing.status]}
           </Badge>
           <Link
-            to={`/item/${item.id}`}
+            to={`/listing/${listing.id}`}
             className="text-xs font-semibold text-terracotta-700 underline-offset-2 hover:underline"
           >
             View details →

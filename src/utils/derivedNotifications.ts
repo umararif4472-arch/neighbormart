@@ -1,4 +1,4 @@
-import type { AppNotification, BorrowRequest, Item, Review, User } from '@/types'
+import type { AppNotification, BorrowRequest, Listing, Review, User } from '@/types'
 import { formatDate, formatDueLabel, relativeTime } from './dates'
 import { findById } from './collections'
 import { effectiveStatus, getReviewProgress, isDueSoon, isOverdue } from './requestLifecycle'
@@ -27,7 +27,7 @@ export interface DerivedNotification {
   body: string
   createdAt: string
   requestId?: string
-  itemId?: string
+  listingId?: string
   /** Stored notifications carry a read flag; derived ones act as unread. */
   read?: boolean
   /** Whether this row came from the store (message pushes) or was derived. */
@@ -37,7 +37,7 @@ export interface DerivedNotification {
 export interface DerivedFeedInput {
   userId: string
   requests: readonly BorrowRequest[]
-  items: readonly Item[]
+  listings: readonly Listing[]
   users: readonly User[]
   reviews: readonly Review[]
   /** Stored push notifications (messages) to merge into the feed. */
@@ -59,31 +59,31 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
   feed: DerivedNotification[]
   attentionCount: number
 } {
-  const { userId, requests, items, users, reviews, storedNotifications } = input
+  const { userId, requests, listings, users, reviews, storedNotifications } = input
   const now = input.now ?? new Date()
   const derived: DerivedNotification[] = []
 
   for (const request of requests) {
-    const item = findById(items, request.itemId)
-    if (!item) continue
-    const isLender = item.ownerId === userId
+    const listing = findById(listings, request.listingId)
+    if (!listing) continue
+    const isLender = listing.ownerId === userId
     const isBorrower = request.borrowerId === userId
     if (!isLender && !isBorrower) continue
 
     const borrower = findById(users, request.borrowerId)
-    const owner = findById(users, item.ownerId)
+    const owner = findById(users, listing.ownerId)
     const counterpart = isLender ? borrower : owner
     const other = firstName(counterpart?.name)
     const status = effectiveStatus(request, now)
 
     const push = (
-      partial: Omit<DerivedNotification, 'id' | 'requestId' | 'itemId'> & { suffix: string },
+      partial: Omit<DerivedNotification, 'id' | 'requestId' | 'listingId'> & { suffix: string },
     ) => {
       const { suffix, ...rest } = partial
       derived.push({
         id: `dnf-${request.id}-${suffix}`,
         requestId: request.id,
-        itemId: item.id,
+        listingId: listing.id,
         ...rest,
       })
     }
@@ -96,7 +96,7 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
             type: 'request-received',
             kind: 'action',
             title: 'New borrow request',
-            body: `${borrower?.name ?? 'A neighbor'} wants to borrow your ${item.title}.`,
+            body: `${borrower?.name ?? 'A neighbor'} wants to borrow your ${listing.title}.`,
             createdAt: request.createdAt,
           })
         } else {
@@ -105,7 +105,7 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
             type: 'request-received',
             kind: 'info',
             title: `Waiting on ${other}`,
-            body: `Your request for ${item.title} is still pending.`,
+            body: `Your request for ${listing.title} is still pending.`,
             createdAt: request.createdAt,
           })
         }
@@ -117,8 +117,8 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
           kind: isLender ? 'action' : 'info',
           title: isLender ? 'Confirm pickup' : 'Request approved 🎉',
           body: isLender
-            ? `Once ${other} picks up the ${item.title}, confirm it here — the clock starts then.`
-            : `${other} approved the ${item.title} — plan pickup via messages.`,
+            ? `Once ${other} picks up the ${listing.title}, confirm it here — the clock starts then.`
+            : `${other} approved the ${listing.title} — plan pickup via messages.`,
           createdAt: request.respondedAt ?? request.createdAt,
         })
         break
@@ -129,7 +129,7 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
             suffix: 'overdue',
             type: 'overdue',
             kind: 'action',
-            title: isLender ? `Your ${item.title} is overdue` : `${item.title} is overdue`,
+            title: isLender ? `Your ${listing.title} is overdue` : `${listing.title} is overdue`,
             body: isLender
               ? `${borrower?.name ?? 'The borrower'} is past the return date (${formatDate(request.dueAt!)}). Message them or report an issue.`
               : `${formatDueLabel(request.dueAt!)} — return it or check in with ${other}.`,
@@ -140,10 +140,10 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
             suffix: 'due-soon',
             type: 'return-reminder',
             kind: 'info',
-            title: isLender ? `${item.title} due back soon` : 'Return reminder',
+            title: isLender ? `${listing.title} due back soon` : 'Return reminder',
             body: isLender
-              ? `${other} should return your ${item.title} by ${formatDate(request.dueAt!)}.`
-              : `${item.title} — ${formatDueLabel(request.dueAt!)}. Plan it with ${other}.`,
+              ? `${other} should return your ${listing.title} by ${formatDate(request.dueAt!)}.`
+              : `${listing.title} — ${formatDueLabel(request.dueAt!)}. Plan it with ${other}.`,
             createdAt: request.dueAt!,
           })
         } else {
@@ -155,7 +155,7 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
       case 'returned': {
         const progress = getReviewProgress(
           reviews.filter((r) => r.requestId === request.id),
-          item.ownerId,
+          listing.ownerId,
           request.borrowerId,
         )
         const iReviewed = isLender ? progress.lenderReviewed : progress.borrowerReviewed
@@ -166,7 +166,7 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
             type: 'review-requested',
             kind: 'action',
             title: `Review your ${isLender ? 'lend' : 'borrow'}`,
-            body: `How did the ${item.title} exchange with ${other} go? Reviews feed their trust score.`,
+            body: `How did the ${listing.title} exchange with ${other} go? Reviews feed their trust score.`,
             createdAt: request.returnedAt ?? request.createdAt,
           })
         } else if (!counterpartReviewed) {
@@ -175,7 +175,7 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
             type: 'review-received',
             kind: 'info',
             title: 'Thanks for your review!',
-            body: `Waiting for ${other} to review the ${item.title} exchange too.`,
+            body: `Waiting for ${other} to review the ${listing.title} exchange too.`,
             createdAt: request.returnedAt ?? request.createdAt,
           })
         } else {
@@ -184,7 +184,7 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
             type: 'return-confirmed',
             kind: 'info',
             title: 'All wrapped up 🌟',
-            body: `The ${item.title} borrow is returned and reviewed by both of you.`,
+            body: `The ${listing.title} borrow is returned and reviewed by both of you.`,
             createdAt: request.returnedAt ?? request.createdAt,
           })
         }
@@ -197,7 +197,7 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
             type: 'request-declined',
             kind: 'info',
             title: 'Declined this time',
-            body: `${other} can't lend the ${item.title} for those dates. No harm done — try different days.`,
+            body: `${other} can't lend the ${listing.title} for those dates. No harm done — try different days.`,
             createdAt: request.respondedAt ?? request.createdAt,
           })
         }
@@ -208,7 +208,7 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
           type: 'request-declined',
           kind: 'info',
           title: 'Request cancelled',
-          body: `The ${item.title} request was withdrawn before approval.`,
+          body: `The ${listing.title} request was withdrawn before approval.`,
           createdAt: request.respondedAt ?? request.createdAt,
         })
         break
@@ -239,7 +239,7 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
       body: `${reviewer?.name ?? 'A neighbor'}: "${review.comment.slice(0, 80)}${review.comment.length > 80 ? '…' : ''}"`,
       createdAt: review.createdAt,
       requestId: review.requestId,
-      itemId: review.itemId,
+      listingId: review.listingId,
     })
   }
 
@@ -254,7 +254,7 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
       body: n.body,
       createdAt: n.createdAt,
       requestId: n.requestId,
-      itemId: n.itemId,
+      listingId: n.listingId,
       read: n.read,
       stored: true,
     }))

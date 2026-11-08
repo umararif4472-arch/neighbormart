@@ -1,22 +1,22 @@
 import { useState } from 'react'
 import { cn } from '@/utils/cn'
-import { categoryEmoji } from '@/utils/categoryMeta'
 
-export interface ItemPhotoProps {
+export interface ListingPhotoProps {
   src: string | undefined
   alt: string
-  category: string
+  /** Emoji shown on the fallback tile when there is no usable photo. */
+  emoji: string
   className?: string
   /** Size class for the fallback emoji. */
   emojiClassName?: string
 }
 
 /**
- * Item photo with a warm category-emoji fallback tile when the photo is
- * missing or fails to load (zero-photo items are a real state — Leo's
- * camp stove ships with none).
+ * Listing photo with a warm emoji fallback tile when the photo is missing
+ * or fails to load (zero-photo listings are a real state — Leo's camp
+ * stove ships with none).
  */
-export function ItemPhoto({ src, alt, category, className, emojiClassName }: ItemPhotoProps) {
+export function ListingPhoto({ src, alt, emoji, className, emojiClassName }: ListingPhotoProps) {
   const [failed, setFailed] = useState(false)
 
   if (!src || failed) {
@@ -30,7 +30,7 @@ export function ItemPhoto({ src, alt, category, className, emojiClassName }: Ite
         )}
       >
         <span aria-hidden className={cn('text-4xl', emojiClassName)}>
-          {categoryEmoji(category)}
+          {emoji}
         </span>
       </div>
     )

@@ -170,10 +170,14 @@ export interface ScheduleConflict {
  * double-booking (the service re-checks at approve time as the backstop).
  */
 export function findScheduleConflicts(
-  candidate: { id?: string; itemId: string; period: { start: ISODateString; end: ISODateString } },
+  candidate: {
+    id?: string
+    listingId: string
+    period: { start: ISODateString; end: ISODateString }
+  },
   requests: ReadonlyArray<{
     id: string
-    itemId: string
+    listingId: string
     status: Status
     period: { start: ISODateString; end: ISODateString }
   }>,
@@ -182,7 +186,7 @@ export function findScheduleConflicts(
     .filter(
       (other) =>
         other.id !== candidate.id &&
-        other.itemId === candidate.itemId &&
+        other.listingId === candidate.listingId &&
         other.status === 'pending' &&
         periodsOverlap(other.period, candidate.period),
     )

@@ -81,7 +81,7 @@ export function ReviewModal({ view, viewerRole, open, onClose }: ReviewModalProp
           </span>
           <p className="text-sm leading-relaxed text-bark-light">
             {done.pairComplete
-              ? `That wraps up the ${view.itemTitle} borrow — you both reviewed, so it's fully closed. Your stars now feed ${counterpartName}'s trust score.`
+              ? `That wraps up the ${view.listingTitle} borrow — you both reviewed, so it's fully closed. Your stars now feed ${counterpartName}'s trust score.`
               : `Thanks! ${counterpartName} gets your stars right away. The borrow stays visible in "reviews pending" until they review you too.`}
           </p>
           <Button onClick={onClose}>Done</Button>
@@ -92,8 +92,8 @@ export function ReviewModal({ view, viewerRole, open, onClose }: ReviewModalProp
             <Avatar name={view.counterpartName} src={view.counterpartAvatar} size="sm" />
             <p className="text-xs leading-relaxed text-bark-light">
               You were the <span className="font-semibold text-bark">{viewerRole}</span> on{' '}
-              <span className="font-semibold text-bark">{view.itemTitle}</span>. Your review feeds{' '}
-              {counterpartName}&apos;s trust score — theirs will feed yours.
+              <span className="font-semibold text-bark">{view.listingTitle}</span>. Your review
+              feeds {counterpartName}&apos;s trust score — theirs will feed yours.
             </p>
           </div>
 

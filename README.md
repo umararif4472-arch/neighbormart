@@ -20,10 +20,11 @@ processing in this release**; a clean service interface leaves room to add
 JazzCash / Easypaisa / Stripe later.
 
 > **Status:** working prototype being rebuilt into the marketplace above,
-> in phases (see [Roadmap](#roadmap)). Today the web and Flutter apps run
-> end-to-end against an in-memory mock service layer with the original
-> lending flow; the multi-section data model, Firebase backend, and
-> section experiences land in Phases 2–5. Originally prototyped as
+> in phases (see [Roadmap](#roadmap)). Phases 1–2 are done: the web app
+> runs end-to-end on the unified multi-section `Listing` model against
+> the in-memory mock service layer, and Flutter mirrors the model and
+> trust formula (its screens migrate in Phase 5). The Firebase backend
+> and section experiences land in Phases 3–5. Originally prototyped as
 > "Borrow Don't Buy"; renamed to **NeighborMart** on 2026-11-08 because
 > the old name only described lending.
 
@@ -47,9 +48,8 @@ This repo has two apps for the same product:
 - In-app messages per request, notifications, reviews, report-an-issue
 - Dashboard for incoming/outgoing requests; profiles with trust breakdown
 
-**Coming with the marketplace rebuild (Phases 2–7)**
+**Coming with the marketplace rebuild (Phases 3–7)**
 
-- Unified `Listing` model across all four sections (see Roadmap)
 - Firebase Auth (Google Sign-In + email fallback), Firestore, Storage
 - Multi-photo upload with compression, reorder, and cover photo
 - Section-specific browse pages, filters, cards, and listing wizards
@@ -135,15 +135,15 @@ on scores.
 
 ```text
 src/
-├ types/          # Data models (User, Item → Listing in Phase 2, …)
+├ types/          # Data models (User, Listing, BorrowRequest, Review, …)
 ├ utils/          # Pure logic — trustScore, dates, distance, filters (unit-tested)
 ├ data/seed/      # Mock seed data (builders with relative dates)
 ├ services/       # Data-access layer: in-memory "DB" + async API enforcing
 │                   #   all business rules (the layer Firebase replaces)
 ├ context/        # AppProvider + ToastProvider (global state, hydration)
-├ hooks/          # useItems, useFilteredItems, useTrustScore(s), useRequests, …
-├ components/     # Presentational kit: ui/, items/, reviews/, layout/
-└ features/       # Pages: landing, browse (+map), item-detail, list-item,
+├ hooks/          # useListings, useFilteredListings, useTrustScore(s), useRequests, …
+├ components/     # Presentational kit: ui/, listings/, reviews/, layout/
+└ features/       # Pages: landing, browse (+map), listing-detail, list-item,
                   #   dashboard, messages, profile, trust, not-found
 docs/             # Design record — implementation-plan.md (Flutter plan)
 mobile/           # Flutter app (same product, same seed data)
@@ -152,9 +152,10 @@ mobile/           # Flutter app (same product, same seed data)
 ### Key design decisions
 
 - **Trust score is a pure function** (`utils/trustScore.ts`): history in →
-  0–100 score + tier out, never stored. Weights today: on-time returns
-  40 · reviews 25 · verification 10 · account age 10 · responsiveness 15.
-  Phase 2 extends it to sellers and renters (completed deals, response time).
+  0–100 score + tier out, never stored. Weights: on-time returns 30 ·
+  reviews 25 · completed deals 15 · verification 10 (phone 4 / email 3 /
+  ID 3) · account age 5 · responsiveness 15. The completed-deals factor
+  lets sellers and renters build trust without ever borrowing.
 - **The service layer is the mock server.** All mutations validate there
   (ownership, state transitions, date overlaps, one review per deal), so
   client validation can't drift into data corruption. Reads deep-clone,
@@ -177,8 +178,9 @@ mobile/           # Flutter app (same product, same seed data)
 
 - [x] **Phase 1 — Clean repo:** dead code out, ESLint + Prettier, docs,
       LICENSE, env template, this README
-- [ ] **Phase 2 — Data model:** unified `Listing` (items / vehicles /
+- [x] **Phase 2 — Data model:** unified `Listing` (items / vehicles /
       properties / arenas), extended trust score, realistic seed data
+      (Lahore, PKR); Flutter model + trust mirror
 - [ ] **Phase 3 — Real backend:** Firebase Auth (Google Sign-In),
       Firestore, Storage, security rules, indexes; mirrored in Flutter
 - [ ] **Phase 4 — Photo upload:** multi-photo, compression, reorder,

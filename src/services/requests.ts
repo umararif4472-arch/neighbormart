@@ -1,10 +1,18 @@
-import type { AppNotification, BorrowPeriod, BorrowRequest, Item, User } from '@/types'
+import type { AppNotification, BorrowPeriod, BorrowRequest, Listing, User } from '@/types'
 import { periodsOverlap } from '@/utils/dates'
 import { assertTransition, getReviewProgress } from '@/utils/requestLifecycle'
 import { validateBorrowPeriod } from '@/utils/validation'
 import { ApiError } from './errors'
 import { createNotification } from './notifications'
-import { clone, findItem, findRequest, findUser, getStore, nextId, simulateLatency } from './store'
+import {
+  clone,
+  findListing,
+  findRequest,
+  findUser,
+  getStore,
+  nextId,
+  simulateLatency,
+} from './store'
 
 /**
  * Borrow request service — mutations flow through the lifecycle state
@@ -14,17 +22,21 @@ import { clone, findItem, findRequest, findUser, getStore, nextId, simulateLaten
  *   pending → approved → active → returned → reviewed
  *   pending → declined / cancelled       active + past due ⇒ overdue (derived)
  *
+ * Phase 2 scope: requests exist for items-section listings (the original
+ * borrow/rent-by-day flow). Vehicle/property/arena booking flows build on
+ * this same service boundary in Phase 5.
+ *
  * Notifications for lifecycle events are NOT stored — the dashboard derives
  * them live from request state (utils/derivedNotifications.ts). Only
  * push-like events that can't be derived (chat messages, issue reports)
  * create stored notifications.
  */
 
-/** Statuses that reserve an item's calendar. */
+/** Statuses that reserve a listing's calendar. */
 const BUSY_STATUSES: BorrowRequest['status'][] = ['pending', 'approved', 'active']
 
 export interface CreateRequestInput {
-  itemId: string
+  listingId: string
   borrowerId: string
   period: BorrowPeriod
   note?: string
@@ -33,8 +45,8 @@ export interface CreateRequestInput {
 /** Everything a mutation might touch, so context can sync in one dispatch. */
 export interface RequestMutationResult {
   request: BorrowRequest
-  /** Updated when a transition changes availability (pickup/return). */
-  item: Item | null
+  /** Updated when a transition changes listing status (pickup/return). */
+  listing: Listing | null
   /** Updated when a transition changes user stats (returns). */
   users: User[]
   /** Stored push notifications (issue reports; lifecycle events are derived). */
@@ -53,36 +65,42 @@ export async function getRequestsForUser(userId: string): Promise<BorrowRequest[
   const store = getStore()
   const visible = store.requests.filter((request) => {
     if (request.borrowerId === userId) return true
-    const item = store.items.find((i) => i.id === request.itemId)
-    return item?.ownerId === userId
+    const listing = store.listings.find((l) => l.id === request.listingId)
+    return listing?.ownerId === userId
   })
   // Newest first.
   visible.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
   return clone(visible)
 }
 
-/** All requests for one item (item detail: "expected back"). */
-export async function getRequestsForItem(itemId: string): Promise<BorrowRequest[]> {
+/** All requests for one listing (detail page: "expected back"). */
+export async function getRequestsForListing(listingId: string): Promise<BorrowRequest[]> {
   await simulateLatency(80, 200)
-  const list = getStore().requests.filter((r) => r.itemId === itemId)
+  const list = getStore().requests.filter((r) => r.listingId === listingId)
   return clone(list)
 }
 
 export async function createRequest(input: CreateRequestInput): Promise<RequestMutationResult> {
   await simulateLatency(300, 600)
 
-  const item = findItem(input.itemId)
+  const listing = findListing(input.listingId)
   const borrower = findUser(input.borrowerId)
 
-  if (item.ownerId === borrower.id) {
-    throw new ApiError('invalid', 'You can\u2019t request your own item — it\u2019s already yours!')
+  if (listing.section !== 'items') {
+    throw new ApiError(
+      'invalid',
+      'Booking for this section arrives with its own flow — this listing cannot be requested yet.',
+    )
   }
-  if (item.availability !== 'available') {
+  if (listing.ownerId === borrower.id) {
+    throw new ApiError('invalid', 'You can’t request your own listing — it’s already yours!')
+  }
+  if (listing.status !== 'active') {
     throw new ApiError(
       'conflict',
-      item.availability === 'borrowed'
-        ? `"${item.title}" is out with a neighbor right now.`
-        : `"${item.title}" isn\u2019t taking requests at the moment.`,
+      listing.status === 'rented'
+        ? `"${listing.title}" is out with a neighbor right now.`
+        : `"${listing.title}" isn’t taking requests at the moment.`,
     )
   }
 
@@ -90,11 +108,11 @@ export async function createRequest(input: CreateRequestInput): Promise<RequestM
   const validation = validateBorrowPeriod(
     input.period.start.slice(0, 10),
     input.period.end.slice(0, 10),
-    item.borrowTerms.maxDurationDays,
+    listing.details.maxDurationDays,
   )
   if (!validation.valid) {
     const first = Object.values(validation.errors).find(Boolean)
-    throw new ApiError('invalid', first ?? 'Those dates don\u2019t work for this item.')
+    throw new ApiError('invalid', first ?? 'Those dates don’t work for this listing.')
   }
 
   const note = (input.note ?? '').trim().slice(0, 500)
@@ -102,7 +120,7 @@ export async function createRequest(input: CreateRequestInput): Promise<RequestM
   // Overlap guard: no double-booking the same calendar days.
   const conflict = getStore().requests.some(
     (request) =>
-      request.itemId === item.id &&
+      request.listingId === listing.id &&
       BUSY_STATUSES.includes(request.status) &&
       periodsOverlap(request.period, input.period),
   )
@@ -115,7 +133,7 @@ export async function createRequest(input: CreateRequestInput): Promise<RequestM
 
   const request: BorrowRequest = {
     id: nextId('req'),
-    itemId: item.id,
+    listingId: listing.id,
     borrowerId: borrower.id,
     period: { ...input.period },
     note,
@@ -128,7 +146,7 @@ export async function createRequest(input: CreateRequestInput): Promise<RequestM
   }
   getStore().requests.push(request)
 
-  return { request: clone(request), item: null, users: [], notifications: [] }
+  return { request: clone(request), listing: null, users: [], notifications: [] }
 }
 
 export async function respondToRequest(
@@ -139,9 +157,9 @@ export async function respondToRequest(
   await simulateLatency(200, 450)
 
   const request = findRequest(requestId)
-  const item = findItem(request.itemId)
+  const listing = findListing(request.listingId)
 
-  if (item.ownerId !== actorId) {
+  if (listing.ownerId !== actorId) {
     throw new ApiError('forbidden', 'Only the owner can respond to this request.')
   }
 
@@ -156,14 +174,14 @@ export async function respondToRequest(
     const collision = getStore().requests.some(
       (other) =>
         other.id !== request.id &&
-        other.itemId === item.id &&
+        other.listingId === listing.id &&
         BUSY_STATUSES.includes(other.status) &&
         periodsOverlap(other.period, request.period),
     )
     if (collision) {
       throw new ApiError(
         'conflict',
-        'Another request already holds those dates for this item. Decline it first or pick different days.',
+        'Another request already holds those dates for this listing. Decline it first or pick different days.',
       )
     }
   }
@@ -172,7 +190,7 @@ export async function respondToRequest(
   request.respondedAt = new Date().toISOString()
   if (decision === 'approved') request.dueAt = request.period.end
 
-  return { request: clone(request), item: null, users: [], notifications: [] }
+  return { request: clone(request), listing: null, users: [], notifications: [] }
 }
 
 export async function confirmPickup(
@@ -182,8 +200,8 @@ export async function confirmPickup(
   await simulateLatency(200, 450)
 
   const request = findRequest(requestId)
-  const item = findItem(request.itemId)
-  const owner = findUser(item.ownerId)
+  const listing = findListing(request.listingId)
+  const owner = findUser(listing.ownerId)
   const borrower = findUser(request.borrowerId)
 
   if (actorId !== owner.id && actorId !== borrower.id) {
@@ -196,9 +214,10 @@ export async function confirmPickup(
   }
 
   request.status = 'active'
-  item.availability = 'borrowed'
+  listing.status = 'rented'
+  listing.updatedAt = new Date().toISOString()
 
-  return { request: clone(request), item: clone(item), users: [], notifications: [] }
+  return { request: clone(request), listing: clone(listing), users: [], notifications: [] }
 }
 
 export async function markReturned(
@@ -208,8 +227,8 @@ export async function markReturned(
   await simulateLatency(200, 450)
 
   const request = findRequest(requestId)
-  const item = findItem(request.itemId)
-  const owner = findUser(item.ownerId)
+  const listing = findListing(request.listingId)
+  const owner = findUser(listing.ownerId)
   const borrower = findUser(request.borrowerId)
 
   if (actorId !== owner.id && actorId !== borrower.id) {
@@ -224,19 +243,23 @@ export async function markReturned(
   const now = new Date().toISOString()
   request.status = 'returned'
   request.returnedAt = now
-  item.availability = 'available'
+  listing.status = 'active'
+  listing.updatedAt = now
 
   // The on-time/late split is what feeds the trust score — this is the
   // moment the score's inputs change (visible on profiles immediately).
+  // A completed rent-type deal also counts as a hosted rental for the
+  // owner, so renters/owners build completed-deal trust too.
   const onTime = request.dueAt ? Date.parse(now) <= Date.parse(request.dueAt) + 86_399_000 : true
   borrower.stats.successfulBorrows += 1
   if (onTime) borrower.stats.onTimeReturns += 1
   else borrower.stats.lateReturns += 1
   owner.stats.successfulLends += 1
+  if (listing.listingType === 'rent') owner.stats.rentalsHosted += 1
 
   return {
     request: clone(request),
-    item: clone(item),
+    listing: clone(listing),
     users: [clone(owner), clone(borrower)],
     notifications: [],
   }
@@ -250,11 +273,11 @@ export async function markReturned(
  */
 export function maybeCompleteReview(requestId: string): BorrowRequest | null {
   const request = findRequest(requestId)
-  const item = getStore().items.find((i) => i.id === request.itemId)
-  if (!item || request.status !== 'returned') return null
+  const listing = getStore().listings.find((l) => l.id === request.listingId)
+  if (!listing || request.status !== 'returned') return null
 
   const existing = getStore().reviews.filter((r) => r.requestId === requestId)
-  if (!getReviewProgress(existing, item.ownerId, request.borrowerId).allReviewed) return null
+  if (!getReviewProgress(existing, listing.ownerId, request.borrowerId).allReviewed) return null
 
   const transition = assertTransition(request.status, 'reviewed')
   if (!transition.ok) return null
@@ -279,7 +302,7 @@ export async function cancelRequest(
   }
 
   request.status = 'cancelled'
-  return { request: clone(request), item: null, users: [], notifications: [] }
+  return { request: clone(request), listing: null, users: [], notifications: [] }
 }
 
 /**
@@ -291,8 +314,8 @@ export async function reportIssue(input: ReportIssueInput): Promise<RequestMutat
   await simulateLatency(200, 450)
 
   const request = findRequest(input.requestId)
-  const item = findItem(request.itemId)
-  const owner = findUser(item.ownerId)
+  const listing = findListing(request.listingId)
+  const owner = findUser(listing.ownerId)
   const borrower = findUser(request.borrowerId)
 
   if (input.actorId !== owner.id && input.actorId !== borrower.id) {
@@ -318,9 +341,9 @@ export async function reportIssue(input: ReportIssueInput): Promise<RequestMutat
     recipientId,
     'issue-reported',
     'Issue reported on a borrow',
-    `${reporter.name} flagged "${request.issue.reason}" on the ${item.title} borrow — please check your messages.`,
-    { requestId: request.id, itemId: item.id },
+    `${reporter.name} flagged "${request.issue.reason}" on the ${listing.title} borrow — please check your messages.`,
+    { requestId: request.id, listingId: listing.id },
   )
 
-  return { request: clone(request), item: null, users: [], notifications: [notification] }
+  return { request: clone(request), listing: null, users: [], notifications: [notification] }
 }

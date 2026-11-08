@@ -67,9 +67,10 @@ void main() {
       expect(before, 0);
       s.verifyEmail();
       final after = s.trustFor(s.currentUser).breakdown.verification;
-      expect(after, before + 5);
+      // Phase 2 split: email is worth 3, phone 4 (ID would add 3 more).
+      expect(after, before + 3);
       s.verifyPhone();
-      expect(s.trustFor(s.currentUser).breakdown.verification, 10);
+      expect(s.trustFor(s.currentUser).breakdown.verification, 7);
     });
 
     test('updateProfile saves name, bio, neighborhood', () {

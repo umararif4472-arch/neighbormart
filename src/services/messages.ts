@@ -31,11 +31,11 @@ export async function sendMessage(
   if (trimmed.length > 1000) throw new ApiError('invalid', 'Messages max out at 1000 characters.')
 
   const store = getStore()
-  const item = store.items.find((i) => i.id === request.itemId)
-  if (!item) throw new ApiError('not-found', 'This thread\u2019s item no longer exists.')
+  const listing = store.listings.find((l) => l.id === request.listingId)
+  if (!listing) throw new ApiError('not-found', 'This thread\u2019s listing no longer exists.')
 
   const isBorrower = request.borrowerId === senderId
-  const isLender = item.ownerId === senderId
+  const isLender = listing.ownerId === senderId
   if (!isBorrower && !isLender) {
     throw new ApiError('forbidden', 'Only the two neighbors in this request can chat here.')
   }
@@ -50,14 +50,14 @@ export async function sendMessage(
   store.messages.push(message)
 
   // Notify the other party (mock push).
-  const recipientId = isBorrower ? item.ownerId : request.borrowerId
+  const recipientId = isBorrower ? listing.ownerId : request.borrowerId
   const senderName = store.users.find((u) => u.id === senderId)?.name ?? 'A neighbor'
   const notification = createNotification(
     recipientId,
     'message-received',
     `New message from ${senderName}`,
     trimmed.slice(0, 80),
-    { requestId, itemId: item.id },
+    { requestId, listingId: listing.id },
   )
 
   return { message: clone(message), notifications: [notification] }

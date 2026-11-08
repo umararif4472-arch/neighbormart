@@ -121,6 +121,8 @@ class AppState extends ChangeNotifier {
         reviewRatings: reviewsFor(user.id).map((r) => r.rating).toList(),
         phoneVerified: user.phoneVerified,
         emailVerified: user.emailVerified,
+        idVerified: user.idVerified,
+        completedDeals: user.stats.completedDeals,
         accountAgeDays: ageDays < 0 ? 0 : ageDays,
         responseRate: user.responseRate,
       ),

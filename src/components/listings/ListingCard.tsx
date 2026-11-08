@@ -1,14 +1,16 @@
 import { Link } from 'react-router-dom'
-import type { Item, TrustTierName, User } from '@/types'
+import type { Listing, ListingStatus, TrustTierName, User } from '@/types'
 import { cn } from '@/utils/cn'
 import { formatDistance } from '@/utils/distance'
+import { formatMoney, formatPrice } from '@/utils/money'
+import { listingEmoji } from '@/utils/categoryMeta'
 import { Avatar } from '@/components/ui/Avatar'
-import { Badge, availabilityTone } from '@/components/ui/Badge'
+import { Badge, listingStatusTone } from '@/components/ui/Badge'
 import { TrustBadge } from '@/components/ui/Trust'
-import { ItemPhoto } from './ItemPhoto'
+import { ListingPhoto } from './ListingPhoto'
 
-export interface ItemCardProps {
-  item: Item
+export interface ListingCardProps {
+  listing: Listing
   owner: User | undefined
   /** The owner's CURRENT trust tier, computed by the caller (useTrustScore). */
   ownerTier: TrustTierName | null
@@ -17,14 +19,40 @@ export interface ItemCardProps {
   className?: string
 }
 
-const AVAILABILITY_LABEL: Record<Item['availability'], string> = {
-  available: 'Available',
-  borrowed: 'Borrowed',
-  unavailable: 'Unavailable',
+const STATUS_LABEL: Record<ListingStatus, string> = {
+  active: 'Available',
+  reserved: 'Reserved',
+  rented: 'Out now',
+  sold: 'Sold',
+  paused: 'Paused',
+  removed: 'Removed',
 }
 
-/** Grid card for browse + landing live feed + profiles. */
-export function ItemCard({ item, owner, ownerTier, distanceKm, className }: ItemCardProps) {
+/** One-line section-specific subtitle under the title. */
+function subtitle(listing: Listing): string {
+  switch (listing.section) {
+    case 'items':
+      return listing.details.category
+    case 'vehicles':
+      return `${listing.details.make} ${listing.details.model} · ${listing.details.year}`
+    case 'properties': {
+      const d = listing.details
+      const beds = d.bedrooms != null ? `${d.bedrooms} bed · ` : ''
+      return `${beds}${d.areaSize} ${d.areaUnit} · ${listing.location.area}`
+    }
+    case 'arenas':
+      return listing.details.sportTypes.join(' · ')
+  }
+}
+
+/** Grid card for browse, section pages, landing live feed, and profiles. */
+export function ListingCard({
+  listing,
+  owner,
+  ownerTier,
+  distanceKm,
+  className,
+}: ListingCardProps) {
   return (
     <article
       className={cn(
@@ -34,21 +62,21 @@ export function ItemCard({ item, owner, ownerTier, distanceKm, className }: Item
       )}
     >
       <Link
-        to={`/item/${item.id}`}
+        to={`/listing/${listing.id}`}
         className="relative block focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-terracotta-600"
       >
-        <ItemPhoto
-          src={item.photos[0]}
-          alt={item.title}
-          category={item.category}
+        <ListingPhoto
+          src={listing.photos[0]}
+          alt={listing.title}
+          emoji={listingEmoji(listing)}
           className="aspect-[4/3] w-full"
         />
         <Badge
-          tone={availabilityTone(item.availability)}
+          tone={listingStatusTone(listing.status)}
           dot
           className="absolute left-3 top-3 shadow-sm"
         >
-          {AVAILABILITY_LABEL[item.availability]}
+          {STATUS_LABEL[listing.status]}
         </Badge>
         {distanceKm != null && (
           <span className="absolute bottom-3 right-3 rounded-full bg-bark/75 px-2 py-0.5 text-xs font-semibold text-cream backdrop-blur-sm">
@@ -59,12 +87,12 @@ export function ItemCard({ item, owner, ownerTier, distanceKm, className }: Item
 
       <div className="flex flex-1 flex-col gap-2.5 p-4">
         <Link
-          to={`/item/${item.id}`}
+          to={`/listing/${listing.id}`}
           className="font-display text-base font-semibold leading-snug text-bark transition-colors hover:text-terracotta-700 focus-visible:outline-2 focus-visible:outline-terracotta-600"
         >
-          {item.title}
+          {listing.title}
         </Link>
-        <p className="text-xs font-medium text-bark-light">{item.category}</p>
+        <p className="text-xs font-medium text-bark-light">{subtitle(listing)}</p>
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
           {owner ? (
@@ -85,12 +113,13 @@ export function ItemCard({ item, owner, ownerTier, distanceKm, className }: Item
         </div>
 
         <p className="text-xs font-semibold text-moss-700">
-          {item.borrowTerms.dailyFee != null
-            ? `$${item.borrowTerms.dailyFee}/day`
-            : 'Free to borrow'}
-          {item.borrowTerms.depositAmount != null && item.borrowTerms.dailyFee == null
-            ? ` · $${item.borrowTerms.depositAmount} deposit`
+          {formatPrice(listing)}
+          {listing.section === 'items' &&
+          listing.details.depositAmount != null &&
+          listing.listingType === 'borrow'
+            ? ` · ${formatMoney(listing.details.depositAmount, listing.currency)} deposit`
             : ''}
+          {listing.negotiable ? ' · Negotiable' : ''}
         </p>
       </div>
     </article>
