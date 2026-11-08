@@ -12,6 +12,7 @@ export type NotificationType =
   | 'review-received'
   | 'issue-reported'
   | 'message-received'
+  | 'admin-warning'
 
 /**
  * Named AppNotification (not Notification) to avoid clashing with the DOM's

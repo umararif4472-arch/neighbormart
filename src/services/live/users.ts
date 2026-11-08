@@ -90,3 +90,14 @@ export async function setBlocked(
   await updateDoc(ref, { blockedUserIds: [...current] })
   return { ...user, blockedUserIds: [...current] }
 }
+
+/** Phase 9: suspended accounts cannot post, message or book (live). */
+export async function assertNotSuspendedLive(userId: string): Promise<void> {
+  const user = await getUserById(userId)
+  if (user?.suspended) {
+    throw new ApiError(
+      'forbidden',
+      'Your account is suspended, so this action is paused. Contact the NeighborMart team if you think this is a mistake.',
+    )
+  }
+}

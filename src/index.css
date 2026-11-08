@@ -67,7 +67,7 @@
   --nm-surface: #fffdf9;
   --nm-surface-2: #f4ede1;
   --nm-ink: #44392f;
-  --nm-ink-soft: #7a6a5b;
+  --nm-ink-soft: #71604e;
   --nm-accent-items: #b45309;
   --nm-accent-vehicles: #1d4ed8;
   --nm-accent-properties: #7e22ce;
@@ -272,4 +272,10 @@
   .nm-pop {
     animation: none;
   }
+}
+
+/* In dark mode the terracotta-600 focus outline is too dark against the
+ * canvas to see clearly — use the lighter step (Phase 9 contrast pass). */
+.dark :focus-visible {
+  outline-color: var(--color-terracotta-400);
 }

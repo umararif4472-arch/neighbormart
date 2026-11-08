@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/profile_setup_validation.dart';
 import '../../../state/app_state.dart';
 
@@ -143,7 +142,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     const SizedBox(height: 4),
                     Text(
                       _stepSubtitle,
-                      style: const TextStyle(color: AppColors.barkLight),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 18),
                     ..._stepFields(),
@@ -152,8 +153,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         padding: const EdgeInsets.only(top: 14),
                         child: Text(
                           _error!,
-                          style: const TextStyle(
-                            color: AppColors.errorRed,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -314,7 +315,9 @@ class _StepIndicator extends StatelessWidget {
                   margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
                   height: 5,
                   decoration: BoxDecoration(
-                    color: i <= step ? AppColors.terracotta : AppColors.sand,
+                    color: i <= step
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),

@@ -152,7 +152,7 @@ function ThreadView({ requestId }: { requestId: string }) {
     <div className="mx-auto flex h-[calc(100dvh-13rem)] max-w-2xl flex-col gap-3 md:h-[calc(100dvh-16rem)]">
       <Link
         to="/messages"
-        className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-bark-light hover:text-terracotta-700 focus-visible:outline-2 focus-visible:outline-terracotta-600"
+        className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-bark-light hover:text-terracotta-700 dark:hover:text-terracotta-300 focus-visible:outline-2 focus-visible:outline-terracotta-600"
       >
         <ChevronLeftIcon className="h-4 w-4" />
         All messages
@@ -182,7 +182,7 @@ function ThreadView({ requestId }: { requestId: string }) {
               <Spinner size="sm" /> Loading conversation…
             </div>
           ) : error ? (
-            <p role="alert" className="py-4 text-center text-sm text-red-700">
+            <p role="alert" className="py-4 text-center text-sm text-red-700 dark:text-red-300">
               {error}
             </p>
           ) : messages.length === 0 ? (
@@ -244,7 +244,7 @@ function ThreadView({ requestId }: { requestId: string }) {
         </Button>
       </form>
       {sendError && (
-        <p role="alert" className="text-sm font-medium text-red-700">
+        <p role="alert" className="text-sm font-medium text-red-700 dark:text-red-300">
           {sendError}
         </p>
       )}

@@ -73,7 +73,12 @@ export function ListingPhoto({
   const showBlur = blurSrc && blurSrc !== displaySrc && isCloudinaryUrl(src)
 
   return (
-    <span className={cn('relative block overflow-hidden bg-terracotta-50', className)}>
+    <span
+      className={cn(
+        'relative block overflow-hidden bg-terracotta-50 dark:bg-terracotta-900/50',
+        className,
+      )}
+    >
       {showBlur && (
         <img
           src={blurSrc}

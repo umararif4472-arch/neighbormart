@@ -50,6 +50,7 @@ bool isNetworkPhotoSource(String source) =>
 /// Category tile used as the photo placeholder and error fallback.
 /// Expands to [width]/[height] when given; the icon stays modest.
 Widget _photoFallback(
+  BuildContext context,
   String category, {
   required double iconSize,
   double? width,
@@ -57,11 +58,11 @@ Widget _photoFallback(
 }) => Container(
   width: width,
   height: height,
-  color: AppColors.creamDark,
+  color: Theme.of(context).colorScheme.surfaceContainerHighest,
   child: Center(
     child: Icon(
       categoryIcon(category),
-      color: AppColors.terracotta,
+      color: Theme.of(context).colorScheme.primary,
       size: iconSize,
     ),
   ),
@@ -91,12 +92,14 @@ Widget itemPhotoImage(
       loadingBuilder: (context, child, progress) => progress == null
           ? child
           : _photoFallback(
+              context,
               category,
               iconSize: fallbackSize * 0.5,
               width: width,
               height: height,
             ),
-      errorBuilder: (_, _, _) => _photoFallback(
+      errorBuilder: (context, _, _) => _photoFallback(
+        context,
         category,
         iconSize: fallbackSize * 0.5,
         width: width,
@@ -109,7 +112,8 @@ Widget itemPhotoImage(
     fit: fit,
     width: width,
     height: height,
-    errorBuilder: (_, _, _) => _photoFallback(
+    errorBuilder: (context, _, _) => _photoFallback(
+      context,
       category,
       iconSize: fallbackSize * 0.5,
       width: width,
@@ -176,16 +180,20 @@ class ItemPhoto extends StatelessWidget {
   }
 }
 
-Color tierColor(String tierName) {
+/// Foreground color for a trust tier, used as text/icon color on a
+/// tinted chip. Dark variants are lightened to keep AA contrast on
+/// the dark surfaces.
+Color tierColor(String tierName, [Brightness brightness = Brightness.light]) {
+  final dark = brightness == Brightness.dark;
   switch (tierName) {
     case 'Community Pillar':
-      return AppColors.mossDark;
+      return dark ? AppColors.darkMoss : AppColors.mossDark;
     case 'Trusted':
-      return AppColors.moss;
+      return dark ? AppColors.darkMoss : AppColors.moss;
     case 'Reliable':
-      return AppColors.amber;
+      return amberAccentColor(brightness);
     default:
-      return AppColors.barkLight;
+      return dark ? AppColors.darkInkSoft : AppColors.barkLight;
   }
 }
 
@@ -195,7 +203,7 @@ class TrustBadge extends StatelessWidget {
   const TrustBadge({super.key, required this.result, this.compact = false});
   @override
   Widget build(BuildContext context) {
-    final color = tierColor(result.tierName);
+    final color = tierColor(result.tierName, Theme.of(context).brightness);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: 3),
       decoration: BoxDecoration(
@@ -228,15 +236,16 @@ class UserAvatar extends StatelessWidget {
   const UserAvatar({super.key, required this.user, this.radius = 20});
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return CircleAvatar(
       radius: radius,
-      backgroundColor: AppColors.moss.withValues(alpha: 0.18),
+      backgroundColor: scheme.secondary.withValues(alpha: 0.18),
       child: Text(
         user.initials,
         style: TextStyle(
           fontSize: radius * 0.8,
           fontWeight: FontWeight.w700,
-          color: AppColors.mossDark,
+          color: scheme.secondary,
         ),
       ),
     );
@@ -250,7 +259,9 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = isOverdue ? 'Overdue' : _label(status);
-    final color = isOverdue ? AppColors.errorRed : _color(status);
+    final color = isOverdue
+        ? Theme.of(context).colorScheme.error
+        : _color(status, Theme.of(context).brightness);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -291,24 +302,25 @@ class StatusChip extends StatelessWidget {
     }
   }
 
-  Color _color(String s) {
+  Color _color(String s, Brightness brightness) {
+    final dark = brightness == Brightness.dark;
     switch (s) {
       case 'pending':
-        return AppColors.amber;
+        return amberAccentColor(brightness);
       case 'approved':
-        return AppColors.moss;
+        return dark ? AppColors.darkMoss : AppColors.moss;
       case 'active':
-        return AppColors.terracotta;
+        return dark ? AppColors.darkPrimary : AppColors.terracotta;
       case 'returned':
-        return AppColors.mossDark;
+        return dark ? AppColors.darkMoss : AppColors.mossDark;
       case 'completed':
-        return AppColors.moss;
+        return dark ? AppColors.darkMoss : AppColors.moss;
       case 'reviewed':
-        return AppColors.barkLight;
+        return dark ? AppColors.darkInkSoft : AppColors.barkLight;
       case 'declined':
-        return AppColors.errorRed;
+        return dark ? AppColors.darkError : AppColors.errorRed;
       default:
-        return AppColors.barkLight;
+        return dark ? AppColors.darkInkSoft : AppColors.barkLight;
     }
   }
 }
@@ -323,12 +335,12 @@ class CategoryTile extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.creamDark,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Icon(
         categoryIcon(category),
-        color: AppColors.terracotta,
+        color: Theme.of(context).colorScheme.primary,
         size: size * 0.5,
       ),
     );
@@ -387,11 +399,15 @@ class _SuccessDialogState extends State<_SuccessDialog>
             child: Container(
               width: 72,
               height: 72,
-              decoration: const BoxDecoration(
-                color: AppColors.moss,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.secondary,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check, color: Colors.white, size: 40),
+              child: Icon(
+                Icons.check,
+                color: Theme.of(context).colorScheme.onSecondary,
+                size: 40,
+              ),
             ),
           ),
           const SizedBox(height: 16),

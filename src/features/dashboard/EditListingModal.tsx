@@ -105,7 +105,7 @@ export function EditListingModal({ listing, open, onClose }: EditListingModalPro
         {error && (
           <p
             role="alert"
-            className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+            className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300"
           >
             {error}
           </p>

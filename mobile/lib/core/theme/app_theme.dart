@@ -16,7 +16,10 @@ class AppColors {
   static const creamSurface = Color(0xFFFFFDF9);
   static const creamDark = Color(0xFFF4EDE1);
   static const bark = Color(0xFF44392F);
-  static const barkLight = Color(0xFF7A6A5B);
+  // Deepened one step from the original 0xFF7A6A5B so muted text also
+  // reaches WCAG AA (4.5:1) on the raised creamDark surface, not just
+  // on the plain surface.
+  static const barkLight = Color(0xFF776655);
   static const sand = Color(0xFFE8DCC8);
   static const amber = Color(0xFFC17A28);
   static const errorRed = Color(0xFFB3261E);
@@ -33,6 +36,20 @@ class AppColors {
   static const darkBorder = Color(0xFF4A3E31);
   static const darkError = Color(0xFFF2B8B5);
 }
+
+/// Warm amber for stars, warnings and "pending" states, as a
+/// foreground (text/icon) color. The dark value is lightened and the
+/// light value deepened relative to the decorative brand amber, so
+/// amber text keeps WCAG AA contrast on both themes' surfaces —
+/// including on its own soft tint (same pattern as the section
+/// accents in section_colors.dart).
+Color amberAccentColor(Brightness brightness) => brightness == Brightness.dark
+    ? const Color(0xFFF0B35E)
+    : const Color(0xFF8F5E14);
+
+/// The amber accent for the ambient theme.
+Color amberAccentOf(BuildContext context) =>
+    amberAccentColor(Theme.of(context).brightness);
 
 /// Maps the persisted [ThemePreference] to Flutter's [ThemeMode].
 ThemeMode themeModeForPreference(ThemePreference preference) =>

@@ -298,7 +298,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
       await showSuccessDialog(
         context,
         title: 'Listing published',
-        message: 'Your item is now visible in Explore for neighbors to borrow.',
+        message: 'Your item is now visible in Explore for neighbors to borrow or rent.',
       );
       if (!mounted) return;
     }
@@ -371,7 +371,9 @@ class _ListItemScreenState extends State<ListItemScreen> {
                                     color: active || done
                                         ? Theme.of(context).colorScheme.primary
                                               .withValues(alpha: 0.14)
-                                        : Colors.black.withValues(alpha: 0.05),
+                                        : Theme.of(context)
+                                              .colorScheme
+                                              .surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
@@ -445,9 +447,9 @@ class _ListItemScreenState extends State<ListItemScreen> {
         ),
         const SizedBox(height: 16),
       ],
-      const Text(
-        'Share something neighbors can borrow. Be specific — brand, size, and what it is good for.',
-        style: TextStyle(color: Colors.black54),
+      Text(
+        'Share something neighbors can borrow or rent. Be specific — brand, size, and what it is good for.',
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
       const SizedBox(height: 16),
       TextFormField(
@@ -588,9 +590,9 @@ class _ListItemScreenState extends State<ListItemScreen> {
       ),
     );
     return [
-      const Text(
+      Text(
         'One last look before it goes live in Explore.',
-        style: TextStyle(color: Colors.black54),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
       const SizedBox(height: 16),
       Card(

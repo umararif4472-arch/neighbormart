@@ -175,7 +175,7 @@ export function FilterBar({
               'shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors',
               filters.categories.length === 0
                 ? 'border-terracotta-600 bg-terracotta-600 text-white'
-                : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300 hover:text-terracotta-700',
+                : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300 dark:border-terracotta-800 hover:text-terracotta-700 dark:hover:text-terracotta-300',
             )}
           >
             All
@@ -198,7 +198,7 @@ export function FilterBar({
                   'shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors',
                   active
                     ? 'border-terracotta-600 bg-terracotta-600 text-white'
-                    : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300 hover:text-terracotta-700',
+                    : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300 dark:border-terracotta-800 hover:text-terracotta-700 dark:hover:text-terracotta-300',
                 )}
               >
                 <span aria-hidden className="mr-1">
@@ -223,7 +223,7 @@ export function FilterBar({
               'shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors',
               filters.listingType === deal.value
                 ? 'border-moss-600 bg-moss-600 text-white'
-                : 'border-bark/15 bg-surface text-bark-light hover:border-moss-400 hover:text-moss-800',
+                : 'border-bark/15 bg-surface text-bark-light hover:border-moss-400 hover:text-moss-800 dark:hover:text-moss-200',
             )}
           >
             {deal.label}
@@ -343,7 +343,7 @@ export function FilterBar({
           <button
             type="button"
             onClick={onReset}
-            className="rounded-full px-3 py-1.5 text-xs font-semibold text-terracotta-700 transition-colors hover:bg-terracotta-50"
+            className="rounded-full px-3 py-1.5 text-xs font-semibold text-terracotta-700 dark:text-terracotta-300 transition-colors hover:bg-terracotta-50 dark:hover:bg-terracotta-900/50"
           >
             Clear all
           </button>

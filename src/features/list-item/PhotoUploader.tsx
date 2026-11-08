@@ -234,7 +234,9 @@ export function PhotoUploader({
         onDrop={handleDrop}
         className={cn(
           'rounded-3xl border-2 border-dashed p-3 transition-colors',
-          dragOver ? 'border-terracotta-500 bg-terracotta-50' : 'border-transparent',
+          dragOver
+            ? 'border-terracotta-500 bg-terracotta-50 dark:bg-terracotta-900/50'
+            : 'border-transparent',
         )}
       >
         <div className="flex flex-wrap gap-3">
@@ -344,7 +346,7 @@ export function PhotoUploader({
 
           {entries.length < limit && (
             <>
-              <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-bark/20 bg-cream/50 text-bark-light transition-colors hover:border-terracotta-400 hover:text-terracotta-600">
+              <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-bark/20 bg-cream/50 text-bark-light transition-colors hover:border-terracotta-400 hover:text-terracotta-600 dark:hover:text-terracotta-400">
                 <CameraIcon className="h-6 w-6" aria-hidden />
                 <span className="text-[11px] font-semibold">Add photos</span>
                 <input
@@ -355,7 +357,7 @@ export function PhotoUploader({
                   onChange={handlePick}
                 />
               </label>
-              <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-bark/20 bg-cream/50 text-bark-light transition-colors hover:border-terracotta-400 hover:text-terracotta-600 sm:hidden">
+              <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-bark/20 bg-cream/50 text-bark-light transition-colors hover:border-terracotta-400 hover:text-terracotta-600 dark:hover:text-terracotta-400 sm:hidden">
                 <span aria-hidden className="text-xl">
                   📸
                 </span>
@@ -380,7 +382,7 @@ export function PhotoUploader({
       </div>
 
       {!isCloudinaryConfigured && (
-        <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <p className="rounded-2xl bg-amber-50 dark:bg-amber-950/60 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
           Heads up: this build has no Cloudinary cloud configured, so uploads will fail until
           VITE_CLOUDINARY_CLOUD_NAME is set in .env.local.
         </p>
@@ -389,12 +391,16 @@ export function PhotoUploader({
       {entries
         .filter((e) => e.status === 'error')
         .map((e) => (
-          <p key={e.id} role="alert" className="text-sm font-medium text-red-700">
+          <p key={e.id} role="alert" className="text-sm font-medium text-red-700 dark:text-red-300">
             {e.error ?? 'A photo failed to upload.'}
           </p>
         ))}
       {rejected.map((problem) => (
-        <p key={problem} role="alert" className="text-sm font-medium text-red-700">
+        <p
+          key={problem}
+          role="alert"
+          className="text-sm font-medium text-red-700 dark:text-red-300"
+        >
           {problem}
         </p>
       ))}

@@ -8,8 +8,10 @@ import { TRUST_TIERS, tierByName, tierForScore } from '@/utils/trustScore'
  */
 
 const TIER_STYLES: Record<TrustTierName, string> = {
-  'New Neighbor': 'bg-stone-100 text-stone-700 border-stone-300',
-  Reliable: 'bg-moss-100 text-moss-800 border-moss-300',
+  'New Neighbor':
+    'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-stone-300',
+  Reliable:
+    'bg-moss-100 dark:bg-moss-900/50 text-moss-800 dark:text-moss-200 border-moss-300 dark:border-moss-800',
   Trusted: 'bg-moss-600 text-white border-moss-700',
   'Community Pillar': 'bg-amber-400 text-amber-950 border-amber-500',
 }
@@ -131,7 +133,7 @@ export function TrustTierLadder({ className }: { className?: string }) {
           <span className="text-sm font-bold text-bark-light">Tier {index + 1}</span>
           <TrustBadge tierName={tier.name} size="md" />
           <p className="text-xs leading-relaxed text-bark-light">{tier.description}</p>
-          <p className="mt-auto text-xs font-semibold text-terracotta-700">
+          <p className="mt-auto text-xs font-semibold text-terracotta-700 dark:text-terracotta-300">
             {tier.minScore}
             {tier.minScore === 0 ? '+' : '–100'} points
           </p>

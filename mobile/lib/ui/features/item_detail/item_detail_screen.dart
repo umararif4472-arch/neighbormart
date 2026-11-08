@@ -65,7 +65,7 @@ class ItemDetailScreen extends StatelessWidget {
             tooltip: isFavorite ? 'Remove from saved' : 'Save this item',
             icon: Icon(
               isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: isFavorite ? AppColors.errorRed : null,
+              color: isFavorite ? Theme.of(context).colorScheme.error : null,
             ),
             onPressed: () => context.read<AppState>().toggleFavorite(item.id),
           ),
@@ -343,7 +343,7 @@ class _PhotoGalleryState extends State<_PhotoGallery> {
       return Container(
         height: 150,
         decoration: BoxDecoration(
-          color: AppColors.creamDark,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Center(
@@ -353,14 +353,14 @@ class _PhotoGalleryState extends State<_PhotoGallery> {
               Icon(
                 categoryIcon(widget.item.category),
                 size: 56,
-                color: AppColors.terracotta,
+                color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(height: 8),
               Text(
                 '${widget.item.category} · no photos yet',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: AppColors.barkLight,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -415,7 +415,9 @@ class _PhotoGalleryState extends State<_PhotoGallery> {
                   width: active ? 18 : 7,
                   height: 7,
                   decoration: BoxDecoration(
-                    color: active ? AppColors.terracotta : AppColors.sand,
+                    color: active
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.outline,
                     borderRadius: BorderRadius.circular(6),
                   ),
                 );
@@ -472,8 +474,10 @@ class _BreakdownRow extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: max == 0 ? 0 : points / max,
                 minHeight: 8,
-                backgroundColor: AppColors.sand,
-                color: AppColors.moss,
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest,
+                color: Theme.of(context).colorScheme.secondary,
               ),
             ),
           ),
@@ -639,16 +643,16 @@ class _BorrowSheetState extends State<_BorrowSheet> {
               margin: const EdgeInsets.only(top: 10),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.12),
+                color: amberAccentOf(context).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.warning_amber,
                     size: 18,
-                    color: AppColors.amber,
+                    color: amberAccentOf(context),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -678,8 +682,8 @@ class _BorrowSheetState extends State<_BorrowSheet> {
               padding: const EdgeInsets.only(top: 10),
               child: Text(
                 _error!,
-                style: const TextStyle(
-                  color: AppColors.errorRed,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
                   fontWeight: FontWeight.w600,
                 ),
               ),

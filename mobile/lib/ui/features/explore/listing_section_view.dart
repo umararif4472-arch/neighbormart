@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/cloudinary_config.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/section_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/listing.dart';
@@ -109,9 +108,9 @@ class ListingCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       listingPriceLabel(listing),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.moss,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -161,10 +160,10 @@ class ListingCard extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         listingStatusLabel(listing.status),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.errorRed,
+                          color: Theme.of(context).colorScheme.error,
                         ),
                       ),
                     ),

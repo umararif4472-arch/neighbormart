@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/trust_score.dart';
 import '../../../core/widgets/reviews_list.dart';
 import '../../../core/widgets/shared_widgets.dart';
@@ -78,7 +77,9 @@ class UserProfileScreen extends StatelessWidget {
                   .map(
                     (interest) => Chip(
                       label: Text(interest),
-                      backgroundColor: AppColors.creamDark,
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest,
                       visualDensity: VisualDensity.compact,
                     ),
                   )
@@ -188,10 +189,10 @@ class UserProfileScreen extends StatelessWidget {
                       children: [
                         Text(
                           '${trust.total}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 44,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.terracotta,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -283,7 +284,7 @@ class UserProfileScreen extends StatelessWidget {
           Text('Badges', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           if (user.badges.isEmpty)
-            const Text('No badges yet — the first on-time return earns one.')
+            const Text('No badges yet — the first completed deal earns one.')
           else
             Wrap(
               spacing: 8,
@@ -293,7 +294,9 @@ class UserProfileScreen extends StatelessWidget {
                     (b) => Chip(
                       avatar: const Icon(Icons.emoji_events, size: 16),
                       label: Text(b.label),
-                      backgroundColor: AppColors.creamDark,
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest,
                     ),
                   )
                   .toList(),
@@ -301,7 +304,7 @@ class UserProfileScreen extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             isOwn
-                ? 'My items (${items.length})'
+                ? 'My listings (${items.length})'
                 : 'Listed by ${user.name.split(' ').first} (${items.length})',
             style: Theme.of(context).textTheme.titleMedium,
           ),
@@ -445,7 +448,9 @@ class _VerifiedRow extends StatelessWidget {
         Icon(
           ok ? Icons.check_circle : Icons.cancel,
           size: 14,
-          color: ok ? AppColors.moss : AppColors.barkLight,
+          color: ok
+              ? Theme.of(context).colorScheme.secondary
+              : Theme.of(context).colorScheme.onSurfaceVariant,
         ),
         const SizedBox(width: 4),
         Text(
@@ -479,7 +484,7 @@ class _AccountTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        leading: Icon(icon, color: AppColors.terracotta),
+        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
         title: Text(title),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
@@ -510,8 +515,10 @@ class _Bar extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: max == 0 ? 0 : points / max,
                 minHeight: 9,
-                backgroundColor: AppColors.sand,
-                color: AppColors.moss,
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest,
+                color: Theme.of(context).colorScheme.secondary,
               ),
             ),
           ),

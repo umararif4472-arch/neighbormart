@@ -99,7 +99,7 @@ export function ListingCard({
       <div className="flex flex-1 flex-col gap-2.5 p-4">
         <Link
           to={`/listing/${listing.id}`}
-          className="font-display text-base font-semibold leading-snug text-bark transition-colors hover:text-terracotta-700 focus-visible:outline-2 focus-visible:outline-terracotta-600"
+          className="font-display text-base font-semibold leading-snug text-bark transition-colors hover:text-terracotta-700 dark:hover:text-terracotta-300 focus-visible:outline-2 focus-visible:outline-terracotta-600"
         >
           {listing.title}
         </Link>
@@ -113,7 +113,7 @@ export function ListingCard({
               aria-label={`View ${owner.name}'s profile`}
             >
               <Avatar name={owner.name} src={owner.avatarUrl} size="xs" />
-              <span className="max-w-24 truncate text-xs font-medium text-bark-light hover:text-terracotta-700">
+              <span className="max-w-24 truncate text-xs font-medium text-bark-light hover:text-terracotta-700 dark:hover:text-terracotta-300">
                 {owner.name}
               </span>
             </Link>
@@ -123,7 +123,7 @@ export function ListingCard({
           {owner && ownerTier && <TrustBadge tierName={ownerTier} />}
         </div>
 
-        <p className="text-xs font-semibold text-moss-700">
+        <p className="text-xs font-semibold text-moss-700 dark:text-moss-300">
           {formatPrice(listing)}
           {listing.section === 'items' &&
           listing.details.depositAmount != null &&

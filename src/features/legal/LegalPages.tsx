@@ -238,7 +238,7 @@ export function SafetyPage() {
           >
             <span
               aria-hidden
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-moss-50 font-display text-base font-extrabold text-moss-700 dark:bg-moss-900 dark:text-moss-200"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-moss-50 font-display text-base font-extrabold text-moss-700 dark:text-moss-300 dark:bg-moss-900 dark:text-moss-200"
             >
               {i + 1}
             </span>

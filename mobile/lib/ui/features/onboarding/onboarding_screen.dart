@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../state/app_state.dart';
 
 class _Page {
@@ -14,18 +13,18 @@ class _Page {
 const _pages = [
   _Page(
     Icons.handshake_outlined,
-    'Borrow instead of buying',
+    'Borrow, rent, buy — nearby',
     'Drills, tents, mixers — your neighbors already own them. Request what you need for a few days, free or for a small fee.',
   ),
   _Page(
     Icons.verified_outlined,
     'Trust scores keep it safe',
-    'Every neighbor has a 0–100 trust score built from on-time returns, reviews, and verified details. You always know who you are lending to.',
+    'Every neighbor has a 0–100 trust score built from on-time returns, reviews, and verified details. You always know who you are dealing with.',
   ),
   _Page(
     Icons.add_box_outlined,
     'List what you own',
-    'That ladder in your garage could help three streets. List it in a minute and earn trust (and maybe a few dollars) when neighbors borrow it.',
+    'That ladder in your garage could help three streets. List it in a minute and earn trust (and maybe a few dollars) when neighbors borrow or rent it.',
   ),
 ];
 
@@ -77,13 +76,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           width: 120,
                           height: 120,
                           decoration: BoxDecoration(
-                            color: AppColors.creamDark,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(32),
                           ),
                           child: Icon(
                             p.icon,
                             size: 60,
-                            color: AppColors.terracotta,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                         const SizedBox(height: 28),
@@ -113,7 +114,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   width: active ? 22 : 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: active ? AppColors.terracotta : AppColors.sand,
+                    color: active
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.outline,
                     borderRadius: BorderRadius.circular(6),
                   ),
                 );

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../state/app_state.dart';
 import 'login_screen.dart';
 
@@ -120,8 +119,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
                   _error!,
-                  style: const TextStyle(
-                    color: AppColors.errorRed,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

@@ -28,8 +28,8 @@ class ActivityScreen extends StatelessWidget {
           ),
           bottom: const TabBar(
             tabs: [
-              Tab(text: 'Borrowing'),
-              Tab(text: 'Lending'),
+              Tab(text: 'My requests'),
+              Tab(text: 'Requests for me'),
             ],
           ),
         ),
@@ -57,8 +57,8 @@ class _RequestList extends StatelessWidget {
           padding: const EdgeInsets.all(32),
           child: Text(
             isLending
-                ? 'No lending activity yet. When neighbors request your items, they will show up here.'
-                : 'No borrowing activity yet. Request an item from Explore to get started.',
+                ? 'Nothing here yet. When neighbors request your listings, they will show up here.'
+                : 'No requests yet. Find something in Explore and send a request to get started.',
             textAlign: TextAlign.center,
           ),
         ),
@@ -86,7 +86,7 @@ void _runWithTierWatch(
   if (tierMinScore(after.tierName) > tierMinScore(before.tierName)) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -94,13 +94,14 @@ void _runWithTierWatch(
               width: 84,
               height: 84,
               decoration: BoxDecoration(
-                color: AppColors.moss.withValues(alpha: 0.14),
+                color: Theme.of(dialogContext).colorScheme.secondary
+                    .withValues(alpha: 0.14),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.emoji_events,
                 size: 44,
-                color: AppColors.mossDark,
+                color: Theme.of(dialogContext).colorScheme.secondary,
               ),
             ),
             const SizedBox(height: 14),
@@ -167,7 +168,9 @@ class _RequestCard extends StatelessWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: AppColors.creamDark,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
@@ -203,7 +206,7 @@ class _RequestCard extends StatelessWidget {
                               const SizedBox(width: 5),
                               Flexible(
                                 child: Text(
-                                  '${isLending ? 'Borrower' : 'Owner'}: ${other.name}',
+                                  '${isLending ? 'Requester' : 'Owner'}: ${other.name}',
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
                                         decoration: TextDecoration.underline,
@@ -225,7 +228,9 @@ class _RequestCard extends StatelessWidget {
                 '${dateRangeLabel(request.period.start, request.period.end)} · ${dueLabel(request.period.end)}',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: overdue ? AppColors.errorRed : AppColors.bark,
+                  color: overdue
+                      ? Theme.of(context).colorScheme.error
+                      : Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               if (request.slot != null)
@@ -258,19 +263,19 @@ class _RequestCard extends StatelessWidget {
                   margin: const EdgeInsets.only(top: 10),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.12),
+                    color: amberAccentOf(context).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: Colors.orange.withValues(alpha: 0.5),
+                      color: amberAccentOf(context).withValues(alpha: 0.5),
                     ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.warning_amber,
                         size: 18,
-                        color: AppColors.amber,
+                        color: amberAccentOf(context),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -295,16 +300,17 @@ class _RequestCard extends StatelessWidget {
                   margin: const EdgeInsets.only(top: 10),
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.errorRed.withValues(alpha: 0.08),
+                    color: Theme.of(context).colorScheme.error
+                        .withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.report_outlined,
                         size: 18,
-                        color: AppColors.errorRed,
+                        color: Theme.of(context).colorScheme.error,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -327,10 +333,10 @@ class _RequestCard extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.check_circle,
                         size: 16,
-                        color: AppColors.moss,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -339,9 +345,9 @@ class _RequestCard extends StatelessWidget {
                             : request.status == 'completed'
                             ? 'Deal completed'
                             : 'Completed — item returned',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: AppColors.mossDark,
+                          color: Theme.of(context).colorScheme.secondary,
                         ),
                       ),
                     ],
@@ -369,7 +375,7 @@ class _RequestCard extends StatelessWidget {
                   state.approveRequest(request.id);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Approved — borrower can pick up.'),
+                      content: Text('Approved — they can pick up now.'),
                     ),
                   );
                 },
@@ -423,7 +429,7 @@ class _RequestCard extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
-                          'Marked as picked up — borrow is now active.',
+                          'Marked as picked up — deal is now active.',
                         ),
                       ),
                     );
@@ -469,7 +475,7 @@ class _RequestCard extends StatelessWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        'Marked late — borrower trust reflects it.',
+                        'Marked late — their trust score reflects it.',
                       ),
                     ),
                   );
@@ -526,7 +532,7 @@ class _RequestCard extends StatelessWidget {
               Expanded(
                 child: TextButton.icon(
                   style: TextButton.styleFrom(
-                    foregroundColor: AppColors.errorRed,
+                    foregroundColor: Theme.of(context).colorScheme.error,
                   ),
                   onPressed: () => ReportIssueSheet.show(context, request.id),
                   icon: const Icon(Icons.report_outlined, size: 18),

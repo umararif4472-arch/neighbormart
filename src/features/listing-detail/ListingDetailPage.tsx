@@ -137,7 +137,7 @@ export function ListingDetailPage() {
     <div className="flex flex-col gap-8">
       <Link
         to="/browse"
-        className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-bark-light transition-colors hover:text-terracotta-700"
+        className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-bark-light transition-colors hover:text-terracotta-700 dark:hover:text-terracotta-300"
       >
         <ChevronLeftIcon className="h-4 w-4" />
         Back to browse
@@ -172,7 +172,7 @@ export function ListingDetailPage() {
               {owner ? (
                 <Link
                   to={`/profile/${owner.id}`}
-                  className="font-semibold text-terracotta-700 underline-offset-4 hover:underline"
+                  className="font-semibold text-terracotta-700 dark:text-terracotta-300 underline-offset-4 hover:underline"
                 >
                   {owner.name}
                 </Link>
@@ -268,7 +268,7 @@ export function ListingDetailPage() {
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-bark">{listing.title}</p>
-            <p className="text-xs font-medium text-moss-700">
+            <p className="text-xs font-medium text-moss-700 dark:text-moss-300">
               {formatPrice(listing)}
               {isItem && listing.details.depositAmount != null
                 ? ` · ${formatMoney(listing.details.depositAmount, listing.currency)} deposit`

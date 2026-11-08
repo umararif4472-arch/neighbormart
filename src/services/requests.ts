@@ -15,6 +15,7 @@ import {
 } from '@/utils/requestLifecycle'
 import { validateBorrowPeriod } from '@/utils/validation'
 import { ApiError } from './errors'
+import { assertNotSuspendedMock } from './suspension'
 import { createNotification } from './notifications'
 import {
   clone,
@@ -104,6 +105,7 @@ export async function createRequest(input: CreateRequestInput): Promise<RequestM
 
   const listing = findListing(input.listingId)
   const borrower = findUser(input.borrowerId)
+  assertNotSuspendedMock(borrower.id)
 
   if (listing.ownerId === borrower.id) {
     throw new ApiError('invalid', 'You can’t request your own listing — it’s already yours!')

@@ -157,7 +157,7 @@ export function RequestDealModal({ listing, owner, open, onClose }: RequestDealM
         <div className="flex flex-col items-center gap-4 py-2 text-center">
           <span
             aria-hidden
-            className="flex h-16 w-16 items-center justify-center rounded-full bg-moss-100 text-moss-700"
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-moss-100 dark:bg-moss-900/50 text-moss-700 dark:text-moss-300"
           >
             <CheckIcon className="h-8 w-8" />
           </span>
@@ -172,7 +172,7 @@ export function RequestDealModal({ listing, owner, open, onClose }: RequestDealM
                 : ' You’ll get a notification here the moment they respond.'}
             </p>
           </div>
-          <p className="rounded-2xl bg-terracotta-50 px-4 py-2 text-sm font-semibold text-bark">
+          <p className="rounded-2xl bg-terracotta-50 dark:bg-terracotta-900/50 px-4 py-2 text-sm font-semibold text-bark">
             {listing.title} ·{' '}
             {isSell
               ? formatMoney(success.offerAmount ?? listing.price, listing.currency)
@@ -189,7 +189,7 @@ export function RequestDealModal({ listing, owner, open, onClose }: RequestDealM
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          <div className="flex items-center gap-3 rounded-2xl bg-terracotta-50 p-3">
+          <div className="flex items-center gap-3 rounded-2xl bg-terracotta-50 dark:bg-terracotta-900/50 p-3">
             <Avatar name={owner.name} src={owner.avatarUrl} size="sm" />
             <p className="text-sm text-bark-light">
               You&apos;re dealing with <span className="font-semibold text-bark">{owner.name}</span>{' '}
@@ -236,7 +236,7 @@ export function RequestDealModal({ listing, owner, open, onClose }: RequestDealM
                 hint={`Up to ${cap} days for ${listing.section}.`}
               />
               {units != null && (
-                <p className="rounded-2xl bg-moss-50 px-4 py-3 text-sm font-semibold text-moss-900">
+                <p className="rounded-2xl bg-moss-50 dark:bg-moss-900/50 px-4 py-3 text-sm font-semibold text-moss-900 dark:text-moss-100">
                   {units} × {formatMoney(listing.price, listing.currency)} per {listing.priceUnit} ={' '}
                   {formatMoney(units * listing.price, listing.currency)} total
                 </p>
@@ -256,7 +256,7 @@ export function RequestDealModal({ listing, owner, open, onClose }: RequestDealM
           {serviceError && (
             <p
               role="alert"
-              className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+              className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300"
             >
               {serviceError}
             </p>

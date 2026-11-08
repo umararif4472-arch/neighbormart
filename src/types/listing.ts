@@ -53,6 +53,8 @@ interface ListingBase {
   updatedAt: ISODateString
   /** Lifetime view counter (owner dashboard stats). */
   views: number
+  /** Phase 9: admin-featured listings lead the landing Featured row. */
+  featured?: boolean
 }
 
 // --- Items & Tools ---------------------------------------------------------

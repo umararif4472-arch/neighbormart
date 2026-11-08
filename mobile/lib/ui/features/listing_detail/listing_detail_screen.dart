@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/cloudinary_config.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/section_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/shared_widgets.dart';
@@ -123,10 +122,10 @@ class ListingDetailScreen extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             listingPriceLabel(listing),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: AppColors.moss,
+              color: Theme.of(context).colorScheme.secondary,
             ),
           ),
           Text(
@@ -409,7 +408,9 @@ class _FactsCard extends StatelessWidget {
                       width: 110,
                       child: Text(
                         f.$1,
-                        style: const TextStyle(color: AppColors.barkLight),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                     Expanded(

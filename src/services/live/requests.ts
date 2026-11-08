@@ -26,6 +26,7 @@ import {
 import { validateBorrowPeriod } from '@/utils/validation'
 import { ApiError } from '../errors'
 import { getDb } from '../firebase'
+import { assertNotSuspendedLive } from './users'
 import { COLLECTIONS, fromDoc, fromDocs, stripUndefined } from './firestoreData'
 import { createNotification } from './notifications'
 
@@ -130,6 +131,7 @@ const RENT_PERIOD_CAPS: Record<string, number> = { vehicles: 30, properties: 366
 export async function createRequest(input: CreateRequestInput): Promise<RequestMutationResult> {
   const listing = await fetchListing(input.listingId)
   const borrower = await fetchUser(input.borrowerId)
+  await assertNotSuspendedLive(borrower.id)
 
   if (listing.ownerId === borrower.id) {
     throw new ApiError('invalid', 'You can’t request your own listing — it’s already yours!')

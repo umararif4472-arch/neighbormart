@@ -41,6 +41,14 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'member') == 'admin';
     }
 
+    // Phase 9: suspended accounts cannot create listings, requests or
+    // messages. A missing profile doc counts as not suspended (profile
+    // docs are created at sign-in, before any create can happen).
+    function notSuspended() {
+      return !exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('suspended', false) != true;
+    }
+
     // Phase 8 rate limits. The client bumps a counter doc
     // (rateLimits/{uid}) BEFORE creating, binding it to the new doc's
     // id. A create is allowed only when the counter names THIS doc and
@@ -140,14 +148,26 @@ service cloud.firestore {
       // role (no self-promotion to admin).
       allow update: if isUser(uid)
         && request.resource.data.get('role', 'member') == resource.data.get('role', 'member');
+      // Admin actions (Phase 9): an admin may suspend/warn another user
+      // or grant/revoke the admin role. isAdmin() reads the CALLER's
+      // doc, so a non-admin can never reach these branches — and the
+      // owner rule above still freezes everyone's own role.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['suspended', 'warnings']);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['role']);
       // Account deletion (Phase 8): owners may delete their own profile.
-      allow delete: if isUser(uid);
+      // Admin user management (Phase 9): admins may also delete a profile.
+      allow delete: if isUser(uid) || isAdmin();
     }
 
     // --- Listings ----------------------------------------------------------
     match /listings/{listingId} {
       allow read: if true;
       allow create: if signedIn()
+        && notSuspended()
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.status == 'active'
         && photosValid(request.resource.data)
@@ -175,10 +195,9 @@ service cloud.firestore {
           // status flips to 'removed' and nothing else changes.
           || (isAdmin()
             && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['status', 'updatedAt'])
-            && request.resource.data.status == 'removed')
+              .hasOnly(['status', 'featured', 'updatedAt']))
         );
-      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow delete: if signedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
     }
 
     // --- Borrow / booking requests -----------------------------------------
@@ -189,6 +208,7 @@ service cloud.firestore {
         && (resource.data.borrowerId == request.auth.uid
           || resource.data.ownerId == request.auth.uid);
       allow create: if signedIn()
+        && notSuspended()
         && request.resource.data.borrowerId == request.auth.uid
         && request.resource.data.ownerId != request.auth.uid
         && request.resource.data.status == 'pending';
@@ -235,6 +255,7 @@ service cloud.firestore {
           get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data
         );
       allow create: if signedIn()
+        && notSuspended()
         && request.resource.data.senderId == request.auth.uid
         && isParticipant(
           get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data
@@ -269,6 +290,16 @@ service cloud.firestore {
     }
 
     // --- Rate-limit counters (Phase 8) ---------------------------------------
+    // Phase 9 audit log: admins read it; admins append entries about
+    // their own actions; nobody can edit or delete history.
+    match /auditLog/{entryId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.adminId == request.auth.uid
+        && request.resource.keys().hasOnly(['adminId', 'action', 'targetType', 'targetId', 'detail', 'createdAt']);
+      allow update, delete: if false;
+    }
+
     match /rateLimits/{uid} {
       allow read: if isUser(uid);
       // Owner-only; counts may rise by at most 1 per write or reset to

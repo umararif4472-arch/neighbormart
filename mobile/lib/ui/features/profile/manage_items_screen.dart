@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
 import '../../../data/models/listing.dart';
@@ -98,11 +97,11 @@ class ManageItemsScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Text('Available for borrowing'),
+                  const Text('Available for requests'),
                   const Spacer(),
                   Switch(
                     value: item.availability == 'available',
-                    activeThumbColor: AppColors.moss,
+                    activeThumbColor: Theme.of(context).colorScheme.secondary,
                     onChanged: borrowed
                         ? null
                         : (v) => state.setItemAvailability(
@@ -113,9 +112,12 @@ class ManageItemsScreen extends StatelessWidget {
                 ],
               ),
               if (borrowed)
-                const Text(
-                  'Currently borrowed — availability is locked until it comes back.',
-                  style: TextStyle(fontSize: 12, color: AppColors.barkLight),
+                Text(
+                  'Currently out on a deal — availability is locked until it comes back.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               Row(
                 children: [
@@ -134,8 +136,10 @@ class ManageItemsScreen extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.errorRed,
-                        side: const BorderSide(color: AppColors.errorRed),
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                       onPressed: () =>
                           _confirmDelete(context, item.id, item.title),
@@ -233,8 +237,10 @@ class ManageItemsScreen extends StatelessWidget {
                   if (listing.status != ListingStatus.rented)
                     OutlinedButton(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.errorRed,
-                        side: const BorderSide(color: AppColors.errorRed),
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                       onPressed: () =>
                           act(ListingStatus.removed, 'Listing removed.'),
@@ -260,7 +266,7 @@ class ManageItemsScreen extends StatelessWidget {
   ) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete this listing?'),
         content: Text(
           '"$title" will be removed from Explore. Pending requests for it are declined.',
@@ -272,7 +278,8 @@ class ManageItemsScreen extends StatelessWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.errorRed,
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
             ),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Delete'),

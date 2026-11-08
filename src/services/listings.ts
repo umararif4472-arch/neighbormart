@@ -3,6 +3,7 @@ import { EMPTY_LISTING_FILTERS } from '@/types'
 import { DEFAULT_CURRENCY } from '@/config'
 import { filterListings } from '@/utils/filters'
 import { ApiError } from './errors'
+import { assertNotSuspendedMock } from './suspension'
 import { sanitizeMultiline, sanitizeText } from '@/utils/sanitize'
 import { checkWindow, LISTING_RATE_LIMIT, type WindowState } from '@/utils/rateLimit'
 import { clone, findUser, getStore, nextId, simulateLatency } from './store'
@@ -128,6 +129,7 @@ export async function createListing(input: CreateListingInput): Promise<Listing>
     throw new ApiError('invalid', Object.values(errors)[0])
   }
   enforceListingQuota(input.ownerId)
+  assertNotSuspendedMock(input.ownerId)
 
   const owner: User = findUser(input.ownerId)
   const now = new Date().toISOString()

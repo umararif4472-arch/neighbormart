@@ -15,10 +15,10 @@ import { cn } from '@/utils/cn'
  */
 
 const CONTROL_BASE =
-  'w-full rounded-2xl border bg-surface px-3.5 py-2.5 text-sm text-bark placeholder:text-bark-light/60 transition-colors outline-offset-1 focus-visible:outline-2 focus-visible:outline-terracotta-600'
+  'w-full rounded-2xl border bg-surface px-3.5 py-2.5 text-sm text-bark placeholder:text-bark-light/75 transition-colors outline-offset-1 focus-visible:outline-2 focus-visible:outline-terracotta-600'
 
 const controlTone = (invalid: boolean) =>
-  invalid ? 'border-red-400 bg-red-50/40' : 'border-bark/15 hover:border-bark/25'
+  invalid ? 'border-red-400 bg-red-50/40 dark:bg-red-950/60' : 'border-bark/15 hover:border-bark/25'
 
 export interface FieldShellProps {
   label: string
@@ -44,7 +44,7 @@ function FieldShell({
       <label htmlFor={htmlFor} className="text-sm font-semibold text-bark">
         {label}
         {required && (
-          <span aria-hidden className="ml-1 text-terracotta-600">
+          <span aria-hidden className="ml-1 text-terracotta-600 dark:text-terracotta-400">
             *
           </span>
         )}
@@ -56,7 +56,7 @@ function FieldShell({
         </p>
       )}
       {error && (
-        <p role="alert" className="text-xs font-medium text-red-700">
+        <p role="alert" className="text-xs font-medium text-red-700 dark:text-red-300">
           {error}
         </p>
       )}

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/app_notification.dart';
@@ -55,27 +54,27 @@ class NotificationsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
       body: feed.isEmpty
-          ? const Center(
+          ? Center(
               child: Padding(
-                padding: EdgeInsets.all(32),
+                padding: const EdgeInsets.all(32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.notifications_off_outlined,
                       size: 52,
-                      color: AppColors.barkLight,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
-                    SizedBox(height: 12),
-                    Text(
+                    const SizedBox(height: 12),
+                    const Text(
                       'All quiet on the block',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    SizedBox(height: 6),
-                    Text(
+                    const SizedBox(height: 6),
+                    const Text(
                       'Requests, due reminders, and review prompts will show up here.',
                       textAlign: TextAlign.center,
                     ),
@@ -108,15 +107,20 @@ class _NotificationTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Card(
-        color: action ? AppColors.creamDark : Colors.white,
+        color: action
+            ? Theme.of(context).colorScheme.surfaceContainerHighest
+            : null,
         child: ListTile(
           leading: CircleAvatar(
             backgroundColor: action
-                ? AppColors.terracotta.withValues(alpha: 0.15)
-                : AppColors.moss.withValues(alpha: 0.12),
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
+                : Theme.of(context).colorScheme.secondary
+                      .withValues(alpha: 0.12),
             child: Icon(
               _iconFor(notification.type),
-              color: action ? AppColors.terracotta : AppColors.mossDark,
+              color: action
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.secondary,
               size: 20,
             ),
           ),

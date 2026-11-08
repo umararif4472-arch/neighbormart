@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
 import '../../../data/models/wishlist_item.dart';
@@ -120,8 +119,10 @@ class _WishlistCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: item.progress,
                 minHeight: 10,
-                backgroundColor: AppColors.sand,
-                color: AppColors.moss,
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest,
+                color: Theme.of(context).colorScheme.secondary,
               ),
             ),
             const SizedBox(height: 6),

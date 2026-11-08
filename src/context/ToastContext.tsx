@@ -46,10 +46,13 @@ const DEFAULT_EMOJI: Record<ToastTone, string> = {
 }
 
 const TONE_STYLES: Record<ToastTone, string> = {
-  success: 'border-moss-300 bg-moss-50 text-moss-900',
-  info: 'border-terracotta-200 bg-terracotta-50 text-terracotta-900',
-  warning: 'border-amber-300 bg-amber-50 text-amber-900',
-  danger: 'border-red-300 bg-red-50 text-red-900',
+  success:
+    'border-moss-300 dark:border-moss-800 bg-moss-50 dark:bg-moss-900/50 text-moss-900 dark:text-moss-100',
+  info: 'border-terracotta-200 dark:border-terracotta-800 bg-terracotta-50 dark:bg-terracotta-900/50 text-terracotta-900 dark:text-terracotta-100',
+  warning:
+    'border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-100',
+  danger:
+    'border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/60 text-red-900 dark:text-red-100',
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {

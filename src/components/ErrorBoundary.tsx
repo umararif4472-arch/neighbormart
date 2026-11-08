@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBound
       return (
         <div
           role="alert"
-          className="mx-auto my-16 flex max-w-md flex-col items-center gap-4 rounded-3xl border border-red-200 bg-red-50 p-8 text-center"
+          className="mx-auto my-16 flex max-w-md flex-col items-center gap-4 rounded-3xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/60 p-8 text-center"
         >
           <span aria-hidden className="text-4xl">
             🛠️

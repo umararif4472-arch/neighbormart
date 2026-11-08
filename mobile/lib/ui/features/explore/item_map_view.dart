@@ -27,6 +27,8 @@ class _ItemMapViewState extends State<ItemMapView> {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final me = state.currentUser;
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     if (widget.items.isEmpty) {
       return const Center(
         child: Padding(
@@ -60,7 +62,9 @@ class _ItemMapViewState extends State<ItemMapView> {
                 return ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: Container(
-                    color: const Color(0xFFEFE7D3),
+                    color: dark
+                        ? scheme.surfaceContainerHighest
+                        : const Color(0xFFEFE7D3),
                     child: Stack(
                       children: [
                         Positioned.fill(
@@ -68,6 +72,10 @@ class _ItemMapViewState extends State<ItemMapView> {
                             painter: _MapPainter(
                               projection: projection,
                               center: centerPx,
+                              gridColor: dark
+                                  ? scheme.onSurface.withValues(alpha: 0.07)
+                                  : Colors.white.withValues(alpha: 0.55),
+                              ringColor: scheme.secondary,
                             ),
                           ),
                         ),
@@ -102,8 +110,14 @@ class _ItemMapViewState extends State<ItemMapView> {
                                 Icons.location_on,
                                 size: 36,
                                 color: selected
-                                    ? AppColors.terracottaDark
-                                    : AppColors.terracotta,
+                                    ? (dark
+                                          ? scheme.primary
+                                          : AppColors.terracottaDark)
+                                    : (dark
+                                          ? scheme.primary.withValues(
+                                              alpha: 0.6,
+                                            )
+                                          : AppColors.terracotta),
                               ),
                             ),
                           );
@@ -147,11 +161,14 @@ class _ItemMapViewState extends State<ItemMapView> {
             ),
           )
         else
-          const Padding(
-            padding: EdgeInsets.only(bottom: 12),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
             child: Text(
               'Tap a pin to preview the item.',
-              style: TextStyle(fontSize: 13, color: AppColors.barkLight),
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
       ],
@@ -162,13 +179,20 @@ class _ItemMapViewState extends State<ItemMapView> {
 class _MapPainter extends CustomPainter {
   final MapProjection projection;
   final ProjectedPoint center;
-  const _MapPainter({required this.projection, required this.center});
+  final Color gridColor;
+  final Color ringColor;
+  const _MapPainter({
+    required this.projection,
+    required this.center,
+    required this.gridColor,
+    required this.ringColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     // Simple street-ish grid so the map reads as a map, not a blank panel.
     final grid = Paint()
-      ..color = Colors.white.withValues(alpha: 0.55)
+      ..color = gridColor
       ..strokeWidth = 10;
     for (var x = 24.0; x < size.width; x += 72) {
       canvas.drawLine(Offset(x, 0), Offset(x + 18, size.height), grid);
@@ -178,10 +202,10 @@ class _MapPainter extends CustomPainter {
     }
     final radius = projection.radiusPx;
     if (radius != null) {
-      final ring = Paint()..color = AppColors.moss.withValues(alpha: 0.10);
+      final ring = Paint()..color = ringColor.withValues(alpha: 0.10);
       canvas.drawCircle(Offset(center.x, center.y), radius, ring);
       final ringBorder = Paint()
-        ..color = AppColors.moss.withValues(alpha: 0.5)
+        ..color = ringColor.withValues(alpha: 0.5)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.6;
       canvas.drawCircle(Offset(center.x, center.y), radius, ringBorder);
@@ -190,5 +214,8 @@ class _MapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MapPainter old) =>
-      old.projection != projection || old.center != center;
+      old.projection != projection ||
+      old.center != center ||
+      old.gridColor != gridColor ||
+      old.ringColor != ringColor;
 }

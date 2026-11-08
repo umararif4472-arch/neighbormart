@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
 import '../../../data/models/message.dart';
@@ -292,6 +291,7 @@ class _Bubble extends StatelessWidget {
   const _Bubble({required this.message, required this.mine});
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -301,28 +301,32 @@ class _Bubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
-          color: mine ? AppColors.terracotta : Colors.white,
+          color: mine ? scheme.primary : scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
             bottomLeft: Radius.circular(mine ? 16 : 4),
             bottomRight: Radius.circular(mine ? 4 : 16),
           ),
-          border: mine ? null : Border.all(color: AppColors.sand),
+          border: mine ? null : Border.all(color: scheme.outline),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               message.body,
-              style: TextStyle(color: mine ? Colors.white : AppColors.bark),
+              style: TextStyle(
+                color: mine ? scheme.onPrimary : scheme.onSurface,
+              ),
             ),
             const SizedBox(height: 3),
             Text(
               chatTimeLabel(message.createdAt),
               style: TextStyle(
                 fontSize: 10,
-                color: mine ? Colors.white70 : AppColors.barkLight,
+                color: mine
+                    ? scheme.onPrimary.withValues(alpha: 0.7)
+                    : scheme.onSurfaceVariant,
               ),
             ),
           ],

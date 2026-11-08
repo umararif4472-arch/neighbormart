@@ -1,7 +1,9 @@
 # NeighborMart — Launch Checklist
 
 Everything left between "the code is done" and "real users". Items are
-grouped by who does them. The app itself shipped in Phase 8:
+grouped by who does them. The app itself shipped in Phase 8, and
+Phase 9 added the dark-mode contrast pass (with an automated guard in
+CI), the /admin panel, account suspension, and the grant-admin script:
 
 - **Live web app:** https://neighbormart-7eff0.web.app
   (also https://neighbormart-7eff0.firebaseapp.com)
@@ -18,7 +20,9 @@ grouped by who does them. The app itself shipped in Phase 8:
 
 The live project still contains the 9 demo accounts
 (`firstname.lastname@example.com`) and their seed listings/requests.
-Remove them when you're ready for real users — **there is no undo**:
+Dry run on 2026-11-08 (Phase 9): **9 auth accounts, 35 listings, 118
+Firestore docs** would be deleted. Remove them when you're ready for
+real users — **there is no undo**:
 
 ```bash
 node scripts/remove-demo-data.mjs            # dry run — prints everything it would delete
@@ -36,15 +40,20 @@ After cleanup:
   app's local mock data on the device — after the cleanup it no longer
   signs in to anything real.
 
-### 1b. Make yourself the first moderator
+### 1b. Make yourself the first admin
 
-1. Sign in to the live app once with your own Google account.
-2. Firebase Console → Firestore → `users` → your document → **Add field**:
-   `role` (string) = `admin`.
-3. The **Moderation** link appears in the navbar; the queue also lives
-   at https://neighbormart-7eff0.web.app/moderation.
-   (Security rules prevent anyone from promoting themselves — the field
-   can only be set from the console/Admin SDK.)
+1. Sign in to the live app once with the Google account that should be
+   admin (so the profile doc exists).
+2. Run: `node scripts/grant-admin.mjs --email you@example.com`
+   (`--list` shows current admins; `--remove` revokes, and removing the
+   last admin is refused.)
+3. The **Admin** and **Moderation** links appear in the navbar. The
+   panel lives at https://neighbormart-7eff0.web.app/admin — overview
+   stats, reports, listing manager (pause/remove/restore/feature),
+   user manager (warn/suspend/delete), admin management, audit log.
+   Later admins can be added by an existing admin from that panel.
+   (Security rules prevent anyone from promoting themselves — the role
+   can only be set by the Admin SDK or by an existing admin.)
 
 ### 1c. Have the legal pages reviewed
 
@@ -55,24 +64,22 @@ contact email in the Privacy Policy.
 
 ---
 
-## 2. Google OAuth consent screen → production
+## 2. Google OAuth consent screen → production ✅ DONE (Phase 9, 2026-11-08)
 
-Firebase created the OAuth consent screen in **Testing** mode (only
-test users can sign in with Google). Publish it:
+The consent screen was already **In production**; Phase 9 completed
+the branding so real users see a proper sign-in screen:
 
-1. Go to https://console.cloud.google.com/apis/credentials/consent
-   and select the **neighbormart-7eff0** project.
-2. **App information:** name `NeighborMart`, user support email = yours,
-   app logo = `public/icon-512.png` from the repo.
-3. **App domain:** home page `https://neighbormart-7eff0.web.app`,
-   Privacy Policy `https://neighbormart-7eff0.web.app/privacy`,
-   Terms `https://neighbormart-7eff0.web.app/terms`.
-4. **Authorized domains:** `neighbormart-7eff0.web.app` (Firebase Auth
-   already authorizes `localhost`, `…firebaseapp.com`, `…web.app` —
-   verified in Phase 8).
-5. **Scopes:** keep only `openid`, `email`, `profile` (what Firebase
-   Auth requests). No sensitive scopes ⇒ no Google verification review.
-6. Click **Publish app** → confirm. Status changes Testing → In production.
+- App name: `NeighborMart` (was the raw project id string)
+- User support + developer contact email: the owner's Gmail
+- Home page: https://neighbormart-7eff0.web.app
+- Privacy Policy: https://neighbormart-7eff0.web.app/privacy
+- Terms: https://neighbormart-7eff0.web.app/terms
+- Authorized domains: `neighbormart-7eff0.web.app` +
+  `neighbormart-7eff0.firebaseapp.com`
+- Scopes: only the default basic ones (`openid`, `email`, `profile`)
+  ⇒ no Google verification review needed.
+- No logo uploaded — a logo would trigger branding verification,
+  which is optional and does not affect the production status.
 
 ---
 
@@ -173,7 +180,28 @@ Muse builds it only on your explicit go-ahead.
 
 ---
 
-## 5. Redeploying the web app
+## 5. The service-account key — when you can delete it
+
+`~/.config/neighbormart/service-account.json` is only used by the
+local scripts (deploy-hosting, remove-demo-data, grant-admin, rules
+deploys). The live app never touches it. You can safely delete the
+file once ALL of these are done:
+
+- demo cleanup has been run (1a),
+- your admin is granted (1b),
+- you don't plan another scripted deploy (use the Firebase Console
+  for Hosting rollbacks instead, or create a fresh key when needed:
+  Firebase Console → Project settings → Service accounts → Generate
+  new private key).
+
+For full hygiene, also delete the key in Google Cloud Console → IAM →
+Service accounts after removing the local file. **Tell Muse when you
+have deleted it** so the scripts' status stays accurate. Until then it
+stays where it is — Muse never reads, prints or commits it.
+
+---
+
+## 6. Redeploying the web app
 
 ```bash
 npm run lint && npm run typecheck && npm test && npm run build

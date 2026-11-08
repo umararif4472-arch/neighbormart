@@ -13,6 +13,7 @@ import { sanitizeMultiline } from '@/utils/sanitize'
 import type { AppNotification, BorrowRequest, Listing, Message } from '@/types'
 import { ApiError } from '../errors'
 import { getDb } from '../firebase'
+import { assertNotSuspendedLive } from './users'
 import { COLLECTIONS, fromDoc, fromDocs, stripUndefined } from './firestoreData'
 import { createNotification } from './notifications'
 
@@ -42,6 +43,7 @@ export async function sendMessage(
   const request = fromDoc<BorrowRequest & { ownerId: string }>(requestSnap)
   if (!request) throw new ApiError('not-found', 'That borrow request no longer exists.')
 
+  await assertNotSuspendedLive(senderId)
   const trimmed = body.trim()
   if (trimmed.length === 0) throw new ApiError('invalid', 'Write something first.')
   if (trimmed.length > 1000) throw new ApiError('invalid', 'Messages max out at 1000 characters.')

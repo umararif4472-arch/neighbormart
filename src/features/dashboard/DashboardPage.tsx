@@ -23,7 +23,7 @@ import { EditListingModal } from './EditListingModal'
 /**
  * /dashboard — the request lifecycle, live.
  *
- * Three tabs (Lending / Borrowing / Notifications). Rows are grouped by the
+ * Tabs: Requests for me / My requests / Notifications / My listings. Rows are grouped by the
  * state machine's EFFECTIVE status (incl. derived "overdue"), every action
  * calls the service then syncs context, and the notification tab is a
  * derived projection of request state — nothing here needs a refresh.
@@ -32,12 +32,12 @@ import { EditListingModal } from './EditListingModal'
 type TabId = 'lending' | 'borrowing' | 'notifications'
 
 const TABS: Array<{ id: TabId; label: string }> = [
-  { id: 'lending', label: 'Lending' },
-  { id: 'borrowing', label: 'Borrowing' },
+  { id: 'lending', label: 'Requests for me' },
+  { id: 'borrowing', label: 'My requests' },
   { id: 'notifications', label: 'Notifications' },
 ]
 
-/** Lending groups — lifecycle order, most attention first. */
+/** Incoming-request groups — lifecycle order, most attention first. */
 const LENDING_GROUPS: Array<{ status: EffectiveRequestStatus; label: string }> = [
   { status: 'pending', label: 'Waiting on you' },
   { status: 'overdue', label: 'Overdue — needs a nudge' },
@@ -50,7 +50,7 @@ const LENDING_GROUPS: Array<{ status: EffectiveRequestStatus; label: string }> =
   { status: 'cancelled', label: 'Cancelled' },
 ]
 
-/** Borrowing groups — what's current first, then history. */
+/** My-request groups — what's current first, then history. */
 const BORROWING_GROUPS: Array<{ status: EffectiveRequestStatus; label: string }> = [
   { status: 'overdue', label: 'Overdue — return it or check in' },
   { status: 'active', label: 'Out now' },
@@ -179,7 +179,7 @@ export function DashboardPage() {
               </div>
               <Link
                 to="/trust"
-                className="text-[11px] font-semibold text-terracotta-700 underline-offset-2 hover:underline"
+                className="text-[11px] font-semibold text-terracotta-700 dark:text-terracotta-300 underline-offset-2 hover:underline"
               >
                 How trust works →
               </Link>
@@ -235,7 +235,7 @@ export function DashboardPage() {
       {actionError && (
         <p
           role="alert"
-          className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+          className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300"
         >
           {actionError}
         </p>
@@ -297,7 +297,7 @@ export function DashboardPage() {
                         <div className="min-w-0 flex-1">
                           <Link
                             to={`/listing/${item.id}`}
-                            className="block truncate text-sm font-semibold text-bark hover:text-terracotta-700"
+                            className="block truncate text-sm font-semibold text-bark hover:text-terracotta-700 dark:hover:text-terracotta-300"
                           >
                             {item.title}
                           </Link>
@@ -352,7 +352,7 @@ export function DashboardPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-red-700 hover:bg-red-50"
+                              className="text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/60"
                               disabled={busy}
                               onClick={() => runListingAction(item, 'removed')}
                             >
@@ -447,7 +447,7 @@ export function DashboardPage() {
                                   </Button>
                                   <Link
                                     to={`/messages/${view.request.id}`}
-                                    className="rounded-full px-3 py-1.5 text-xs font-semibold text-terracotta-700 hover:bg-terracotta-50"
+                                    className="rounded-full px-3 py-1.5 text-xs font-semibold text-terracotta-700 dark:text-terracotta-300 hover:bg-terracotta-50 dark:hover:bg-terracotta-900/50"
                                   >
                                     Chat →
                                   </Link>
@@ -483,14 +483,14 @@ export function DashboardPage() {
                                 </Button>
                                 <Link
                                   to={`/messages/${view.request.id}`}
-                                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-terracotta-700 hover:bg-terracotta-50"
+                                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-terracotta-700 dark:text-terracotta-300 hover:bg-terracotta-50 dark:hover:bg-terracotta-900/50"
                                 >
                                   Chat →
                                 </Link>
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="text-red-700 hover:bg-red-50"
+                                  className="text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/60"
                                   onClick={() => setIssueTarget(view)}
                                 >
                                   Report issue
@@ -578,7 +578,7 @@ export function DashboardPage() {
                                 </Button>
                                 <Link
                                   to={`/messages/${view.request.id}`}
-                                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-terracotta-700 hover:bg-terracotta-50"
+                                  className="rounded-full px-3 py-1.5 text-xs font-semibold text-terracotta-700 dark:text-terracotta-300 hover:bg-terracotta-50 dark:hover:bg-terracotta-900/50"
                                 >
                                   Chat →
                                 </Link>
@@ -586,7 +586,7 @@ export function DashboardPage() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="text-red-700 hover:bg-red-50"
+                                    className="text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/60"
                                     onClick={() => setIssueTarget(view)}
                                   >
                                     Report issue
@@ -615,7 +615,7 @@ export function DashboardPage() {
       {/* NOTIFICATIONS — the derived feed */}
       {tab === 'notifications' && (
         <div className="flex flex-col gap-4">
-          <p className="rounded-3xl border border-bark/10 bg-white/70 px-4 py-3 text-xs leading-relaxed text-bark-light">
+          <p className="rounded-3xl border border-bark/10 bg-surface/80 px-4 py-3 text-xs leading-relaxed text-bark-light">
             This feed is{' '}
             <span className="font-semibold text-bark">live-derived from your requests</span> —
             approve, return, or review anything and it updates instantly. Nothing goes stale.
@@ -624,7 +624,7 @@ export function DashboardPage() {
             <EmptyState
               emoji="🔔"
               title="All quiet"
-              message="No notifications yet — request something, or lend something out."
+              message="No notifications yet — make a request, or list an item for your neighbors."
             />
           ) : (
             <ul className="flex list-none flex-col gap-2">
@@ -634,15 +634,17 @@ export function DashboardPage() {
                   className={cn(
                     'flex items-start gap-3 rounded-3xl border p-4',
                     notification.kind === 'action'
-                      ? 'border-terracotta-200 bg-terracotta-50/60'
-                      : 'border-bark/10 bg-white/60',
+                      ? 'border-terracotta-200 dark:border-terracotta-800 bg-terracotta-50/60 dark:bg-terracotta-900/50'
+                      : 'border-bark/10 bg-surface/70',
                   )}
                 >
                   <span
                     aria-hidden
                     className={cn(
                       'mt-1 text-[10px] leading-none',
-                      notification.kind === 'action' ? 'text-terracotta-600' : 'text-bark/25',
+                      notification.kind === 'action'
+                        ? 'text-terracotta-600 dark:text-terracotta-400'
+                        : 'text-bark/25',
                     )}
                   >
                     ●
@@ -660,7 +662,7 @@ export function DashboardPage() {
                     {notification.kind === 'action' && notification.requestId && (
                       <Link
                         to="/dashboard"
-                        className="text-xs font-semibold text-terracotta-700 underline-offset-2 hover:underline"
+                        className="text-xs font-semibold text-terracotta-700 dark:text-terracotta-300 underline-offset-2 hover:underline"
                       >
                         Act →
                       </Link>

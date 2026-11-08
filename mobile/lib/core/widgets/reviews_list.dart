@@ -39,7 +39,7 @@ class StarRow extends StatelessWidget {
         (i) => Icon(
           i < rating ? Icons.star : Icons.star_border,
           size: size,
-          color: AppColors.amber,
+          color: amberAccentOf(context),
         ),
       ),
     );
@@ -60,17 +60,17 @@ class ReviewsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (reviews.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 10),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
             Icon(
               Icons.rate_review_outlined,
               size: 18,
-              color: AppColors.barkLight,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-            SizedBox(width: 8),
-            Text('No reviews yet'),
+            const SizedBox(width: 8),
+            const Text('No reviews yet'),
           ],
         ),
       );

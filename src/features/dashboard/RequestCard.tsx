@@ -47,7 +47,9 @@ export function RequestCard({
     <article
       className={cn(
         'flex flex-col gap-3 rounded-3xl border bg-surface p-4 shadow-sm transition-opacity',
-        overdue ? 'border-red-300 bg-red-50/40' : 'border-bark/10',
+        overdue
+          ? 'border-red-300 dark:border-red-800 bg-red-50/40 dark:bg-red-950/60'
+          : 'border-bark/10',
         busy && 'opacity-60',
         className,
       )}
@@ -59,7 +61,7 @@ export function RequestCard({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Link
               to={`/item/${request.listingId}`}
-              className="truncate font-display text-sm font-bold text-bark hover:text-terracotta-700"
+              className="truncate font-display text-sm font-bold text-bark hover:text-terracotta-700 dark:hover:text-terracotta-300"
             >
               {view.listingTitle}
             </Link>
@@ -73,7 +75,12 @@ export function RequestCard({
             {formatDateRange(request.period.start, request.period.end)}
             {request.dueAt && (effective === 'active' || overdue) && (
               <span
-                className={cn('font-semibold', overdue ? 'text-red-700' : 'text-terracotta-700')}
+                className={cn(
+                  'font-semibold',
+                  overdue
+                    ? 'text-red-700 dark:text-red-300'
+                    : 'text-terracotta-700 dark:text-terracotta-300',
+                )}
               >
                 {' '}
                 · {formatDueLabel(request.dueAt)}
@@ -92,7 +99,7 @@ export function RequestCard({
       {conflictLabels.length > 0 && (
         <p
           role="alert"
-          className="flex items-start gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900"
+          className="flex items-start gap-2 rounded-2xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/60 px-3 py-2 text-xs font-medium text-amber-900 dark:text-amber-100"
         >
           <span aria-hidden>⚠️</span>
           <span>
@@ -104,7 +111,7 @@ export function RequestCard({
 
       {/* Overdue escalation — never a dead end. */}
       {overdue && (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/60 px-3 py-2 text-xs text-red-800 dark:text-red-200">
           <span className="font-semibold">This borrow is overdue.</span>
           <span>
             {viewerRole === 'lender'
@@ -134,7 +141,7 @@ export function RequestCard({
 
       {/* Issue flag */}
       {request.issue && (
-        <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-800">
+        <p className="rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/60 px-3 py-2 text-xs font-medium text-red-800 dark:text-red-200">
           🚩 Issue reported ({request.issue.reason})
           {request.issue.note ? ` — “${request.issue.note}”` : ''}
         </p>

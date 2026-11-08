@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../state/app_state.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -73,23 +72,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
                   _error!,
-                  style: const TextStyle(
-                    color: AppColors.errorRed,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             if (_sent)
               Card(
-                color: AppColors.moss.withValues(alpha: 0.12),
-                child: const Padding(
-                  padding: EdgeInsets.all(14),
+                color: Theme.of(context).colorScheme.secondary
+                    .withValues(alpha: 0.12),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
                         Icons.mark_email_read_outlined,
-                        color: AppColors.mossDark,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                       SizedBox(width: 10),
                       Expanded(

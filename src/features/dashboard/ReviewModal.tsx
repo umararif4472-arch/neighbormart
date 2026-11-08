@@ -75,7 +75,7 @@ export function ReviewModal({ view, viewerRole, open, onClose }: ReviewModalProp
         <div className="flex flex-col items-center gap-4 py-2 text-center">
           <span
             aria-hidden
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-moss-100 text-moss-700"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-moss-100 dark:bg-moss-900/50 text-moss-700 dark:text-moss-300"
           >
             <CheckIcon className="h-7 w-7" />
           </span>
@@ -88,7 +88,7 @@ export function ReviewModal({ view, viewerRole, open, onClose }: ReviewModalProp
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-          <div className="flex items-center gap-3 rounded-2xl bg-terracotta-50 p-3">
+          <div className="flex items-center gap-3 rounded-2xl bg-terracotta-50 dark:bg-terracotta-900/50 p-3">
             <Avatar name={view.counterpartName} src={view.counterpartAvatar} size="sm" />
             <p className="text-xs leading-relaxed text-bark-light">
               You were the <span className="font-semibold text-bark">{viewerRole}</span> on{' '}
@@ -118,7 +118,7 @@ export function ReviewModal({ view, viewerRole, open, onClose }: ReviewModalProp
           {error && (
             <p
               role="alert"
-              className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+              className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300"
             >
               {error}
             </p>

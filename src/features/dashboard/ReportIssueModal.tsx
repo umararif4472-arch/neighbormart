@@ -72,7 +72,7 @@ export function ReportIssueModal({ view, open, onClose }: ReportIssueModalProps)
         <div className="flex flex-col items-center gap-4 py-2 text-center">
           <span
             aria-hidden
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-700"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300"
           >
             <CheckIcon className="h-7 w-7" />
           </span>
@@ -102,7 +102,7 @@ export function ReportIssueModal({ view, open, onClose }: ReportIssueModalProps)
           <fieldset className="flex flex-col gap-2">
             <legend className="text-sm font-semibold text-bark">
               What went wrong?
-              <span aria-hidden className="ml-1 text-terracotta-600">
+              <span aria-hidden className="ml-1 text-terracotta-600 dark:text-terracotta-400">
                 *
               </span>
             </legend>
@@ -113,8 +113,8 @@ export function ReportIssueModal({ view, open, onClose }: ReportIssueModalProps)
                   'flex cursor-pointer items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 text-sm transition-colors',
                   'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-terracotta-600',
                   reason === option
-                    ? 'border-terracotta-600 bg-terracotta-50 text-terracotta-900 font-semibold'
-                    : 'border-bark/15 bg-surface text-bark hover:border-terracotta-300',
+                    ? 'border-terracotta-600 bg-terracotta-50 dark:bg-terracotta-900/50 text-terracotta-900 dark:text-terracotta-100 font-semibold'
+                    : 'border-bark/15 bg-surface text-bark hover:border-terracotta-300 dark:border-terracotta-800',
                 )}
               >
                 <input
@@ -143,7 +143,7 @@ export function ReportIssueModal({ view, open, onClose }: ReportIssueModalProps)
             ))}
           </fieldset>
           {reasonError && (
-            <p role="alert" className="-mt-2 text-xs font-medium text-red-700">
+            <p role="alert" className="-mt-2 text-xs font-medium text-red-700 dark:text-red-300">
               {reasonError}
             </p>
           )}
@@ -161,7 +161,7 @@ export function ReportIssueModal({ view, open, onClose }: ReportIssueModalProps)
           {error && (
             <p
               role="alert"
-              className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+              className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300"
             >
               {error}
             </p>

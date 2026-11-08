@@ -1,5 +1,6 @@
 import type { AppNotification, Message } from '@/types'
 import { ApiError } from './errors'
+import { assertNotSuspendedMock } from './suspension'
 import { createNotification } from './notifications'
 import { clone, findRequest, getStore, nextId, simulateLatency } from './store'
 import { sanitizeMultiline } from '@/utils/sanitize'
@@ -30,6 +31,7 @@ export async function sendMessage(
   await simulateLatency(150, 400)
 
   const request = findRequest(requestId)
+  assertNotSuspendedMock(senderId)
   const trimmed = sanitizeMultiline(body, 1000)
   if (trimmed.length === 0) throw new ApiError('invalid', 'Write something first.')
   const decision = checkWindow(

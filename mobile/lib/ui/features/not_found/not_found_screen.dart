@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_theme.dart';
-
 /// Friendly 404 used when an item/user id does not resolve.
 class NotFoundScreen extends StatelessWidget {
   final String? message;
@@ -21,13 +19,13 @@ class NotFoundScreen extends StatelessWidget {
                 width: 96,
                 height: 96,
                 decoration: BoxDecoration(
-                  color: AppColors.creamDark,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(28),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.explore_off_outlined,
                   size: 50,
-                  color: AppColors.terracotta,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 20),

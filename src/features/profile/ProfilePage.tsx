@@ -93,7 +93,7 @@ function ContactPrefsCard({ user }: { user: User }) {
         {error && (
           <p
             role="alert"
-            className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+            className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300"
           >
             {error}
           </p>
@@ -103,7 +103,7 @@ function ContactPrefsCard({ user }: { user: User }) {
             Save contact settings
           </Button>
           {saved && (
-            <span role="status" className="text-sm font-semibold text-moss-700">
+            <span role="status" className="text-sm font-semibold text-moss-700 dark:text-moss-300">
               Saved ✓
             </span>
           )}
@@ -191,13 +191,13 @@ export function ProfilePage() {
         )}
         <dl className="flex flex-wrap justify-center gap-2 text-xs">
           <div className="rounded-2xl bg-bark/5 px-3 py-2">
-            <dt className="font-semibold text-bark-light">Lends</dt>
+            <dt className="font-semibold text-bark-light">Deals hosted</dt>
             <dd className="font-display text-base font-bold text-bark">
               {user.stats.successfulLends}
             </dd>
           </div>
           <div className="rounded-2xl bg-bark/5 px-3 py-2">
-            <dt className="font-semibold text-bark-light">Borrows</dt>
+            <dt className="font-semibold text-bark-light">Deals joined</dt>
             <dd className="font-display text-base font-bold text-bark">
               {user.stats.successfulBorrows}
             </dd>
@@ -227,7 +227,7 @@ export function ProfilePage() {
           Badges
         </h2>
         {user.badges.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-bark/15 bg-white/60 p-4 text-center text-sm text-bark-light">
+          <p className="rounded-3xl border border-dashed border-bark/15 bg-surface/70 p-4 text-center text-sm text-bark-light">
             No badges yet — on-time returns and reviews earn them.
           </p>
         ) : (
@@ -236,7 +236,7 @@ export function ProfilePage() {
               <li
                 key={badge.id}
                 title={badge.description}
-                className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900"
+                className="flex items-center gap-2 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/60 px-3 py-2 text-sm font-semibold text-amber-900 dark:text-amber-100"
               >
                 <span aria-hidden>{badge.emoji}</span>
                 {badge.label}
@@ -253,7 +253,7 @@ export function ProfilePage() {
           <span className="text-sm font-medium text-bark-light">({userListings.length})</span>
         </h2>
         {userListings.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-bark/15 bg-white/60 p-4 text-center text-sm text-bark-light">
+          <p className="rounded-3xl border border-dashed border-bark/15 bg-surface/70 p-4 text-center text-sm text-bark-light">
             Nothing listed right now.
           </p>
         ) : (
@@ -293,7 +293,7 @@ export function ProfilePage() {
           <span className="text-sm font-medium text-bark-light">({reviewsByUser.length})</span>
         </h2>
         {reviewsByUser.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-bark/15 bg-white/60 p-4 text-center text-sm text-bark-light">
+          <p className="rounded-3xl border border-dashed border-bark/15 bg-surface/70 p-4 text-center text-sm text-bark-light">
             {user.name.split(' ')[0]} hasn&apos;t written any reviews yet.
           </p>
         ) : (

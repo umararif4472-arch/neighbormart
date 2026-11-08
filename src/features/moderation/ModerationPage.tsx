@@ -78,7 +78,7 @@ export function ModerationPage() {
       {error && (
         <div
           role="alert"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-red-200 dark:border-red-800 bg-red-50 p-4 text-sm text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100"
         >
           <span>{error}</span>
           <Button size="sm" variant="secondary" onClick={() => void load()}>

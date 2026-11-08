@@ -27,7 +27,9 @@ export function EmptyState({
     <div
       className={cn(
         'flex flex-col items-center gap-3 rounded-3xl border border-dashed px-6 py-10 text-center',
-        tone === 'error' ? 'border-red-300 bg-red-50/50' : 'border-bark/15 bg-white/60',
+        tone === 'error'
+          ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/60'
+          : 'border-bark/15 bg-surface/70',
         className,
       )}
       role="status"

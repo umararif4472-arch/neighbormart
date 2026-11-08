@@ -27,7 +27,7 @@ export function LogoMark({ compact = false }: { compact?: boolean }) {
       </span>
       {!compact && (
         <span className="font-display text-lg font-extrabold tracking-tight text-bark">
-          Neighbor<span className="text-terracotta-600">Mart</span>
+          Neighbor<span className="text-terracotta-600 dark:text-terracotta-400">Mart</span>
         </span>
       )}
     </span>
@@ -81,9 +81,14 @@ function Navbar() {
             Messages
           </NavLink>
           {currentUser?.role === 'admin' && (
-            <NavLink to="/moderation" className={navLinkClass}>
-              Moderation
-            </NavLink>
+            <>
+              <NavLink to="/moderation" className={navLinkClass}>
+                Moderation
+              </NavLink>
+              <NavLink to="/admin" className={navLinkClass}>
+                Admin
+              </NavLink>
+            </>
           )}
           <Link
             to="/list-item"
@@ -225,7 +230,7 @@ function Footer() {
           Trust is earned: on-time returns, honest reviews, and showing up for your street.{' '}
           <Link
             to="/trust"
-            className="font-semibold text-terracotta-700 underline-offset-2 hover:underline"
+            className="font-semibold text-terracotta-700 dark:text-terracotta-300 underline-offset-2 hover:underline"
           >
             How it works
           </Link>
@@ -237,6 +242,7 @@ function Footer() {
 
 export function Layout() {
   const location = useLocation()
+  const { state } = useApp()
   return (
     <div className="flex min-h-dvh flex-col">
       <a
@@ -246,6 +252,15 @@ export function Layout() {
         Skip to content
       </a>
       <Navbar />
+      {state.currentUser?.suspended && (
+        <div
+          role="alert"
+          className="border-b border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/60 px-4 py-2.5 text-center text-sm font-medium text-red-800 dark:text-red-200"
+        >
+          Your account is suspended — you can browse, but posting listings, messaging and making
+          requests are paused. Contact the NeighborMart team if you think this is a mistake.
+        </div>
+      )}
       <main
         id="main-content"
         className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-6 sm:px-6 md:pb-10"

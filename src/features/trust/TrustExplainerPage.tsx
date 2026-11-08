@@ -126,13 +126,13 @@ export function TrustExplainerPage() {
               <div className="flex items-center gap-3 sm:w-56 sm:shrink-0">
                 <span
                   aria-hidden
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl bg-terracotta-50 text-xl"
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl bg-terracotta-50 dark:bg-terracotta-900/50 text-xl"
                 >
                   {factor.emoji}
                 </span>
                 <div>
                   <p className="font-display text-sm font-bold text-bark">{factor.name}</p>
-                  <p className="text-xs font-semibold text-terracotta-700">
+                  <p className="text-xs font-semibold text-terracotta-700 dark:text-terracotta-300">
                     up to {factor.max} pts
                   </p>
                 </div>
@@ -146,26 +146,26 @@ export function TrustExplainerPage() {
       {/* On-time vs late — the visible difference */}
       <section
         aria-labelledby="late-demo"
-        className="flex flex-col gap-4 rounded-[2.5rem] border border-terracotta-200 bg-terracotta-50/60 p-6 sm:p-8"
+        className="flex flex-col gap-4 rounded-[2.5rem] border border-terracotta-200 dark:border-terracotta-800 bg-terracotta-50/60 dark:bg-terracotta-900/50 p-6 sm:p-8"
       >
         <h2 id="late-demo" className="font-display text-xl font-extrabold text-bark">
           On-time vs. late — the math isn&apos;t cosmetic
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-3xl border border-moss-300 bg-surface p-4">
-            <p className="flex items-center gap-2 text-sm font-bold text-moss-800">
+          <div className="rounded-3xl border border-moss-300 dark:border-moss-800 bg-surface p-4">
+            <p className="flex items-center gap-2 text-sm font-bold text-moss-800 dark:text-moss-200">
               <CheckIcon className="h-4 w-4" aria-hidden /> 8 returns, all on time
             </p>
-            <p className="mt-1 font-display text-2xl font-extrabold text-moss-800">
+            <p className="mt-1 font-display text-2xl font-extrabold text-moss-800 dark:text-moss-200">
               40<span className="text-sm font-semibold text-bark-light">/40 pts</span>
             </p>
             <p className="mt-1 text-xs text-bark-light">rate 8/8 × volume 8/8 = full marks</p>
           </div>
-          <div className="rounded-3xl border border-red-200 bg-surface p-4">
-            <p className="flex items-center gap-2 text-sm font-bold text-red-700">
+          <div className="rounded-3xl border border-red-200 dark:border-red-800 bg-surface p-4">
+            <p className="flex items-center gap-2 text-sm font-bold text-red-700 dark:text-red-300">
               <span aria-hidden>⏳</span> 8 returns, 2 late
             </p>
-            <p className="mt-1 font-display text-2xl font-extrabold text-red-700">
+            <p className="mt-1 font-display text-2xl font-extrabold text-red-700 dark:text-red-300">
               30<span className="text-sm font-semibold text-bark-light">/40 pts</span>
             </p>
             <p className="mt-1 text-xs text-bark-light">

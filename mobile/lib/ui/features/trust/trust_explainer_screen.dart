@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/trust_score.dart';
 import '../../../core/widgets/shared_widgets.dart';
 
@@ -20,7 +19,7 @@ class TrustExplainerScreen extends StatelessWidget {
       (
         'Reviews',
         kReviewsMax,
-        'Stars your neighbors leave after a borrow. The 10 most recent reviews count, weighted by their average rating.',
+        'Stars your neighbors leave after a deal. The 10 most recent reviews count, weighted by their average rating.',
       ),
       (
         'Completed deals',
@@ -84,15 +83,16 @@ class TrustExplainerScreen extends StatelessWidget {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.moss.withValues(alpha: 0.12),
+                            color: Theme.of(context).colorScheme.secondary
+                                .withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             'up to ${c.$2} pts',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.mossDark,
+                              color: Theme.of(context).colorScheme.secondary,
                             ),
                           ),
                         ),

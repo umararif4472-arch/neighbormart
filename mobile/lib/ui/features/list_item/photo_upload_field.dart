@@ -220,22 +220,31 @@ class _PhotoUploadFieldState extends State<PhotoUploadField> {
             const SizedBox(width: 8),
             Text(
               '${photos.length}/$_cap',
-              style: const TextStyle(color: Colors.black54, fontSize: 13),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
             ),
             if (photos.any((p) => p.isUploading))
-              const Padding(
-                padding: EdgeInsets.only(left: 8),
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
                 child: Text(
                   'Uploading…',
-                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
                 ),
               ),
           ],
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Photos upload as you add them. The first photo is the cover.',
-          style: TextStyle(color: Colors.black54, fontSize: 13),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 13,
+          ),
         ),
         const SizedBox(height: 10),
         if (photos.isNotEmpty)
@@ -421,7 +430,10 @@ class _PhotoUploadFieldState extends State<PhotoUploadField> {
           if (photo.isFailed && photo.error != null)
             Text(
               photo.error!,
-              style: const TextStyle(color: Colors.red, fontSize: 10),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 10,
+              ),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),

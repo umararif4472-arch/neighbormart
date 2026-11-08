@@ -5,10 +5,14 @@ type BadgeTone = 'neutral' | 'success' | 'warning' | 'danger' | 'terracotta' | '
 
 const TONES: Record<BadgeTone, string> = {
   neutral: 'bg-bark/5 text-bark-light border-bark/10',
-  success: 'bg-moss-100 text-moss-800 border-moss-200',
-  warning: 'bg-amber-100 text-amber-800 border-amber-200',
-  danger: 'bg-red-50 text-red-700 border-red-200',
-  terracotta: 'bg-terracotta-50 text-terracotta-800 border-terracotta-200',
+  success:
+    'bg-moss-100 dark:bg-moss-900/50 text-moss-800 dark:text-moss-200 border-moss-200 dark:border-moss-800',
+  warning:
+    'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-800',
+  danger:
+    'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
+  terracotta:
+    'bg-terracotta-50 dark:bg-terracotta-900/50 text-terracotta-800 dark:text-terracotta-200 border-terracotta-200 dark:border-terracotta-800',
   moss: 'bg-moss-600 text-white border-moss-700',
 }
 

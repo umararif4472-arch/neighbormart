@@ -256,7 +256,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ),
                     Switch(
                       value: _onlyAvailable,
-                      activeThumbColor: AppColors.moss,
+                      activeThumbColor: Theme.of(context).colorScheme.secondary,
                       onChanged: (v) => setState(() => _onlyAvailable = v),
                     ),
                   ],
@@ -336,9 +336,10 @@ class _ExploreScreenState extends State<ExploreScreen>
                                   Icon(
                                     Icons.search_off,
                                     size: 56,
-                                    color: AppColors.barkLight.withValues(
-                                      alpha: 0.6,
-                                    ),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                        .withValues(alpha: 0.6),
                                   ),
                                   const SizedBox(height: 12),
                                   const Text(
@@ -543,19 +544,19 @@ class _ItemCard extends StatelessWidget {
                       item.borrowTerms.dailyFee == null
                           ? 'Free to borrow'
                           : '\$${item.borrowTerms.dailyFee}/day',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.mossDark,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.star,
                           size: 14,
-                          color: AppColors.amber,
+                          color: amberAccentOf(context),
                         ),
                         const SizedBox(width: 3),
                         Flexible(

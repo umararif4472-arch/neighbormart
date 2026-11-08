@@ -262,7 +262,10 @@ export function SignInPage() {
           />
 
           {error && (
-            <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+            <p
+              role="alert"
+              className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+            >
               {error}
             </p>
           )}
@@ -284,7 +287,7 @@ export function SignInPage() {
               New to NeighborMart?{' '}
               <button
                 type="button"
-                className="font-semibold text-terracotta-700 underline-offset-2 hover:underline"
+                className="font-semibold text-terracotta-700 dark:text-terracotta-300 underline-offset-2 hover:underline"
                 onClick={() => {
                   setMode('signup')
                   setError(null)
@@ -298,7 +301,7 @@ export function SignInPage() {
               Already have an account?{' '}
               <button
                 type="button"
-                className="font-semibold text-terracotta-700 underline-offset-2 hover:underline"
+                className="font-semibold text-terracotta-700 dark:text-terracotta-300 underline-offset-2 hover:underline"
                 onClick={() => {
                   setMode('signin')
                   setError(null)
@@ -311,7 +314,7 @@ export function SignInPage() {
         </p>
 
         {!isFirebaseConfigured && (
-          <p className="rounded-2xl bg-moss-50 px-4 py-3 text-center text-xs leading-relaxed text-moss-800">
+          <p className="rounded-2xl bg-moss-50 dark:bg-moss-900/50 px-4 py-3 text-center text-xs leading-relaxed text-moss-800 dark:text-moss-200">
             Demo mode: this build runs on sample data, so any sign-in opens the demo account.
             Connect Firebase (see .env.example) for real accounts.
           </p>

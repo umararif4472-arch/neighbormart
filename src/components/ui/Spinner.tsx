@@ -17,7 +17,11 @@ export function Spinner({ size = 'md', className }: SpinnerProps) {
     <svg
       role="status"
       aria-label="Loading"
-      className={cn('animate-spin text-terracotta-600', SIZES[size], className)}
+      className={cn(
+        'animate-spin text-terracotta-600 dark:text-terracotta-400',
+        SIZES[size],
+        className,
+      )}
       viewBox="0 0 24 24"
       fill="none"
     >

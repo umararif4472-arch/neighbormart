@@ -134,7 +134,7 @@ export function ArenaBookingPanel({ listing, owner, requests }: ArenaBookingPane
       >
         <span
           aria-hidden
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-moss-100 text-moss-700"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-moss-100 dark:bg-moss-900/50 text-moss-700 dark:text-moss-300"
         >
           <CheckIcon className="h-7 w-7" />
         </span>
@@ -184,7 +184,7 @@ export function ArenaBookingPanel({ listing, owner, requests }: ArenaBookingPane
                 'flex shrink-0 flex-col items-center rounded-2xl border px-3 py-2 text-xs transition-colors',
                 active
                   ? 'border-terracotta-600 bg-terracotta-600 text-white'
-                  : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300',
+                  : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300 dark:border-terracotta-800',
               )}
             >
               <span className="font-semibold">{label.top}</span>
@@ -213,7 +213,7 @@ export function ArenaBookingPanel({ listing, owner, requests }: ArenaBookingPane
                 state === 'tooSoon' && 'cursor-not-allowed border-bark/10 bg-surface text-bark/30',
                 state === 'free' &&
                   !isSelected &&
-                  'border-moss-300 bg-moss-50 text-moss-900 hover:border-moss-500',
+                  'border-moss-300 dark:border-moss-800 bg-moss-50 dark:bg-moss-900/50 text-moss-900 dark:text-moss-100 hover:border-moss-500',
                 isSelected && 'border-terracotta-600 bg-terracotta-600 text-white',
               )}
             >
@@ -228,7 +228,7 @@ export function ArenaBookingPanel({ listing, owner, requests }: ArenaBookingPane
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         {chosen ? (
-          <p className="rounded-2xl bg-moss-50 px-4 py-3 text-sm font-semibold text-moss-900">
+          <p className="rounded-2xl bg-moss-50 dark:bg-moss-900/50 px-4 py-3 text-sm font-semibold text-moss-900 dark:text-moss-100">
             {date} · {chosen.startTime}–{chosen.endTime} · {chosen.hours} hr ={' '}
             {formatMoney(chosen.total, listing.currency)}
           </p>
@@ -247,7 +247,7 @@ export function ArenaBookingPanel({ listing, owner, requests }: ArenaBookingPane
         {serviceError && (
           <p
             role="alert"
-            className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+            className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300"
           >
             {serviceError}
           </p>

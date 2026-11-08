@@ -226,7 +226,7 @@ export function OnboardingPage() {
           <fieldset className="flex flex-col gap-3">
             <legend className="text-sm font-semibold text-bark">
               What are you here for?{' '}
-              <span aria-hidden className="text-terracotta-600">
+              <span aria-hidden className="text-terracotta-600 dark:text-terracotta-400">
                 *
               </span>
             </legend>
@@ -246,7 +246,7 @@ export function OnboardingPage() {
                       'cursor-pointer rounded-full border px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-600',
                       selected
                         ? 'border-terracotta-600 bg-terracotta-600 text-white'
-                        : 'border-bark/15 bg-surface text-bark hover:border-terracotta-300 hover:text-terracotta-700',
+                        : 'border-bark/15 bg-surface text-bark hover:border-terracotta-300 dark:border-terracotta-800 hover:text-terracotta-700 dark:hover:text-terracotta-300',
                     )}
                   >
                     {selected ? '✓ ' : ''}
@@ -256,7 +256,7 @@ export function OnboardingPage() {
               })}
             </div>
             {showErrors && errors.interests && (
-              <p role="alert" className="text-xs font-medium text-red-700">
+              <p role="alert" className="text-xs font-medium text-red-700 dark:text-red-300">
                 {errors.interests}
               </p>
             )}
@@ -264,7 +264,10 @@ export function OnboardingPage() {
         )}
 
         {saveError && (
-          <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p
+            role="alert"
+            className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+          >
             {saveError}
           </p>
         )}

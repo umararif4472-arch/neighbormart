@@ -108,7 +108,7 @@ export function OwnerCard({
             href={`https://wa.me/${owner.phone.replace(/\D/g, '')}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-9 items-center rounded-full border border-moss-600 px-4 text-xs font-semibold text-moss-800 transition-colors hover:bg-moss-50 focus-visible:outline-2 focus-visible:outline-moss-600"
+            className="inline-flex h-9 items-center rounded-full border border-moss-600 px-4 text-xs font-semibold text-moss-800 dark:text-moss-200 transition-colors hover:bg-moss-50 dark:hover:bg-moss-900/50 focus-visible:outline-2 focus-visible:outline-moss-600"
           >
             WhatsApp
           </a>
@@ -117,7 +117,7 @@ export function OwnerCard({
 
       <Link
         to={`/profile/${owner.id}`}
-        className="text-sm font-semibold text-terracotta-700 underline-offset-4 hover:underline"
+        className="text-sm font-semibold text-terracotta-700 dark:text-terracotta-300 underline-offset-4 hover:underline"
       >
         View {owner.name.split(' ')[0]}&apos;s profile →
       </Link>
@@ -183,7 +183,7 @@ export function ListingTermsCard({ listing, origin }: ListingTermsCardProps) {
         )}
       </ul>
 
-      <p className="rounded-2xl bg-moss-50 p-3 text-xs leading-relaxed text-moss-900">
+      <p className="rounded-2xl bg-moss-50 dark:bg-moss-900/50 p-3 text-xs leading-relaxed text-moss-900 dark:text-moss-100">
         <span className="font-semibold">Owner&apos;s pickup notes: </span>
         {terms.pickupInstructions}
       </p>

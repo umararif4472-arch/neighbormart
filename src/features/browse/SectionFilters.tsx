@@ -22,7 +22,7 @@ const chipClass = (active: boolean) =>
     'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
     active
       ? 'border-terracotta-600 bg-terracotta-600 text-white'
-      : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300 hover:text-terracotta-700',
+      : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300 dark:border-terracotta-800 hover:text-terracotta-700 dark:hover:text-terracotta-300',
   )
 
 const selectClass =
@@ -45,7 +45,7 @@ export function SectionFilters({ section, listings, filters, onPatch }: SectionF
   return (
     <section
       aria-label={`${section} filters`}
-      className="flex flex-col gap-3 rounded-3xl border border-bark/10 bg-white/70 p-4"
+      className="flex flex-col gap-3 rounded-3xl border border-bark/10 bg-surface/80 p-4"
     >
       {section === 'vehicles' && (
         <>

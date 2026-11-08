@@ -18,6 +18,7 @@ import { ApiError } from '../errors'
 import { bumpListingQuota } from './rateLimit'
 import { sanitizeMultiline, sanitizeText } from '@/utils/sanitize'
 import { getDb } from '../firebase'
+import { assertNotSuspendedLive } from './users'
 import {
   validateCreateItemListingInput,
   validateCreateListingInput,
@@ -80,6 +81,7 @@ export async function createItemListing(input: CreateItemListingInput): Promise<
     throw new ApiError('invalid', Object.values(errors)[0])
   }
 
+  await assertNotSuspendedLive(input.ownerId)
   const ownerSnap = await getDoc(doc(getDb(), COLLECTIONS.users, input.ownerId))
   const owner = fromDoc<User>(ownerSnap)
   if (!owner) {

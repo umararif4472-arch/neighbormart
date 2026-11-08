@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/firebase/firebase_init.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../state/app_state.dart';
@@ -110,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen>
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 4),
-            const Text('Log in to borrow and lend on your block.'),
+            const Text('Log in to borrow, rent, buy and sell on your block.'),
             const SizedBox(height: 18),
             TextFormField(
               controller: _email,
@@ -147,8 +146,8 @@ class _LoginScreenState extends State<LoginScreen>
                 padding: const EdgeInsets.only(top: 12),
                 child: Text(
                   _error!,
-                  style: const TextStyle(
-                    color: AppColors.errorRed,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -176,11 +175,11 @@ class _LoginScreenState extends State<LoginScreen>
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: _googleBusy ? null : _googleSignIn,
-                icon: const Text(
+                icon: Text(
                   'G',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
-                    color: AppColors.terracotta,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 label: Text(
@@ -190,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             const SizedBox(height: 14),
             Card(
-              color: AppColors.creamDark,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Column(
@@ -221,9 +220,12 @@ class _LoginScreenState extends State<LoginScreen>
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Prototype shortcut — tap a neighbor to jump into their account.',
-              style: TextStyle(fontSize: 13, color: AppColors.barkLight),
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 8),
             ...state.users.map(
@@ -297,29 +299,32 @@ class _AnimatedLoginHeader extends StatelessWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: AppColors.terracotta,
+              color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(19),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.handshake_outlined,
               size: 36,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'NeighborMart',
             style: TextStyle(
               fontSize: 23,
               fontWeight: FontWeight.w800,
-              color: AppColors.bark,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 3),
-          const Text(
+          Text(
             'Borrow, rent, buy & sell — right on your block.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13.5, color: AppColors.barkLight),
+            style: TextStyle(
+              fontSize: 13.5,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 14),
           AnimatedBuilder(
@@ -339,7 +344,9 @@ class _AnimatedLoginHeader extends StatelessWidget {
                         height: 42,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: AppColors.creamDark,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(13),
                         ),
                         child: Text(

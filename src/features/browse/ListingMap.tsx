@@ -70,7 +70,7 @@ export function ListingMap({ listings, usersById, origin, radiusKm, className }:
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-3xl border border-bark/10 bg-moss-50 shadow-sm',
+        'relative overflow-hidden rounded-3xl border border-bark/10 bg-moss-50 dark:bg-moss-900/50 shadow-sm',
         className,
       )}
     >
@@ -164,7 +164,7 @@ export function ListingMap({ listings, usersById, origin, radiusKm, className }:
       ))}
 
       {/* Legend */}
-      <div className="pointer-events-none absolute left-3 top-3 rounded-2xl bg-white/90 px-3 py-2 text-[11px] font-medium text-bark-light shadow-sm backdrop-blur-sm">
+      <div className="pointer-events-none absolute left-3 top-3 rounded-2xl bg-surface/90 px-3 py-2 text-[11px] font-medium text-bark-light shadow-sm backdrop-blur-sm">
         <span className="mr-2 inline-flex items-center gap-1">
           <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-terracotta-600 bg-surface" />
           You
@@ -277,7 +277,7 @@ function MapPreviewCard({
         <div className="flex items-start justify-between gap-2">
           <Link
             to={`/listing/${listing.id}`}
-            className="font-display text-sm font-semibold leading-snug text-bark hover:text-terracotta-700 focus-visible:outline-2 focus-visible:outline-terracotta-600"
+            className="font-display text-sm font-semibold leading-snug text-bark hover:text-terracotta-700 dark:hover:text-terracotta-300 focus-visible:outline-2 focus-visible:outline-terracotta-600"
           >
             {listing.title}
           </Link>
@@ -303,7 +303,7 @@ function MapPreviewCard({
           </Badge>
           <Link
             to={`/listing/${listing.id}`}
-            className="text-xs font-semibold text-terracotta-700 underline-offset-2 hover:underline"
+            className="text-xs font-semibold text-terracotta-700 dark:text-terracotta-300 underline-offset-2 hover:underline"
           >
             View details →
           </Link>

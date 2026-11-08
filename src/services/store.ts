@@ -1,4 +1,5 @@
 import type {
+  AuditEntry,
   Report,
   AppNotification,
   BorrowRequest,
@@ -34,6 +35,8 @@ interface Database {
   messages: Message[]
   /** Phase 8 moderation queue (general listing/user reports). */
   reports: Report[]
+  /** Phase 9: every admin action, for the audit log. */
+  audit: AuditEntry[]
 }
 
 function createDatabase(): Database {
@@ -46,6 +49,7 @@ function createDatabase(): Database {
     notifications: seedNotifications(),
     messages: seedMessages(),
     reports: [],
+    audit: [],
   }
 }
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../../state/app_state.dart';
 
 /// Phone/email verification. The demo code is always 123456.
@@ -42,9 +41,9 @@ class VerificationScreen extends StatelessWidget {
             onVerify: () => _askCode(context, isPhone: false),
           ),
           const SizedBox(height: 16),
-          const Card(
-            color: AppColors.creamDark,
-            child: Padding(
+          Card(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: const Padding(
               padding: EdgeInsets.all(14),
               child: Text(
                 'Demo mode: the verification code is always 123456. Nothing is actually texted or emailed.',
@@ -90,13 +89,16 @@ class _VerifyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        leading: Icon(icon, color: AppColors.terracotta),
+        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
         title: Text(title),
         subtitle: Text(
           verified ? 'Verified' : (subtitle ?? 'Not verified yet'),
         ),
         trailing: verified
-            ? const Icon(Icons.check_circle, color: AppColors.moss)
+            ? Icon(
+                Icons.check_circle,
+                color: Theme.of(context).colorScheme.secondary,
+              )
             : ElevatedButton(onPressed: onVerify, child: const Text('Verify')),
       ),
     );

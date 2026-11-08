@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_theme.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
 
@@ -20,13 +19,13 @@ class LandingScreen extends StatelessWidget {
               height: 76,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppColors.terracotta,
+                color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(22),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.handshake_outlined,
                 size: 42,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
             const SizedBox(height: 22),
@@ -35,9 +34,12 @@ class LandingScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 10),
-            const Text(
-              'Borrow tools, gear, and party equipment from people on your block — free or for a small fee.',
-              style: TextStyle(fontSize: 15, color: AppColors.barkLight),
+            Text(
+              'Borrow, rent, or buy tools, gear, vehicles and more from people on your block.',
+              style: TextStyle(
+                fontSize: 15,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 24),
             const Row(
@@ -50,7 +52,7 @@ class LandingScreen extends StatelessWidget {
                 ),
                 _HowItWorksPoint(
                   icon: Icons.verified_outlined,
-                  label: 'Return, build trust',
+                  label: 'Complete the deal',
                 ),
               ],
             ),
@@ -95,10 +97,14 @@ class _HowItWorksPoint extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppColors.creamDark,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: AppColors.mossDark, size: 22),
+            child: Icon(
+              icon,
+              color: Theme.of(context).colorScheme.secondary,
+              size: 22,
+            ),
           ),
           const SizedBox(height: 6),
           Text(

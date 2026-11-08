@@ -60,6 +60,9 @@ const SafetyPage = lazy(() =>
 const ModerationPage = lazy(() =>
   import('@/features/moderation/ModerationPage').then((m) => ({ default: m.ModerationPage })),
 )
+const AdminPage = lazy(() =>
+  import('@/features/admin/AdminPage').then((m) => ({ default: m.AdminPage })),
+)
 const OnboardingPage = lazy(() =>
   import('@/features/auth/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
 )
@@ -268,6 +271,16 @@ export default function App() {
               <RequireAuth>
                 <ErrorBoundary>
                   <ModerationPage />
+                </ErrorBoundary>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="admin"
+            element={
+              <RequireAuth>
+                <ErrorBoundary>
+                  <AdminPage />
                 </ErrorBoundary>
               </RequireAuth>
             }

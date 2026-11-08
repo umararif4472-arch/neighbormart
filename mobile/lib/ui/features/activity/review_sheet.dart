@@ -78,7 +78,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
                 icon: Icon(
                   star <= _rating ? Icons.star : Icons.star_border,
                   size: 38,
-                  color: AppColors.amber,
+                  color: amberAccentOf(context),
                 ),
               );
             }),
@@ -96,8 +96,8 @@ class _ReviewSheetState extends State<ReviewSheet> {
               padding: const EdgeInsets.only(top: 10),
               child: Text(
                 _error!,
-                style: const TextStyle(
-                  color: AppColors.errorRed,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
                   fontWeight: FontWeight.w600,
                 ),
               ),

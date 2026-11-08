@@ -25,7 +25,7 @@ export function StarInput({ value, onChange, error, legend }: StarInputProps) {
       <fieldset className="flex flex-col gap-1.5" onMouseLeave={() => setHover(0)}>
         <legend className="text-sm font-semibold text-bark">
           {legend}
-          <span aria-hidden className="ml-1 text-terracotta-600">
+          <span aria-hidden className="ml-1 text-terracotta-600 dark:text-terracotta-400">
             *
           </span>
         </legend>
@@ -62,7 +62,7 @@ export function StarInput({ value, onChange, error, legend }: StarInputProps) {
         </div>
       </fieldset>
       {error && (
-        <p role="alert" className="text-xs font-medium text-red-700">
+        <p role="alert" className="text-xs font-medium text-red-700 dark:text-red-300">
           {error}
         </p>
       )}

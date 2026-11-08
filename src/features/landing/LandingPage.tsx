@@ -93,12 +93,17 @@ export function LandingPage() {
     return counts
   }, [listings])
 
-  // "Featured" — the most-viewed active listings (Phase 5): social proof
-  // up top, straight from the real view counters.
+  // "Featured" — admin-featured listings first (Phase 9), then the
+  // most-viewed active listings (Phase 5) fill the row.
   const featuredListings = useMemo(
     () =>
       excludeBlockedOwners(
-        listings.filter((l) => l.status === 'active').sort((a, b) => b.views - a.views),
+        listings
+          .filter((l) => l.status === 'active')
+          .sort(
+            (a, b) =>
+              Number(b.featured ?? false) - Number(a.featured ?? false) || b.views - a.views,
+          ),
         currentUser?.blockedUserIds,
       ).slice(0, 3),
     [listings, currentUser?.blockedUserIds],
@@ -109,14 +114,14 @@ export function LandingPage() {
       {/* Hero */}
       <section className="grid items-center gap-8 lg:grid-cols-[1.2fr_1fr]">
         <div className="flex flex-col gap-5">
-          <p className="inline-flex w-fit items-center gap-2 rounded-full border border-moss-300 bg-moss-50 px-3 py-1 text-xs font-semibold text-moss-800">
+          <p className="inline-flex w-fit items-center gap-2 rounded-full border border-moss-300 dark:border-moss-800 bg-moss-50 dark:bg-moss-900/50 px-3 py-1 text-xs font-semibold text-moss-800 dark:text-moss-200">
             <span aria-hidden>📍</span>
             {currentUser ? `${currentUser.neighborhood} & nearby` : 'Your neighborhood'}
             {listings.length > 0 && ` · ${listings.length} listings near you`}
           </p>
           <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-bark sm:text-5xl">
             Why buy it when your{' '}
-            <span className="text-terracotta-600 underline decoration-terracotta-300 decoration-4 underline-offset-4">
+            <span className="text-terracotta-600 dark:text-terracotta-400 underline decoration-terracotta-300 decoration-4 underline-offset-4">
               neighbor
             </span>{' '}
             already owns one?
@@ -262,7 +267,7 @@ export function LandingPage() {
               </span>
               <span
                 aria-hidden
-                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-terracotta-50 text-2xl"
+                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-terracotta-50 dark:bg-terracotta-900/50 text-2xl"
               >
                 {step.emoji}
               </span>
@@ -318,7 +323,7 @@ export function LandingPage() {
           </div>
           <Link
             to="/browse"
-            className="text-sm font-semibold text-terracotta-700 underline-offset-4 hover:underline"
+            className="text-sm font-semibold text-terracotta-700 dark:text-terracotta-300 underline-offset-4 hover:underline"
           >
             See all items →
           </Link>
@@ -408,7 +413,10 @@ export function LandingPage() {
                   {faq.q}
                   <span
                     aria-hidden
-                    className={cn('text-terracotta-600 transition-transform', open && 'rotate-180')}
+                    className={cn(
+                      'text-terracotta-600 dark:text-terracotta-400 transition-transform',
+                      open && 'rotate-180',
+                    )}
                   >
                     ▾
                   </span>
@@ -436,7 +444,11 @@ export function LandingPage() {
           minutes — your neighbors will do the rest.
         </p>
         <Link to="/list-item">
-          <Button size="lg" variant="secondary" className="border-terracotta-300">
+          <Button
+            size="lg"
+            variant="secondary"
+            className="border-terracotta-300 dark:border-terracotta-800"
+          >
             List something you own
           </Button>
         </Link>

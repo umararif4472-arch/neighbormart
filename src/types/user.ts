@@ -104,6 +104,16 @@ export interface User {
    * hidden from browse/landing and they cannot be dealt with.
    */
   blockedUserIds?: string[]
+  /** Contact email (admin lookups + account notices). */
+  email?: string
+  /**
+   * Phase 9: a suspended account cannot post listings, send messages
+   * or make requests — enforced in the services AND the Firestore
+   * rules. Set only by admins.
+   */
+  suspended?: boolean
+  /** How many admin warnings this account has received. */
+  warnings?: number
   /**
    * Phase 8 moderation: only 'admin' accounts can read the reports
    * queue and resolve reports. Set manually in Firestore — never by

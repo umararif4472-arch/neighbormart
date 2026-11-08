@@ -86,7 +86,7 @@ export function ListItemPage() {
       <div className="mx-auto flex max-w-lg flex-col items-center gap-5 py-8 text-center">
         <span
           aria-hidden
-          className="flex h-16 w-16 items-center justify-center rounded-full bg-moss-100 text-moss-700"
+          className="flex h-16 w-16 items-center justify-center rounded-full bg-moss-100 dark:bg-moss-900/50 text-moss-700 dark:text-moss-300"
         >
           <CheckIcon className="h-8 w-8" />
         </span>
@@ -113,7 +113,7 @@ export function ListItemPage() {
         </div>
         <Link
           to="/browse"
-          className="text-sm font-semibold text-terracotta-700 underline-offset-4 hover:underline"
+          className="text-sm font-semibold text-terracotta-700 dark:text-terracotta-300 underline-offset-4 hover:underline"
         >
           Browse what neighbors are sharing →
         </Link>
@@ -145,14 +145,14 @@ export function ListItemPage() {
       {form.restored && form.dirty && (
         <div
           role="status"
-          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/60 px-4 py-3 text-sm text-amber-900 dark:text-amber-100"
         >
           <p>Welcome back — we kept your draft ({step.toLowerCase()} step).</p>
           <Button
             variant="ghost"
             size="sm"
             onClick={discard}
-            className="shrink-0 text-amber-900 hover:bg-amber-100"
+            className="shrink-0 text-amber-900 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-amber-900/50"
           >
             Start over
           </Button>
@@ -176,7 +176,11 @@ export function ListItemPage() {
               <span
                 className={cn(
                   'text-[11px] font-semibold sm:text-xs',
-                  isCurrent ? 'text-terracotta-700' : isDone ? 'text-moss-700' : 'text-bark-light',
+                  isCurrent
+                    ? 'text-terracotta-700 dark:text-terracotta-300'
+                    : isDone
+                      ? 'text-moss-700 dark:text-moss-300'
+                      : 'text-bark-light',
                 )}
               >
                 {isDone && '✓ '}
@@ -232,7 +236,7 @@ export function ListItemPage() {
       {publishError && (
         <p
           role="alert"
-          className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+          className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300"
         >
           {publishError}
         </p>
@@ -307,8 +311,8 @@ function SectionStep({ draft, errors, showErrors, setField }: StepProps) {
             className={cn(
               'flex flex-col items-start gap-1 rounded-2xl border p-3 text-left transition-colors',
               draft.section === section
-                ? 'border-terracotta-600 bg-terracotta-50'
-                : 'border-bark/15 bg-surface hover:border-terracotta-300',
+                ? 'border-terracotta-600 bg-terracotta-50 dark:bg-terracotta-900/50'
+                : 'border-bark/15 bg-surface hover:border-terracotta-300 dark:border-terracotta-800',
             )}
           >
             <span className="text-2xl" aria-hidden>
@@ -339,7 +343,7 @@ function SectionStep({ draft, errors, showErrors, setField }: StepProps) {
         ))}
       </div>
       {fieldError(errors, showErrors, 'listingType') && (
-        <p role="alert" className="text-xs font-medium text-red-700">
+        <p role="alert" className="text-xs font-medium text-red-700 dark:text-red-300">
           {errors.listingType}
         </p>
       )}
@@ -756,7 +760,7 @@ function PhotosStep({
       />
 
       {fieldError(errors, showErrors, 'photos') && (
-        <p role="alert" className="text-sm font-medium text-red-700">
+        <p role="alert" className="text-sm font-medium text-red-700 dark:text-red-300">
           {errors.photos}
         </p>
       )}
@@ -788,7 +792,7 @@ function PriceStep({
       <h2 className="font-display text-lg font-bold text-bark">Price & place</h2>
 
       {draft.listingType === 'borrow' ? (
-        <p className="rounded-2xl bg-moss-50 px-4 py-3 text-sm font-semibold text-moss-900">
+        <p className="rounded-2xl bg-moss-50 dark:bg-moss-900/50 px-4 py-3 text-sm font-semibold text-moss-900 dark:text-moss-100">
           Free borrow — neighbors lend this one for nothing. Karma points included.
         </p>
       ) : (
@@ -880,7 +884,7 @@ function PreviewStep({
           </div>
         </>
       ) : (
-        <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <div className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300">
           <p className="font-semibold">A few things still need fixing:</p>
           <ul className="mt-1 list-disc pl-5">
             {'errors' in built &&

@@ -101,7 +101,7 @@ export function RequestBorrowModal({ listing, owner, open, onClose }: RequestBor
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           {/* Owner + item context */}
-          <div className="flex items-center gap-3 rounded-2xl bg-terracotta-50 p-3">
+          <div className="flex items-center gap-3 rounded-2xl bg-terracotta-50 dark:bg-terracotta-900/50 p-3">
             <Avatar name={owner.name} src={owner.avatarUrl} size="sm" />
             <p className="text-sm text-bark-light">
               You&apos;re asking <span className="font-semibold text-bark">{owner.name}</span> —
@@ -133,7 +133,7 @@ export function RequestBorrowModal({ listing, owner, open, onClose }: RequestBor
             }
           />
           {submitted && validation.errors.duration && (
-            <p role="alert" className="-mt-2 text-xs font-medium text-red-700">
+            <p role="alert" className="-mt-2 text-xs font-medium text-red-700 dark:text-red-300">
               {validation.errors.duration}
             </p>
           )}
@@ -151,7 +151,7 @@ export function RequestBorrowModal({ listing, owner, open, onClose }: RequestBor
           {serviceError && (
             <p
               role="alert"
-              className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+              className="rounded-2xl bg-red-50 dark:bg-red-950/60 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300"
             >
               {serviceError}
             </p>
@@ -186,7 +186,7 @@ function SuccessView({
     <div className="flex flex-col items-center gap-4 py-2 text-center">
       <span
         aria-hidden
-        className="flex h-16 w-16 items-center justify-center rounded-full bg-moss-100 text-moss-700"
+        className="flex h-16 w-16 items-center justify-center rounded-full bg-moss-100 dark:bg-moss-900/50 text-moss-700 dark:text-moss-300"
       >
         <CheckIcon className="h-8 w-8" />
       </span>
@@ -197,7 +197,7 @@ function SuccessView({
           You&apos;ll get a notification here the moment they respond.
         </p>
       </div>
-      <p className="rounded-2xl bg-terracotta-50 px-4 py-2 text-sm font-semibold text-bark">
+      <p className="rounded-2xl bg-terracotta-50 dark:bg-terracotta-900/50 px-4 py-2 text-sm font-semibold text-bark">
         {listing.title} · {formatDateRange(request.period.start, request.period.end)}
       </p>
       <div className="flex gap-2">

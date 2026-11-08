@@ -40,6 +40,7 @@ export function seedUsers(): User[] {
     {
       id: 'u-maya',
       name: 'Maya Chen',
+      email: 'maya.chen@example.com',
       avatarUrl: 'https://picsum.photos/seed/bdb-maya/128/128',
       bio: 'Weekend woodworker, weekday cook. Happy to lend the drill if you return it with a story.',
       city: 'Lahore',
@@ -80,6 +81,7 @@ export function seedUsers(): User[] {
     {
       id: 'u-joan',
       name: 'Joan Whitfield',
+      email: 'joan.whitfield@example.com',
       avatarUrl: 'https://picsum.photos/seed/bdb-joan/128/128',
       bio: 'Retired teacher. If it\u2019s in my garage, it\u2019s yours to borrow — just bring it back so the next neighbor can.',
       city: 'Lahore',
@@ -122,6 +124,7 @@ export function seedUsers(): User[] {
     {
       id: 'u-tom',
       name: 'Tom Alvarez',
+      email: 'tom.alvarez@example.com',
       avatarUrl: 'https://picsum.photos/seed/bdb-tom/128/128',
       bio: 'The fix-it guy on the block. Tools are meant to be used, not dusted.',
       city: 'Lahore',
@@ -152,6 +155,7 @@ export function seedUsers(): User[] {
     {
       id: 'u-priya',
       name: 'Priya Sharma',
+      email: 'priya.sharma@example.com',
       avatarUrl: 'https://picsum.photos/seed/bdb-priya/128/128',
       bio: 'Gardener, tennis regular, and firm believer that every block needs a shared ladder.',
       city: 'Lahore',
@@ -189,6 +193,7 @@ export function seedUsers(): User[] {
     {
       id: 'u-marcus',
       name: 'Marcus Webb',
+      email: 'marcus.webb@example.com',
       avatarUrl: 'https://picsum.photos/seed/bdb-marcus/128/128',
       bio: 'I own more camping gear than my garage can explain. Ask away.',
       city: 'Lahore',
@@ -215,6 +220,7 @@ export function seedUsers(): User[] {
     {
       id: 'u-sana',
       name: 'Sana Iqbal',
+      email: 'sana.iqbal@example.com',
       avatarUrl: 'https://picsum.photos/seed/bdb-sana/128/128',
       bio: 'Canning season is a lifestyle. Jars included with the canner, obviously.',
       city: 'Lahore',
@@ -243,6 +249,7 @@ export function seedUsers(): User[] {
     {
       id: 'u-diego',
       name: 'Diego Ramírez',
+      email: 'diego.ramirez@example.com',
       avatarUrl: 'https://picsum.photos/seed/bdb-diego/128/128',
       bio: 'New-ish here. The snowboard collects dust eight months a year — it should be on the mountain.',
       city: 'Lahore',
@@ -269,6 +276,7 @@ export function seedUsers(): User[] {
     {
       id: 'u-nina',
       name: 'Nina Kowalski',
+      email: 'nina.kowalski@example.com',
       avatarUrl: 'https://picsum.photos/seed/bdb-nina/128/128',
       bio: 'Party supplies central. If your backyard needs string lights, I\u2019ve got 300 feet of them.',
       city: 'Lahore',
@@ -297,6 +305,7 @@ export function seedUsers(): User[] {
     {
       id: 'u-leo',
       name: 'Leo Park',
+      email: 'leo.park@example.com',
       avatarUrl: 'https://picsum.photos/seed/bdb-leo/128/128',
       bio: 'Just moved in. The projector is the only thing I\u2019ve unpacked so far.',
       city: 'Lahore',
