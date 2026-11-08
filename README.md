@@ -1,6 +1,13 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="src/assets/brand/wordmark-dark.png" />
+    <img src="src/assets/brand/wordmark-light.png" alt="NeighborMart — Everything behind the door" width="480" />
+  </picture>
+</p>
+
 # NeighborMart — Local Marketplace
 
-> Borrow, rent, buy, or sell almost anything — right in your own city.
+> **Everything behind the door** — borrow, rent, buy, or sell almost anything, right in your own city. (Brand: see [docs/BRAND.md](docs/BRAND.md).)
 
 A local marketplace where people list what they own and neighbors can
 **borrow it free, rent it, or buy it outright**. One app, four sections:
