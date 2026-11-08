@@ -132,7 +132,13 @@ const _lightPalette = _Palette(
   surfaceVariant: AppColors.creamDark,
   ink: AppColors.bark,
   inkSoft: AppColors.barkLight,
-  primary: AppColors.terracotta,
+  // Button/primary contrast: white on AppColors.terracotta (#C05F3B) is
+  // only ~4.25:1, below WCAG AA 4.5:1 for button text. terracottaDark
+  // (#A44B2D, ~5.8:1) is the palette's next shade down and is exactly
+  // the web app's button color (terracotta-600), so both platforms now
+  // share one button color. AppColors.terracotta itself is unchanged
+  // and still used for brand surfaces (splash, logo tiles).
+  primary: AppColors.terracottaDark,
   onPrimary: Colors.white,
   trust: AppColors.moss,
   onTrust: Colors.white,

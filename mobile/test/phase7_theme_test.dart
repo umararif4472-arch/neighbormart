@@ -76,7 +76,10 @@ void main() {
       final theme = buildAppTheme();
       expect(theme.brightness, Brightness.light);
       expect(theme.scaffoldBackgroundColor, AppColors.cream);
-      expect(theme.colorScheme.primary, AppColors.terracotta);
+      // Primary is the darker terracotta shade so white button text
+      // meets WCAG AA 4.5:1 (Phase 9); AppColors.terracotta remains
+      // the brand surface color (splash, logo tiles).
+      expect(theme.colorScheme.primary, AppColors.terracottaDark);
       expect(theme.colorScheme.surface, AppColors.creamSurface);
       expect(theme.colorScheme.surfaceContainerHighest, AppColors.creamDark);
       expect(theme.colorScheme.onSurface, AppColors.bark);

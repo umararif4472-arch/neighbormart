@@ -151,6 +151,22 @@ const PAIRS: Array<[string, string, string, number]> = [
   ['terracotta-900 on terracotta-50', '#4c2518', '#faf1eb', AA],
 ]
 
+describe('button terracotta rule', () => {
+  it('never pairs bg-terracotta-500 with white text (buttons use terracotta-600, ~5.8:1)', () => {
+    const bad: string[] = []
+    for (const file of sourceFiles(SRC)) {
+      const text = readFileSync(file, 'utf8')
+      for (const m of text.matchAll(/className=(?:"([^"]*)"|'([^']*)'|`([^`]*)`)/g)) {
+        const cls = m[1] ?? m[2] ?? m[3] ?? ''
+        if (/bg-terracotta-500(?!\d)/.test(cls) && /text-white(?!\w)/.test(cls)) {
+          bad.push(file + ' :: ' + cls.slice(0, 60))
+        }
+      }
+    }
+    expect(bad).toEqual([])
+  })
+})
+
 describe('color guard — WCAG AA contrast for theme token pairs', () => {
   it.each(PAIRS)('%s meets its ratio', (_label, fg, bg, min) => {
     expect(ratio(fg, bg)).toBeGreaterThanOrEqual(min)

@@ -52,10 +52,11 @@ void main() {
             reason: '${entry.key} ${pair.key} must meet AA for normal text',
           );
         }
-        // The brand primary carries large text, icons and button fills
-        // rather than body text; it is held to the 3:1 large/graphic
-        // threshold. (Light terracotta sits at ~4.2:1 — a shipped brand
-        // value, not changed by the dark-mode pass.)
+        // The brand primary is the button fill and onPrimary is the
+        // button label, so that pair is held to the full 4.5:1 AA text
+        // threshold (white on terracottaDark #A44B2D is ~5.8:1).
+        // primary against the surface stays at 3:1 — it is also used
+        // for large icons and graphic accents.
         expect(
           contrastRatio(scheme.primary, scheme.surface),
           greaterThanOrEqualTo(3.0),
@@ -63,8 +64,8 @@ void main() {
         );
         expect(
           contrastRatio(scheme.onPrimary, scheme.primary),
-          greaterThanOrEqualTo(3.0),
-          reason: '${entry.key} onPrimary/primary must meet 3:1',
+          greaterThanOrEqualTo(4.5),
+          reason: '${entry.key} onPrimary/primary must meet 4.5:1',
         );
       });
     }
