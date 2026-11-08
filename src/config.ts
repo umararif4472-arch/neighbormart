@@ -5,6 +5,18 @@
  */
 
 /**
+ * Brand identity (Open Door brand kit — see docs/BRAND.md). The app
+ * name is a placeholder: if the product is ever renamed, change it
+ * HERE (plus the static copies in index.html, public/manifest.webmanifest
+ * and the kit wordmark artwork) and every surface that imports these
+ * constants follows.
+ */
+export const APP_NAME = 'NeighborMart'
+
+/** Brand tagline — sentence case, used verbatim everywhere. */
+export const APP_TAGLINE = 'Everything behind the door'
+
+/**
  * Default currency for prices, ISO-style code. PKR unless overridden.
  * Read defensively: the seed script imports this module under plain
  * Node (tsx), where `import.meta.env` does not exist — there the

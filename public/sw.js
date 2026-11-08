@@ -8,7 +8,7 @@
  *   never served stale from here.
  * Bump SW_VERSION to invalidate old caches on deploy.
  */
-const SW_VERSION = 'neighbormart-v1'
+const SW_VERSION = 'neighbormart-v2'
 const SHELL_CACHE = `${SW_VERSION}-shell`
 const SHELL_URLS = ['/', '/offline.html', '/manifest.webmanifest', '/icon-192.png', '/favicon.svg']
 

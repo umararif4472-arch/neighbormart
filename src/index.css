@@ -57,33 +57,62 @@
   --color-accent-properties: var(--nm-accent-properties);
   --color-accent-arenas: var(--nm-accent-arenas);
 
-  /* Friendly rounded display face for headings (system fallbacks) */
-  --font-display: "Georgia", "Trebuchet MS", ui-serif, serif;
+  /* Open Door brand kit — STATIC tokens (identical in both themes).
+   * brand-cream is the kit cream for use on non-flipping backgrounds
+   * (the terracotta mesh hero, the door intro), where the flipping
+   * `--color-cream` canvas token would be wrong. brand-* accents are
+   * the EXACT kit hexes for graphical use (logo art, hero icon tiles,
+   * chart fills); text-facing section accents live in --nm-accent-*
+   * because most kit hexes cannot reach 4.5:1 as small text (see
+   * docs/BRAND.md for the measured ratios). */
+  --color-brand-cream: #f6ebdd;
+  --color-brand-amber: #d99a2b;
+  --color-door: #5e2815;
+  --color-brand-items: #d99a2b;
+  --color-brand-vehicles: #3b7dd8;
+  --color-brand-properties: #8e4a8b;
+  --color-brand-arenas: #4f8a4b;
+
+  /* "Mart" in the wordmark: terracotta on light, the kit's lightened
+   * terracotta (#D9805F, from logo-wordmark-dark.svg) on dark. */
+  --color-wordmark-mart: #a44b2d;
+
+  /* Poppins (Google Fonts, loaded in index.html) is the brand display
+   * face — the wordmark is set in Poppins Bold. */
+  --font-display: "Poppins", "Trebuchet MS", system-ui, sans-serif;
   --font-sans: "Segoe UI", "Trebuchet MS", system-ui, -apple-system, sans-serif;
 }
 
 :root {
-  --nm-canvas: #fbf7f0;
+  --nm-canvas: #f6ebdd;
   --nm-surface: #fffdf9;
   --nm-surface-2: #f4ede1;
-  --nm-ink: #44392f;
+  --nm-ink: #3a2218;
   --nm-ink-soft: #71604e;
-  --nm-accent-items: #b45309;
+  /* Text shades of the kit section hues, deepened until they reach
+   * WCAG AA on the cream canvas (kit hexes are kept for graphics in
+   * the --color-brand-* tokens above). Properties' kit hex passes as
+   * text as-is (5.10:1), so it is used exactly. */
+  --nm-accent-items: #a84e09;
   --nm-accent-vehicles: #1d4ed8;
-  --nm-accent-properties: #7e22ce;
-  --nm-accent-arenas: #15803d;
+  --nm-accent-properties: #8e4a8b;
+  --nm-accent-arenas: #146c36;
 }
 
 .dark {
-  --nm-canvas: #171310;
-  --nm-surface: #221c16;
-  --nm-surface-2: #2b241c;
+  --nm-canvas: #201b16;
+  --nm-surface: #2a251f;
+  --nm-surface-2: #38312a;
   --nm-ink: #f3ede4;
   --nm-ink-soft: #c9bba9;
-  --nm-accent-items: #fbbf24;
+  /* Items uses the exact kit amber (7.00:1 on the dark canvas); the
+   * other kit hexes fall short of AA as dark-mode text, so they keep
+   * lightened shades of the same hues. */
+  --nm-accent-items: #d99a2b;
   --nm-accent-vehicles: #60a5fa;
   --nm-accent-properties: #c084fc;
   --nm-accent-arenas: #4ade80;
+  --color-wordmark-mart: #d9805f;
   color-scheme: dark;
 }
 
@@ -227,6 +256,125 @@
   .nm-logo-pop,
   .nm-fade-up {
     animation: none;
+  }
+}
+
+/* Dark mode: the mesh sits on warm charcoal with the brand hues as
+ * soft glows, instead of the light mode's terracotta field. */
+.dark .nm-mesh {
+  background-color: #201b16;
+  background-image:
+    radial-gradient(38rem 22rem at 15% 10%, rgb(164 75 45 / 0.5), transparent 60%),
+    radial-gradient(30rem 20rem at 90% 15%, rgb(127 169 115 / 0.35), transparent 60%),
+    radial-gradient(36rem 26rem at 55% 105%, rgb(217 154 43 / 0.25), transparent 65%);
+}
+
+/* Pause every CSS animation inside a subtree (tab hidden — the
+ * sign-in page toggles this on visibilitychange). */
+.nm-paused,
+.nm-paused * {
+  animation-play-state: paused !important;
+}
+
+/* Form error shake (sign-in card). */
+@keyframes nm-shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-5px);
+  }
+  40%,
+  60% {
+    transform: translateX(5px);
+  }
+}
+
+@utility nm-shake {
+  animation: nm-shake 0.45s ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nm-shake {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Open Door intro (src/components/DoorIntro.tsx). The door leaf is an */
+/* SVG group hinged on its left edge: `transform-box: fill-box` makes  */
+/* the group's own bounding box the transform reference, so           */
+/* `transform-origin: left center` is exactly the hinge line (x=176   */
+/* in kit geometry). The parent supplies the 3D perspective.          */
+/* ------------------------------------------------------------------ */
+
+@keyframes nm-door-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@utility nm-door-in {
+  animation: nm-door-in 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+@keyframes nm-knob-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.nm-door-leaf {
+  transform-box: fill-box;
+  transform-origin: left center;
+  transition: transform 0.7s cubic-bezier(0.6, 0.05, 0.3, 1);
+  will-change: transform;
+}
+
+.nm-door-leaf-open {
+  transform: rotateY(-102deg);
+}
+
+/* The knob's halo: a second amber circle behind the knob that swells
+ * and fades — the "someone's home" loading cue. */
+.nm-door-knob-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nm-knob-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nm-door-in {
+    animation: none;
+  }
+  .nm-door-knob-halo {
+    animation: none;
+    opacity: 0;
+  }
+  .nm-door-leaf {
+    transition: none;
   }
 }
 

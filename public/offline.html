@@ -11,8 +11,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #fbf7f0;
-        color: #44392f;
+        background: #f6ebdd;
+        color: #3a2218;
         font-family: 'Segoe UI', 'Trebuchet MS', system-ui, sans-serif;
         text-align: center;
         padding: 24px;
@@ -27,19 +27,15 @@
       .mark {
         width: 72px;
         height: 72px;
-        border-radius: 20px;
-        background: #a44b2d;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: block;
       }
       h1 {
-        font-family: Georgia, 'Trebuchet MS', serif;
+        font-family: Poppins, Georgia, 'Trebuchet MS', sans-serif;
         font-size: 28px;
         margin: 8px 0 0;
       }
       p {
-        color: #7a6a5b;
+        color: #71604e;
         line-height: 1.55;
         margin: 0;
       }
@@ -58,11 +54,16 @@
   </head>
   <body>
     <div class="card">
-      <div class="mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="40" height="40" fill="#FBF7F0">
-          <path d="M12 4 3 11h2.5v8H10v-5h4v5h4.5v-8H21z" />
-        </svg>
-      </div>
+      <!-- Open Door logo (brand kit: logo-symbol.svg, inlined verbatim) -->
+      <svg class="mark" viewBox="0 0 512 512" aria-hidden="true">
+        <rect width="512" height="512" rx="112" fill="#A44B2D" />
+        <g>
+          <path d="M146 372 V226 A110 110 0 0 1 366 226 V372 Z" fill="#F6EBDD" />
+          <path d="M176 372 V230 A80 80 0 0 1 336 230 V372 Z" fill="#5E2815" />
+          <circle cx="312" cy="316" r="9" fill="#D99A2B" />
+          <rect x="126" y="372" width="260" height="22" rx="11" fill="#D99A2B" />
+        </g>
+      </svg>
       <h1>You're offline</h1>
       <p>
         NeighborMart needs a connection to show live listings near you. Check your internet and try
