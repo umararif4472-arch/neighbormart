@@ -453,9 +453,16 @@ class _VerifiedRow extends StatelessWidget {
               : Theme.of(context).colorScheme.onSurfaceVariant,
         ),
         const SizedBox(width: 4),
-        Text(
-          '$label ${ok ? 'verified' : 'unverified'}',
-          style: const TextStyle(fontSize: 12),
+        // Flexible + ellipsis: at large text scales the label
+        // shrinks into the chip's share of the Wrap instead of
+        // overflowing the row.
+        Flexible(
+          child: Text(
+            '$label ${ok ? 'verified' : 'unverified'}',
+            style: const TextStyle(fontSize: 12),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );

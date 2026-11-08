@@ -134,8 +134,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            // Wrap, not Row: with large accessibility text the
+            // button drops to its own line instead of overflowing.
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 const Text('Already have an account?'),
                 TextButton(

@@ -83,27 +83,8 @@ class _ConversationTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Card(
-        child: ListTile(
-          leading: leading,
-          title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text(
-            subtitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          trailing: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (req != null)
-                StatusChip(status: req.status, isOverdue: req.isOverdue),
-              if (req != null) const SizedBox(height: 4),
-              Text(
-                shortDate(c.lastActivity),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => c.isRequestThread
@@ -114,6 +95,60 @@ class _ConversationTile extends StatelessWidget {
                       otherUserId: c.other.id,
                     )
                   : ChatScreen.forUser(otherUserId: c.other.id),
+            ),
+          ),
+          // A hand-built row instead of ListTile: ListTile's fixed
+          // internal text column overflows at large text scales
+          // with a two-line subtitle; here every part sizes to its
+          // content and the middle column flexes.
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                leading,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (req != null)
+                      StatusChip(status: req.status, isOverdue: req.isOverdue),
+                    if (req != null) const SizedBox(height: 4),
+                    Text(
+                      shortDate(c.lastActivity),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
