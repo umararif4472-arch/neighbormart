@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1063143466647",
+    "project_id": "neighbormart-7eff0",
+    "storage_bucket": "neighbormart-7eff0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1063143466647:android:9169ed9c2a6f91561f2bd2",
+        "android_client_info": {
+          "package_name": "com.neighbormart.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1063143466647-4mpguikqq0fscuuju0cvn2gl99l5li92.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.neighbormart.app",
+            "certificate_hash": "0177915156da078bd3a0a0a97c829f01cd28c0d4"
+          }
+        },
+        {
+          "client_id": "1063143466647-qr27rd21pcppuqmg5kms86m2isav15it.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJxRDfMO295F3zP2C_0cqENq-tGB0cA20"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1063143466647-qr27rd21pcppuqmg5kms86m2isav15it.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

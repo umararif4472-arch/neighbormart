@@ -12,3 +12,7 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+# Exception: the shared DEBUG keystore is committed on purpose (standard
+# public debug credentials, password "android") so every CI build signs
+# with the same SHA-1 that is registered in Firebase for Google Sign-In.
+!debug.keystore

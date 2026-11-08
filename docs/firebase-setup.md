@@ -1,5 +1,29 @@
 # Firebase setup — NeighborMart (Phase 3)
 
+> **Status (2026-11-08): DONE, except Storage.** The live project
+> **`neighbormart-7eff0`** exists: web + Android apps registered (the
+> Android app carries the CI debug keystore's SHA-1:
+> `01:77:91:51:…:c0:d4`), Google + Email/Password providers enabled,
+> Firestore created in **asia-south1**, `firestore.rules` deployed,
+> all 12 composite indexes **READY**, Firestore seeded (9 users /
+> 35 listings / 30 requests / 29 reviews / 6 messages / 2
+> notifications), and a live smoke test passes
+> (`node scripts/smoke-live.mjs`). Rules and indexes were deployed
+> through the API with the service-account key (which was granted the
+> Cloud Datastore Index Admin role for that purpose); on your own
+> machine, `firebase login` + Part C below does the same job.
+> The write-up below is kept as the record of how it was set up.
+>
+> **One thing remains: Cloud Storage.** Firebase now requires the
+> pay-as-you-go **Blaze** plan before Storage can be enabled at all
+> (the console shows "Storage requires a billing account"). Auth and
+> Firestore run fine on Spark; only Phase 4 photo uploads need
+> Storage. Upgrading to Blaze is a billing decision — it adds a card
+> to the account, though Storage has a no-cost usage allowance and
+> this app's demo-scale usage stays inside it. Until then the app
+> runs without photo storage and falls back to emoji/placeholder
+> imagery, exactly as designed.
+
 The code is done: with `VITE_FIREBASE_*` set, the web app runs on
 Firebase Auth + Firestore, and the Flutter app activates Google
 Sign-In when it finds its config file. What remains is creating the

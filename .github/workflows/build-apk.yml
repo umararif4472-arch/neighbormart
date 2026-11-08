@@ -23,6 +23,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # One fixed debug keystore for every CI build, so the APK signing
+      # SHA-1 never changes and Firebase/Google Sign-In keeps working
+      # (the fingerprint is registered in the Firebase console).
+      - name: Install fixed debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          cp android/debug.keystore "$HOME/.android/debug.keystore"
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
