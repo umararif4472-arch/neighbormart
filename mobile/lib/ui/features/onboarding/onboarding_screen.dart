@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/config.dart';
+import '../../../core/widgets/brand_mark.dart';
 import '../../../state/app_state.dart';
 
 class _Page {
@@ -56,9 +58,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(onPressed: _finish, child: const Text('Skip')),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 8, 0),
+              child: Row(
+                children: [
+                  const BrandMark(size: 36),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      kAppName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton(onPressed: _finish, child: const Text('Skip')),
+                ],
+              ),
             ),
             Expanded(
               child: PageView.builder(

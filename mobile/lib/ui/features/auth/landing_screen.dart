@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config.dart';
+import '../../../core/widgets/brand_mark.dart';
 import 'login_screen.dart';
 import 'signup_screen.dart';
 
@@ -14,18 +16,14 @@ class LandingScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 36, 16, 32),
           children: [
-            Container(
-              width: 76,
-              height: 76,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Icon(
-                Icons.handshake_outlined,
-                size: 42,
-                color: Theme.of(context).colorScheme.onPrimary,
+            const BrandMark(size: 76),
+            const SizedBox(height: 14),
+            Text(
+              kAppTagline,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 22),
