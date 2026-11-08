@@ -306,7 +306,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 700));
       expect(find.text('NeighborMart'), findsOneWidget);
       expect(
-        find.text('Borrow, rent, buy and sell, right on your block'),
+        find.text('Everything behind the door'),
         findsOneWidget,
       );
       expect(find.text('Continue with Google'), findsOneWidget);

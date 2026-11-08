@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/config.dart';
 import '../../../core/firebase/firebase_init.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/brand_mark.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../state/app_state.dart';
@@ -12,12 +15,14 @@ import 'forgot_password_screen.dart';
 import 'login_backdrop.dart';
 import 'signup_screen.dart';
 
-/// Login: the clean sign-in screen — brand block, then one card
-/// holding Google sign-in (the primary path), an "or" divider,
-/// and the email form — given tasteful motion only:
-/// a very subtle drifting-gradient backdrop (see [LoginBackdrop]),
-/// a short staggered entrance (logo → wordmark → card, under a
-/// second), and a small shake of the card when an error lands.
+/// Login: the clean sign-in screen — the Open Door brand block
+/// (kit logo symbol, two-tone wordmark, tagline revealing span
+/// by span), then one card holding Google sign-in (the primary
+/// path), an "or" divider, and the email form — over the
+/// drifting mesh + floating section icons of [LoginBackdrop].
+/// Motion stays tasteful: the backdrop drift, a short staggered
+/// entrance (logo → wordmark → tagline → card, under a second),
+/// and a small shake of the card when an error lands.
 ///
 /// Auth behaviour: Google goes through [FirebaseAuthService] and
 /// adopts the returned user, email goes through [AppState.login],
@@ -215,7 +220,7 @@ class _LoginScreenState extends State<LoginScreen>
               opacity: logoOpacity.clamp(0.0, 1.0),
               child: Transform.scale(
                 scale: logoScale.clamp(0.85, 1.05),
-                child: _logoTile(scheme),
+                child: const BrandMark(size: 72),
               ),
             ),
             const SizedBox(height: 14),
@@ -327,48 +332,62 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _logoTile(ColorScheme scheme) {
-    return Container(
-      width: 68,
-      height: 68,
-      decoration: BoxDecoration(
-        color: scheme.primary,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.primary.withValues(alpha: 0.30),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Icon(Icons.handshake_outlined, size: 36, color: scheme.onPrimary),
-    );
-  }
-
-  /// Wordmark and the tagline as one plain centered string (a
-  /// single Text keeps it one accessible string).
+  /// The wordmark and tagline. The kit's wordmark is set in
+  /// Poppins Bold ("Neighbor" in ink, "Mart" in terracotta); the
+  /// font isn't bundled and flutter_svg can't render the SVG
+  /// lockup's `<text>`, so the wordmark is styled text in the
+  /// same two-tone split (the sanctioned fallback in
+  /// docs/BRAND.md), next to the kit symbol in [BrandMark]. The
+  /// tagline is one [Text.rich] — one accessible string — whose
+  /// two spans fade in on successive beats of the entrance.
   Widget _wordmark(BuildContext context, ColorScheme scheme) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final neighbor = dark ? AppColors.darkInk : AppColors.bark;
+    final mart = dark ? AppColors.wordmarkMartDark : AppColors.terracottaDark;
+    final base = scheme.onSurfaceVariant;
+    final v = _entrance.value;
+    // The reveal splits the tagline at "behind": "Everything "
+    // lands first, "behind the door" follows.
+    final split = kAppTagline.indexOf('behind');
+    final seg1 = const Interval(0.30, 0.58, curve: Curves.easeOut).transform(v);
+    final seg2 = const Interval(0.46, 0.78, curve: Curves.easeOut).transform(v);
     return Column(
       children: [
-        Text(
-          'NeighborMart',
-          style: TextStyle(
-            fontSize: 27,
-            fontWeight: FontWeight.w800,
-            color: scheme.onSurface,
-            letterSpacing: 0.2,
+        Text.rich(
+          TextSpan(
+            style: const TextStyle(
+              fontSize: 27,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
+            ),
+            children: [
+              TextSpan(
+                text: 'Neighbor',
+                style: TextStyle(color: neighbor),
+              ),
+              TextSpan(
+                text: 'Mart',
+                style: TextStyle(color: mart),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 6),
-        Text(
-          'Borrow, rent, buy and sell, right on your block',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14.5,
-            height: 1.35,
-            color: scheme.onSurfaceVariant,
+        Text.rich(
+          TextSpan(
+            style: TextStyle(fontSize: 14.5, height: 1.35, color: base),
+            children: [
+              TextSpan(
+                text: kAppTagline.substring(0, split),
+                style: TextStyle(color: base.withValues(alpha: seg1)),
+              ),
+              TextSpan(
+                text: kAppTagline.substring(split),
+                style: TextStyle(color: base.withValues(alpha: seg2)),
+              ),
+            ],
           ),
+          textAlign: TextAlign.center,
         ),
       ],
     );

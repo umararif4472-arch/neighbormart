@@ -10,3 +10,12 @@ const String kAppName = 'NeighborMart';
 /// The brand tagline, verbatim (sentence case) everywhere it
 /// appears: door intro, login, landing hero, About.
 const String kAppTagline = 'Everything behind the door';
+
+/// Brand asset paths (kit SVGs, bundled from assets/brand/).
+/// Placement rules (docs/BRAND.md): dark backgrounds take the
+/// dark symbol; light backgrounds take the standard symbol, or
+/// the simple symbol (no welcome mat) at 48px and below.
+const String kBrandSymbolAsset = 'assets/brand/logo-symbol.svg';
+const String kBrandSymbolDarkAsset = 'assets/brand/logo-symbol-dark.svg';
+const String kBrandSymbolSimpleAsset = 'assets/brand/logo-symbol-simple.svg';
+const String kBrandOneColorCreamAsset = 'assets/brand/logo-onecolor-cream.svg';

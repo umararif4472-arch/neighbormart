@@ -102,9 +102,9 @@ void main() {
       await settleEntrance(tester);
 
       expect(find.text('NeighborMart'), findsOneWidget);
-      // The tagline is one plain Text with the exact copy.
+      // The tagline is one Text.rich with the exact brand copy.
       expect(
-        find.text('Borrow, rent, buy and sell, right on your block'),
+        find.text('Everything behind the door'),
         findsOneWidget,
       );
       expect(find.byType(GoogleGLogo), findsOneWidget);
