@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -7,11 +9,15 @@ import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../state/app_state.dart';
 import 'forgot_password_screen.dart';
+import 'login_backdrop.dart';
 import 'signup_screen.dart';
 
-/// Login: a clean, mostly static sign-in screen — brand block on
-/// the theme canvas, then one card holding Google sign-in (the
-/// primary path), an "or" divider, and the email form.
+/// Login: the clean sign-in screen — brand block, then one card
+/// holding Google sign-in (the primary path), an "or" divider,
+/// and the email form — given tasteful motion only:
+/// a very subtle drifting-gradient backdrop (see [LoginBackdrop]),
+/// a short staggered entrance (logo → wordmark → card, under a
+/// second), and a small shake of the card when an error lands.
 ///
 /// Auth behaviour: Google goes through [FirebaseAuthService] and
 /// adopts the returned user, email goes through [AppState.login],
@@ -19,8 +25,8 @@ import 'signup_screen.dart';
 /// root gate. The demo card and one-tap neighbor shortcuts only
 /// exist when Firebase is NOT configured for the build
 /// ([firebaseReady] false) — a live build never offers demo
-/// accounts. The only motion is a single subtle fade-in of the
-/// whole column, skipped entirely for reduced-motion users.
+/// accounts. Reduced-motion users get the static backdrop, the
+/// settled layout at the first frame, and no shake.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -28,19 +34,27 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
   String? _error;
   bool _googleBusy = false;
 
-  /// The one entrance animation: a 300ms fade of the whole column.
-  late final AnimationController _fade = AnimationController(
+  /// Entrance choreography: logo, wordmark/tagline, then the card
+  /// block, staggered ~120ms apart over 900ms total.
+  late final AnimationController _entrance = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 300),
+    duration: const Duration(milliseconds: 900),
   );
 
+  /// Error shake on the sign-in card.
+  late final AnimationController _shake = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 450),
+  );
+
+  bool _reduceMotion = false;
   bool? _lastReduceMotion;
 
   @override
@@ -51,16 +65,20 @@ class _LoginScreenState extends State<LoginScreen>
     final reduce = MediaQuery.of(context).disableAnimations;
     if (_lastReduceMotion == reduce) return;
     _lastReduceMotion = reduce;
+    _reduceMotion = reduce;
     if (reduce) {
-      _fade.value = 1;
-    } else {
-      _fade.forward();
+      // Static version: everything parked at its final state.
+      _entrance.value = 1;
+      _shake.stop();
+    } else if (_entrance.status == AnimationStatus.dismissed) {
+      _entrance.forward();
     }
   }
 
   @override
   void dispose() {
-    _fade.dispose();
+    _entrance.dispose();
+    _shake.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
@@ -68,6 +86,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   void _showError(String message) {
     setState(() => _error = message);
+    if (!_reduceMotion) _shake.forward(from: 0);
     HapticFeedback.mediumImpact();
   }
 
@@ -123,91 +142,33 @@ class _LoginScreenState extends State<LoginScreen>
     final state = context.watch<AppState>();
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            SingleChildScrollView(
+      body: Stack(
+        children: [
+          Positioned.fill(child: LoginBackdrop(reduceMotion: _reduceMotion)),
+          SafeArea(
+            child: SingleChildScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(24),
               child: Align(
                 alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 460),
-                  child: FadeTransition(
-                    opacity: _fade,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 16),
-                        _brandBlock(context, scheme),
-                        const SizedBox(height: 28),
-                        _signInCard(context, scheme),
-                        const SizedBox(height: 18),
-                        // Wrap, not Row: with very large accessibility
-                        // text the button drops to its own line instead
-                        // of overflowing.
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            const Text('New here?'),
-                            TextButton(
-                              onPressed: () => Navigator.of(context)
-                                  .pushReplacement(
-                                    MaterialPageRoute(
-                                      builder: (_) => const SignUpScreen(),
-                                    ),
-                                  ),
-                              child: const Text('Create an account'),
-                            ),
-                          ],
-                        ),
-                        if (!firebaseReady) ...[
-                          const SizedBox(height: 8),
-                          _demoCard(context, scheme),
-                          const SizedBox(height: 22),
-                          Text(
-                            'Or continue as a neighbor',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Prototype shortcut — tap a neighbor to jump into their account.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          ...state.users.map(
-                            (u) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Card(
-                                color: scheme.surfaceContainerHighest,
-                                child: ListTile(
-                                  leading: UserAvatar(user: u, radius: 20),
-                                  title: Text(u.name),
-                                  subtitle: Text(
-                                    '${u.neighborhood} · ${u.email}',
-                                  ),
-                                  trailing: const Icon(Icons.chevron_right),
-                                  onTap: () {
-                                    context.read<AppState>().loginAs(u);
-                                    _leave();
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 16),
+                      _animatedBrand(context, scheme),
+                      const SizedBox(height: 28),
+                      _animatedActions(context, state, scheme),
+                    ],
                   ),
                 ),
               ),
             ),
-            if (Navigator.of(context).canPop())
-              Padding(
+          ),
+          if (Navigator.of(context).canPop())
+            SafeArea(
+              child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: Material(
                   color: scheme.surface.withValues(alpha: 0.92),
@@ -220,38 +181,176 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
 
-  /// Logo tile, wordmark, and the tagline as one plain centered
-  /// string (a single Text keeps it one accessible string).
-  Widget _brandBlock(BuildContext context, ColorScheme scheme) {
-    return Column(
-      children: [
-        Container(
-          width: 68,
-          height: 68,
-          decoration: BoxDecoration(
-            color: scheme.primary,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: scheme.primary.withValues(alpha: 0.30),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+  /// The brand block with the entrance applied: the logo tile
+  /// scales 0.85 → 1 with a fade (easeOutBack), then the wordmark
+  /// and tagline fade in while rising 8px.
+  Widget _animatedBrand(BuildContext context, ColorScheme scheme) {
+    return AnimatedBuilder(
+      animation: _entrance,
+      builder: (context, _) {
+        final v = _entrance.value;
+        final logoScale =
+            0.85 +
+            0.15 *
+                const Interval(0, 0.55, curve: Curves.easeOutBack).transform(v);
+        final logoOpacity = const Interval(
+          0,
+          0.4,
+          curve: Curves.easeOut,
+        ).transform(v);
+        final wordT = const Interval(
+          0.13,
+          0.68,
+          curve: Curves.easeOutCubic,
+        ).transform(v);
+        return Column(
+          children: [
+            Opacity(
+              opacity: logoOpacity.clamp(0.0, 1.0),
+              child: Transform.scale(
+                scale: logoScale.clamp(0.85, 1.05),
+                child: _logoTile(scheme),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Opacity(
+              opacity: wordT,
+              child: Transform.translate(
+                offset: Offset(0, (1 - wordT) * 8),
+                child: _wordmark(context, scheme),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// The card block with the entrance applied (fade + 16px rise,
+  /// last in the stagger): sign-in card, sign-up row, and — in
+  /// mock builds only — the demo extras.
+  Widget _animatedActions(
+    BuildContext context,
+    AppState state,
+    ColorScheme scheme,
+  ) {
+    return AnimatedBuilder(
+      animation: _entrance,
+      builder: (context, child) {
+        final cardT = const Interval(
+          0.27,
+          1.0,
+          curve: Curves.easeOutCubic,
+        ).transform(_entrance.value);
+        return Opacity(
+          opacity: cardT,
+          child: Transform.translate(
+            offset: Offset(0, (1 - cardT) * 16),
+            child: child,
+          ),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _shakenCard(context, scheme),
+          const SizedBox(height: 18),
+          // Wrap, not Row: with very large accessibility text the
+          // button drops to its own line instead of overflowing.
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              const Text('New here?'),
+              TextButton(
+                onPressed: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                ),
+                child: const Text('Create an account'),
               ),
             ],
           ),
-          child: Icon(
-            Icons.handshake_outlined,
-            size: 36,
-            color: scheme.onPrimary,
+          if (!firebaseReady) ...[
+            const SizedBox(height: 8),
+            _demoCard(context, scheme),
+            const SizedBox(height: 22),
+            Text(
+              'Or continue as a neighbor',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Prototype shortcut — tap a neighbor to jump into their account.',
+              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            ...state.users.map(
+              (u) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Card(
+                  color: scheme.surfaceContainerHighest,
+                  child: ListTile(
+                    leading: UserAvatar(user: u, radius: 20),
+                    title: Text(u.name),
+                    subtitle: Text('${u.neighborhood} · ${u.email}'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      context.read<AppState>().loginAs(u);
+                      _leave();
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// The sign-in card, wrapped in the error shake (±6px, decaying).
+  Widget _shakenCard(BuildContext context, ColorScheme scheme) {
+    return AnimatedBuilder(
+      animation: _shake,
+      builder: (context, child) {
+        final v = _shake.value;
+        final dx = v == 0 || v == 1 ? 0.0 : _shakeOffset(v);
+        return Transform.translate(offset: Offset(dx, 0), child: child);
+      },
+      child: _signInCard(context, scheme),
+    );
+  }
+
+  Widget _logoTile(ColorScheme scheme) {
+    return Container(
+      width: 68,
+      height: 68,
+      decoration: BoxDecoration(
+        color: scheme.primary,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.primary.withValues(alpha: 0.30),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
-        ),
-        const SizedBox(height: 14),
+        ],
+      ),
+      child: Icon(Icons.handshake_outlined, size: 36, color: scheme.onPrimary),
+    );
+  }
+
+  /// Wordmark and the tagline as one plain centered string (a
+  /// single Text keeps it one accessible string).
+  Widget _wordmark(BuildContext context, ColorScheme scheme) {
+    return Column(
+      children: [
         Text(
           'NeighborMart',
           style: TextStyle(
@@ -487,4 +586,11 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
+}
+
+/// A decaying side-to-side shake: a few quick ±6px swings that
+/// settle at rest as [v] runs 0 → 1.
+double _shakeOffset(double v) {
+  final decay = 1 - v;
+  return math.sin(v * math.pi * 5) * 6 * decay * decay;
 }

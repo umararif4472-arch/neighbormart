@@ -84,10 +84,11 @@ void main() {
 
   AppState signedOut() => AppState()..signOut();
 
-  /// The only motion left is a 300ms fade-in — run it out.
+  /// Run the 900ms staggered entrance out so elements sit at
+  /// their settled positions/opacities.
   Future<void> settleEntrance(WidgetTester tester) async {
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump(const Duration(milliseconds: 1000));
   }
 
   group('rendering', () {
@@ -297,8 +298,11 @@ void main() {
       await tester.pumpWidget(
         harness(signedOut(), theme: theme, realFont: true),
       );
+      // Pump past the whole 900ms entrance: goldens capture the
+      // settled state (the backdrop drift is deterministic under
+      // fake async, so its phase is stable at this timestamp).
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pump(const Duration(milliseconds: 1000));
       expect(tester.takeException(), isNull);
     }
 
