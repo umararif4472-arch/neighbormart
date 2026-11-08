@@ -16,18 +16,18 @@ Future<void> main() async {
     // Prefs unavailable (should not happen on-device): fall back to the
     // in-memory defaults so the app still opens.
   }
-  runApp(BorrowDontBuyApp(state: state));
+  runApp(NeighborMartApp(state: state));
 }
 
-class BorrowDontBuyApp extends StatelessWidget {
+class NeighborMartApp extends StatelessWidget {
   final AppState state;
-  const BorrowDontBuyApp({super.key, required this.state});
+  const NeighborMartApp({super.key, required this.state});
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AppState>.value(
       value: state,
       child: MaterialApp(
-        title: "Borrow Don't Buy",
+        title: "NeighborMart",
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
         home: const AppRoot(),

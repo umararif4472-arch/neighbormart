@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:borrow_dont_buy/core/theme/app_theme.dart';
-import 'package:borrow_dont_buy/state/app_state.dart';
-import 'package:borrow_dont_buy/ui/app_shell.dart';
-import 'package:borrow_dont_buy/ui/features/item_detail/item_detail_screen.dart';
+import 'package:neighbor_mart/core/theme/app_theme.dart';
+import 'package:neighbor_mart/state/app_state.dart';
+import 'package:neighbor_mart/ui/app_shell.dart';
+import 'package:neighbor_mart/ui/features/item_detail/item_detail_screen.dart';
 
 /// Layout audit guard: the whole shell (all four tabs render at once
 /// in the IndexedStack) and the item detail page for the longest

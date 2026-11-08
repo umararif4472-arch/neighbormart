@@ -1,6 +1,7 @@
-# Borrow Don't Buy — Mobile
+# NeighborMart — Mobile
 
-Flutter port of Borrow Don't Buy: borrow tools, gear, and party equipment
+Flutter port of NeighborMart: borrow, rent, buy, and sell tools, gear, vehicles,
+properties, and more
 from neighbors instead of buying them, with trust built through a 0–100
 reputation score instead of payments.
 

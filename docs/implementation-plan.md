@@ -6,7 +6,8 @@
 > data source for now (there is no Next.js `/api` in this repo to connect
 > to — the web app is Vite + an in-browser mock layer), and platforms are
 > scaffolded for Android, Web, and Windows. The plan is kept as the design
-> record.
+> record. The project was renamed from Borrow Don't Buy to
+> **NeighborMart** on 2026-11-08; the plan text below is the original record.
 
 Convert the "Borrow Don't Buy" hyperlocal lending network into a mobile application built with Flutter & Dart, structured around clean architecture, modern mobile UX, and a high-fidelity prototype that runs on Windows Desktop, Web, and mobile devices (Android/iOS).
 

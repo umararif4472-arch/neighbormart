@@ -28,7 +28,7 @@ class SettingsScreen extends StatelessWidget {
             leading: Icon(Icons.info_outline),
             title: Text('About'),
             subtitle: Text(
-              "Borrow Don't Buy · version 1.0.0 · prototype with demo data",
+              "NeighborMart · version 1.0.0 · prototype with demo data",
             ),
           ),
           const Divider(height: 32),

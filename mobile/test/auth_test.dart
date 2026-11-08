@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:borrow_dont_buy/state/app_state.dart';
+import 'package:neighbor_mart/state/app_state.dart';
 
 void main() {
   group('auth', () {

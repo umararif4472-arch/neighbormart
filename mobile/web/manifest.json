@@ -1,11 +1,11 @@
 {
-    "name": "borrow_dont_buy",
-    "short_name": "borrow_dont_buy",
+    "name": "NeighborMart",
+    "short_name": "NeighborMart",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Borrow Don't Buy - hyperlocal peer-to-peer lending network",
+    "description": "NeighborMart - local marketplace to borrow, rent, buy and sell near you",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

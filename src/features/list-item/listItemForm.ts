@@ -232,7 +232,7 @@ export function listItemFormReducer(
 // Draft persistence (localStorage) — defensive: storage may be missing/full
 // ---------------------------------------------------------------------------
 
-export const DRAFT_STORAGE_KEY = 'bdb:list-item-draft:v1'
+export const DRAFT_STORAGE_KEY = 'neighbormart:list-item-draft:v1'
 
 interface StoredDraft {
   draft: ListItemDraft

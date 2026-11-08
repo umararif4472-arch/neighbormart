@@ -133,7 +133,7 @@ export function ListItemPage() {
               className="flex-1"
               onClick={() => {
                 const shareData = {
-                  title: 'Borrow Don’t Buy',
+                  title: 'NeighborMart',
                   text: `My ${published.title} is now free to borrow from neighbors — check it out!`,
                   url: `${window.location.origin}/item/${published.id}`,
                 }

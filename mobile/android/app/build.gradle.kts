@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.borrowdontbuy.borrow_dont_buy"
+    namespace = "com.neighbormart.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,8 +15,8 @@ android {
     }
 
     defaultConfig {
-        // Application ID for Borrow Don't Buy.
-        applicationId = "com.borrowdontbuy.borrow_dont_buy"
+        // Application ID for NeighborMart (renamed from Borrow Don't Buy on 2026-11-08).
+        applicationId = "com.neighbormart.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         // Version comes from pubspec.yaml.

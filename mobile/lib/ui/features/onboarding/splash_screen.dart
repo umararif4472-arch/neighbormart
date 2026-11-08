@@ -28,7 +28,7 @@ class SplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             const Text(
-              "Borrow Don't Buy",
+              "NeighborMart",
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,

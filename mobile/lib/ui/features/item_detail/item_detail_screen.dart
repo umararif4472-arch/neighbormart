@@ -22,7 +22,7 @@ class ItemDetailScreen extends StatelessWidget {
     final text =
         'Borrow instead of buying: ${item.title} (${item.category}) — '
         '${item.borrowTerms.dailyFee == null ? 'free to borrow' : '\$${item.borrowTerms.dailyFee}/day'}, '
-        'up to ${item.borrowTerms.maxDurationDays} days on Borrow Don\u2019t Buy.';
+        'up to ${item.borrowTerms.maxDurationDays} days on NeighborMart.';
     try {
       final result = await SharePlus.instance.share(
         ShareParams(text: text, subject: item.title),

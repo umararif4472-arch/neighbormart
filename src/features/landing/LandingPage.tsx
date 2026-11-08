@@ -65,9 +65,9 @@ export function LandingPage() {
             already owns one?
           </h1>
           <p className="max-w-xl text-base leading-relaxed text-bark-light sm:text-lg">
-            Borrow Don&apos;t Buy is the neighborhood&apos;s shared garage: tools, gear, and party
-            tricks from people within walking distance. No fees unless the owner asks, no strangers
-            — just neighbors building trust.
+            NeighborMart is your neighborhood marketplace: tools, gear, vehicles, homes, and sports
+            grounds from people nearby — borrow them free, rent them, or buy them outright. No
+            strangers, just neighbors building trust.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link to="/browse">

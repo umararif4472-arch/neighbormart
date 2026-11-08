@@ -20,7 +20,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBound
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     // Prototype: surface in console; a real backend would report it.
-    console.error('[Borrow Don\u2019t Buy] render error:', error, info.componentStack)
+    console.error('[NeighborMart] render error:', error, info.componentStack)
   }
 
   render() {

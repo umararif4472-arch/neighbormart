@@ -1,4 +1,4 @@
-package com.borrowdontbuy.borrow_dont_buy
+package com.neighbormart.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:borrow_dont_buy/core/utils/trust_score.dart';
+import 'package:neighbor_mart/core/utils/trust_score.dart';
 
 TrustHistory _history({
   int onTime = 0,

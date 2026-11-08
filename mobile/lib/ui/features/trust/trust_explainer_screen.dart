@@ -50,7 +50,7 @@ class TrustExplainerScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
           const Text(
-            'Trust is the currency of Borrow Don\u2019t Buy. There are no deposits held by the app and no payment processing — instead, everyone carries a 0–100 trust score, recomputed from their history wherever their name appears.',
+            'Trust is the currency of NeighborMart. There are no deposits held by the app and no payment processing — instead, everyone carries a 0–100 trust score, recomputed from their history wherever their name appears.',
           ),
           const SizedBox(height: 20),
           Text(

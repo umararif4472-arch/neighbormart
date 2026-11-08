@@ -24,7 +24,7 @@ export function LogoMark({ compact = false }: { compact?: boolean }) {
       </span>
       {!compact && (
         <span className="font-display text-lg font-extrabold tracking-tight text-bark">
-          Borrow<span className="text-terracotta-600">·</span>Don&apos;t Buy
+          Neighbor<span className="text-terracotta-600">Mart</span>
         </span>
       )}
     </span>
@@ -51,7 +51,7 @@ function Navbar() {
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
         <Link
           to="/"
-          aria-label="Borrow Don't Buy — home"
+          aria-label="NeighborMart — home"
           className="focus-visible:outline-2 focus-visible:outline-terracotta-600"
         >
           <LogoMark />

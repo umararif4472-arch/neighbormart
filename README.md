@@ -1,4 +1,4 @@
-# Borrow Don't Buy — Local Marketplace (rename pending)
+# NeighborMart — Local Marketplace
 
 > Borrow, rent, buy, or sell almost anything — right in your own city.
 
@@ -23,8 +23,9 @@ JazzCash / Easypaisa / Stripe later.
 > in phases (see [Roadmap](#roadmap)). Today the web and Flutter apps run
 > end-to-end against an in-memory mock service layer with the original
 > lending flow; the multi-section data model, Firebase backend, and
-> section experiences land in Phases 2–5. A new name is being chosen —
-> "Borrow Don't Buy" only describes lending.
+> section experiences land in Phases 2–5. Originally prototyped as
+> "Borrow Don't Buy"; renamed to **NeighborMart** on 2026-11-08 because
+> the old name only described lending.
 
 This repo has two apps for the same product:
 

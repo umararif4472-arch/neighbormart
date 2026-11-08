@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:borrow_dont_buy/core/utils/formatters.dart';
-import 'package:borrow_dont_buy/core/utils/map_projection.dart';
-import 'package:borrow_dont_buy/data/models/user.dart';
+import 'package:neighbor_mart/core/utils/formatters.dart';
+import 'package:neighbor_mart/core/utils/map_projection.dart';
+import 'package:neighbor_mart/data/models/user.dart';
 
 const bounds = MapBounds(width: 800, height: 600, padding: 40);
 

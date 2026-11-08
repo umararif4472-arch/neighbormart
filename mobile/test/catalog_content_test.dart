@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:borrow_dont_buy/data/models/item.dart';
-import 'package:borrow_dont_buy/data/models/user.dart';
-import 'package:borrow_dont_buy/state/app_state.dart';
+import 'package:neighbor_mart/data/models/item.dart';
+import 'package:neighbor_mart/data/models/user.dart';
+import 'package:neighbor_mart/state/app_state.dart';
 
 Item _item(String id, String category) => Item(
   id: id,
