@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/utils/trust_score.dart';
 import '../core/utils/formatters.dart';
+import '../core/utils/profile_setup_validation.dart';
 import '../data/models/user.dart';
 import '../data/models/item.dart';
 import '../data/models/listing.dart';
@@ -35,6 +38,11 @@ Map<String, List<Item>> groupItemsByCategory(List<Item> items) {
 class AppState extends ChangeNotifier {
   static const _kSessionUserId = 'sessionUserId';
   static const _kOnboardingSeen = 'onboardingSeen';
+
+  /// Prefix for the per-user Phase 6 profile-setup payload (JSON).
+  /// The app has no general user-data store — session + this payload
+  /// are what SharedPreferences carries.
+  static const _kProfileSetupPrefix = 'profileSetup:';
 
   late List<AppUser> _users;
   late List<Item> _items;
@@ -538,6 +546,7 @@ class AppState extends ChangeNotifier {
   Future<void> restoreFromPrefs(SharedPreferences prefs) async {
     _prefs = prefs;
     onboardingSeen = prefs.getBool(_kOnboardingSeen) ?? false;
+    _applySavedProfileSetups(prefs);
     final savedId = prefs.getString(_kSessionUserId);
     if (savedId != null && userByIdOrNull(savedId) != null) {
       _currentUserId = savedId;
@@ -607,6 +616,8 @@ class AppState extends ChangeNotifier {
       email: e,
       password: password,
       bio: 'New to the block — say hi!',
+      // Phase 6: brand-new accounts complete the profile setup next.
+      onboardingCompleted: false,
       neighborhood: neighborhood.trim(),
       homeLocation: LatLng(
         maya.homeLocation.lat + 0.002,
@@ -644,10 +655,98 @@ class AppState extends ChangeNotifier {
     } else {
       _users.add(user);
     }
+    // A setup finished on this device in a previous run wins over a
+    // lagging remote profile, so the user is not prompted twice.
+    if (_prefs != null) _applySavedProfileSetups(_prefs!);
     _currentUserId = user.id;
     isLoggedIn = true;
     _persistSession();
     notifyListeners();
+  }
+
+  // ---------------- Phase 6: profile setup ----------------
+
+  /// The single place that decides whether the signed-in user must
+  /// see the 3-step profile setup: they are logged in and their
+  /// profile flag says setup is not done. Seed users all carry
+  /// `onboardingCompleted: true`, so only genuinely new accounts
+  /// (local sign-up or a fresh Firebase profile) are ever routed in.
+  bool get currentUserNeedsOnboarding =>
+      isLoggedIn && userByIdOrNull(_currentUserId)?.needsOnboarding == true;
+
+  /// Re-apply any profile setup saved in a previous run over the
+  /// freshly seeded users (same mechanism as the session restore).
+  void _applySavedProfileSetups(SharedPreferences prefs) {
+    for (var i = 0; i < _users.length; i++) {
+      final raw = prefs.getString('$_kProfileSetupPrefix${_users[i].id}');
+      if (raw == null) continue;
+      try {
+        final data = jsonDecode(raw) as Map<String, dynamic>;
+        _users[i] = _users[i].copyWith(
+          name: data['name'] as String?,
+          phone: data['phone'] as String?,
+          city: data['city'] as String?,
+          neighborhood: data['neighborhood'] as String?,
+          interests: ((data['interests'] as List<dynamic>?) ?? const [])
+              .map((e) => e.toString())
+              .toList(),
+          onboardingCompleted: data['onboardingCompleted'] as bool? ?? true,
+        );
+      } catch (_) {
+        // Corrupt payload — ignore it; the in-memory profile stands.
+      }
+    }
+  }
+
+  Future<void> _persistProfileSetup(AppUser user) async {
+    await _prefs?.setString(
+      '$_kProfileSetupPrefix${user.id}',
+      jsonEncode({
+        'name': user.name,
+        'phone': user.phone,
+        'city': user.city,
+        'neighborhood': user.neighborhood,
+        'interests': user.interests,
+        'onboardingCompleted': user.onboardingCompleted,
+      }),
+    );
+  }
+
+  /// Finish (or re-edit) the Phase 6 profile setup for the current
+  /// user. Returns null on success, or the first validation error —
+  /// the same rules the setup screen checks step by step.
+  Future<String?> completeOnboarding({
+    required String name,
+    required String phone,
+    required String city,
+    required String neighborhood,
+    required List<String> interests,
+  }) async {
+    final error =
+        validateSetupName(name) ??
+        validateSetupPhone(phone) ??
+        validateSetupCity(city) ??
+        validateSetupArea(neighborhood) ??
+        validateSetupInterests(interests);
+    if (error != null) return error;
+    final idx = _users.indexWhere((u) => u.id == _currentUserId);
+    if (idx < 0) return 'No signed-in user to set up.';
+    _users[idx] = _users[idx].copyWith(
+      name: name.trim(),
+      phone: phone.trim(),
+      city: city.trim(),
+      neighborhood: neighborhood.trim(),
+      interests: List.of(interests),
+      onboardingCompleted: true,
+    );
+    await _persistProfileSetup(_users[idx]);
+    notifyListeners();
+    // Mirror to Firestore when live (fire and forget, like sign-out —
+    // local completion must never block on the network).
+    FirebaseAuthService.instance
+        .saveOnboardingProfile(_users[idx])
+        .catchError((_) {});
+    return null;
   }
 
   void signOut() {

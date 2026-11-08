@@ -1,6 +1,9 @@
 import type { User } from '@/types'
 import { ApiError } from './errors'
 import { clone, simulateLatency, getStore } from './store'
+import { validateOnboarding, type OnboardingDraft } from '@/utils/onboarding'
+
+export type CompleteOnboardingInput = OnboardingDraft
 
 /** User service. Mock now; each function maps 1:1 to a future HTTP route. */
 
@@ -37,5 +40,34 @@ export async function updateContactPrefs(
   }
   user.phone = phone
   user.showPhone = prefs.showPhone
+  return clone(user)
+}
+
+/**
+ * Onboarding (Phase 6): save the 3-step setup onto the profile and mark
+ * it complete. Owner-only; the same shared validators the page uses run
+ * again here so a bad payload cannot slip past the UI.
+ */
+export async function completeOnboarding(
+  userId: string,
+  actorId: string,
+  input: CompleteOnboardingInput,
+): Promise<User> {
+  await simulateLatency(150, 300)
+  if (userId !== actorId) {
+    throw new ApiError('forbidden', 'Only the account owner can complete their onboarding.')
+  }
+  const user = getStore().users.find((u) => u.id === userId)
+  if (!user) throw new ApiError('not-found', 'User not found.')
+  const errors = validateOnboarding(input)
+  const firstError = Object.values(errors)[0]
+  if (firstError) throw new ApiError('invalid', firstError)
+  user.name = input.name.trim()
+  user.avatarUrl = input.avatarUrl.trim()
+  user.phone = input.phone.trim()
+  user.city = input.city.trim()
+  user.neighborhood = input.neighborhood.trim()
+  user.interests = [...input.interests]
+  user.onboardingCompleted = true
   return clone(user)
 }

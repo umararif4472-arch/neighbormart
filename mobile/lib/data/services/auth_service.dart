@@ -133,9 +133,28 @@ class FirebaseAuthService {
       'badges': <dynamic>[],
       'phone': '',
       'email': fbUser.email ?? '',
+      // Phase 6: brand-new profiles go through the 3-step profile
+      // setup on first login; the flag flips to true when they finish.
+      'onboardingCompleted': false,
+      'interests': <dynamic>[],
     };
     await ref.set(data);
     return _userFromMap(fbUser.uid, data);
+  }
+
+  /// Best-effort write-back of the Phase 6 profile setup to the
+  /// user's Firestore doc. Local state is the source of truth for the
+  /// UI; this keeps the shared dataset in step when Firebase is live.
+  Future<void> saveOnboardingProfile(AppUser user) async {
+    if (!firebaseReady) return;
+    await _db.collection('users').doc(user.id).update({
+      'name': user.name,
+      'phone': user.phone,
+      'city': user.city,
+      'neighborhood': user.neighborhood,
+      'interests': user.interests,
+      'onboardingCompleted': true,
+    });
   }
 
   AppUser _userFromMap(String uid, Map<String, dynamic> data) {
@@ -147,7 +166,14 @@ class FirebaseAuthService {
       name: data['name'] as String? ?? 'Neighbor',
       email: data['email'] as String? ?? '',
       bio: data['bio'] as String? ?? '',
+      phone: data['phone'] as String? ?? '',
       city: data['city'] as String? ?? '',
+      // Docs written before Phase 6 have no flag — treat them as not
+      // set up yet so those users get the one-time setup prompt.
+      onboardingCompleted: data['onboardingCompleted'] as bool? ?? false,
+      interests: ((data['interests'] as List<dynamic>?) ?? const [])
+          .map((e) => e.toString())
+          .toList(),
       neighborhood: data['neighborhood'] as String? ?? '',
       homeLocation: LatLng(
         (home['lat'] as num?)?.toDouble() ?? 31.5204,

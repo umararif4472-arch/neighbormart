@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,14 +17,36 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
   String? _error;
 
+  /// Drives the header's gentle emoji float (6 s sine loop). The
+  /// entrance itself is a TweenAnimationBuilder — no controller needed.
+  late final AnimationController _floatController = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 6),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Respect reduced motion: park the loop at rest instead of
+    // animating (the header renders the same layout, just static).
+    if (MediaQuery.of(context).disableAnimations) {
+      _floatController.stop();
+      _floatController.value = 0;
+    } else if (!_floatController.isAnimating) {
+      _floatController.repeat();
+    }
+  }
+
   @override
   void dispose() {
+    _floatController.dispose();
     _email.dispose();
     _password.dispose();
     super.dispose();
@@ -76,6 +100,11 @@ class _LoginScreenState extends State<LoginScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           children: [
+            _AnimatedLoginHeader(
+              floatAnimation: _floatController,
+              reduceMotion: MediaQuery.of(context).disableAnimations,
+            ),
+            const SizedBox(height: 20),
             Text(
               'Welcome back, neighbor',
               style: Theme.of(context).textTheme.titleLarge,
@@ -226,6 +255,105 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Phase 6 animated header: the brand mark fades/slides in, the
+/// tagline reveals a beat later, and the four section emojis drift on
+/// a slow sine loop. With [reduceMotion] everything renders in its
+/// resting position — same layout, no movement.
+class _AnimatedLoginHeader extends StatelessWidget {
+  final Animation<double> floatAnimation;
+  final bool reduceMotion;
+  const _AnimatedLoginHeader({
+    required this.floatAnimation,
+    required this.reduceMotion,
+  });
+
+  static const _sectionEmojis = ['🧰', '🚗', '🏠', '🏟️'];
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 650),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, child) {
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, (1 - t) * 14),
+            child: child,
+          ),
+        );
+      },
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.terracotta,
+              borderRadius: BorderRadius.circular(19),
+            ),
+            child: const Icon(
+              Icons.handshake_outlined,
+              size: 36,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'NeighborMart',
+            style: TextStyle(
+              fontSize: 23,
+              fontWeight: FontWeight.w800,
+              color: AppColors.bark,
+            ),
+          ),
+          const SizedBox(height: 3),
+          const Text(
+            'Borrow, rent, buy & sell — right on your block.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13.5, color: AppColors.barkLight),
+          ),
+          const SizedBox(height: 14),
+          AnimatedBuilder(
+            animation: floatAnimation,
+            builder: (context, _) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(_sectionEmojis.length, (i) {
+                  final phase = floatAnimation.value * math.pi * 2 + i * 1.7;
+                  final dy = reduceMotion ? 0.0 : math.sin(phase) * 4.5;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    child: Transform.translate(
+                      offset: Offset(0, dy),
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.creamDark,
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: Text(
+                          _sectionEmojis[i],
+                          style: const TextStyle(fontSize: 20),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

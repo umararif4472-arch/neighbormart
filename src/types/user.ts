@@ -90,6 +90,15 @@ export interface User {
   phoneVerified: boolean
   emailVerified: boolean
   idVerified: boolean
+  /**
+   * Phase 6 onboarding: false/absent on a brand-new profile means the
+   * 3-step setup (confirm details → city/area → interests) still needs
+   * doing. Seed/demo profiles predate the flag and count as done when
+   * they already carry a city + area — see utils/onboarding.
+   */
+  onboardingCompleted?: boolean
+  /** Marketplace interests picked during onboarding (chip labels). */
+  interests?: string[]
   /** 0–1 */
   responseRate: number
   /** Average response time in minutes ("typically replies in ~45 min"). */

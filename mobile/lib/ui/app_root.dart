@@ -7,11 +7,13 @@ import '../state/app_state.dart';
 import 'app_shell.dart';
 import 'features/auth/landing_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/onboarding/profile_setup_screen.dart';
 import 'features/onboarding/splash_screen.dart';
 
 /// Root gate: Splash -> Onboarding (first launch) -> Landing (signed out)
-/// -> AppShell (signed in). Session + onboarding flags live on AppState and
-/// are restored from SharedPreferences in main().
+/// -> ProfileSetup (new account, Phase 6) -> AppShell (signed in).
+/// Session + onboarding flags live on AppState and are restored from
+/// SharedPreferences in main().
 class AppRoot extends StatefulWidget {
   const AppRoot({super.key});
   @override
@@ -42,6 +44,7 @@ class _AppRootState extends State<AppRoot> {
     final state = context.watch<AppState>();
     if (!state.onboardingSeen) return const OnboardingScreen();
     if (!state.isLoggedIn) return const LandingScreen();
+    if (state.currentUserNeedsOnboarding) return const ProfileSetupScreen();
     return const AppShell();
   }
 }

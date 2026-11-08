@@ -100,8 +100,18 @@ function appReducer(state: AppState, action: Action): AppState {
       return { ...state, listings: upsertById(state.listings, action.listings) }
     case 'REQUESTS_UPSERTED':
       return { ...state, requests: upsertById(state.requests, action.requests) }
-    case 'USERS_UPSERTED':
-      return { ...state, users: upsertById(state.users, action.users) }
+    case 'USERS_UPSERTED': {
+      // Keep the session copy in sync when the signed-in user's own
+      // profile changes (contact prefs, onboarding, …).
+      const ownUpdate = state.currentUser
+        ? action.users.find((u) => u.id === state.currentUser?.id)
+        : undefined
+      return {
+        ...state,
+        users: upsertById(state.users, action.users),
+        currentUser: ownUpdate ?? state.currentUser,
+      }
+    }
     case 'REVIEWS_APPENDED':
       return { ...state, reviews: [...state.reviews, ...action.reviews] }
     case 'NOTIFICATIONS_SET':

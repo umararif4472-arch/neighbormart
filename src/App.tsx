@@ -13,6 +13,7 @@ import { ProfilePage } from '@/features/profile/ProfilePage'
 import { TrustExplainerPage } from '@/features/trust/TrustExplainerPage'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
 import { SignInPage } from '@/features/auth/SignInPage'
+import { OnboardingPage } from '@/features/auth/OnboardingPage'
 import { RequireAuth } from '@/components/layout/RequireAuth'
 import { useTierWatcher } from '@/hooks/useTierWatcher'
 
@@ -104,6 +105,17 @@ export default function App() {
           element={
             <ErrorBoundary>
               <SignInPage />
+            </ErrorBoundary>
+          }
+        />
+        {/* Phase 6: first-login setup, reached from the sign-in flow. */}
+        <Route
+          path="welcome"
+          element={
+            <ErrorBoundary>
+              <RequireAuth>
+                <OnboardingPage />
+              </RequireAuth>
             </ErrorBoundary>
           }
         />

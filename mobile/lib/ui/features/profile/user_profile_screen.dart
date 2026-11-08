@@ -10,6 +10,7 @@ import '../../../state/app_state.dart';
 import '../item_detail/item_detail_screen.dart';
 import '../messages/chat_screen.dart';
 import '../not_found/not_found_screen.dart';
+import '../onboarding/profile_setup_screen.dart';
 import '../trust/trust_explainer_screen.dart';
 import 'edit_profile_screen.dart';
 import 'manage_items_screen.dart';
@@ -66,6 +67,22 @@ class UserProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(user.bio),
+          if (isOwn && user.interests.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: user.interests
+                  .map(
+                    (interest) => Chip(
+                      label: Text(interest),
+                      backgroundColor: AppColors.creamDark,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
           if (!isOwn) ...[
             const SizedBox(height: 14),
             SizedBox(
@@ -262,6 +279,16 @@ class UserProfileScreen extends StatelessWidget {
               subtitle: 'Name, bio, and neighborhood',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+              ),
+            ),
+            _AccountTile(
+              icon: Icons.manage_accounts_outlined,
+              title: 'Set up profile',
+              subtitle: 'Edit interests & area',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ProfileSetupScreen(editMode: true),
+                ),
               ),
             ),
             _AccountTile(

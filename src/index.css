@@ -82,3 +82,97 @@
     display: none;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Phase 6 — sign-in & onboarding motion. Pure CSS (no animation lib):
+ * a drifting warm mesh, gently floating section icons, a logo pop and
+ * staggered fade-up reveals. Everything is disabled when the user
+ * prefers reduced motion.                                            */
+/* ------------------------------------------------------------------ */
+
+@keyframes nm-mesh-drift {
+  0%,
+  100% {
+    background-position:
+      0% 0%,
+      100% 0%,
+      50% 100%;
+  }
+  50% {
+    background-position:
+      30% 20%,
+      70% 30%,
+      50% 70%;
+  }
+}
+
+@keyframes nm-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--nm-tilt, 0deg));
+  }
+  50% {
+    transform: translateY(-12px) rotate(var(--nm-tilt, 0deg));
+  }
+}
+
+@keyframes nm-logo-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) rotate(-6deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes nm-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/** Warm gradient mesh panel (sign-in hero). */
+@utility nm-mesh {
+  background-color: var(--color-terracotta-700);
+  background-image:
+    radial-gradient(38rem 22rem at 15% 10%, rgb(224 161 129 / 0.55), transparent 60%),
+    radial-gradient(30rem 20rem at 90% 15%, rgb(127 169 115 / 0.5), transparent 60%),
+    radial-gradient(36rem 26rem at 55% 105%, rgb(164 75 45 / 0.65), transparent 65%);
+  background-size:
+    140% 140%,
+    140% 140%,
+    140% 140%;
+  animation: nm-mesh-drift 16s ease-in-out infinite;
+}
+
+@utility nm-float {
+  animation: nm-float 5.5s ease-in-out infinite;
+}
+
+@utility nm-logo-pop {
+  animation: nm-logo-pop 0.7s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+@utility nm-fade-up {
+  animation: nm-fade-up 0.6s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nm-mesh,
+  .nm-float,
+  .nm-logo-pop,
+  .nm-fade-up {
+    animation: none;
+  }
+}

@@ -70,6 +70,10 @@ export async function ensureUserProfile(
     // the profile for contact purposes; auth owns the canonical copy.
     phone: '',
     showPhone: false,
+    // Phase 6: a brand-new profile starts with onboarding incomplete —
+    // the sign-in flow routes the user through the 3-step setup.
+    onboardingCompleted: false,
+    interests: [],
     email: fbUser.email ?? '',
   }
   const { id: _id, ...docData } = profile

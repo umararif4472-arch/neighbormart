@@ -66,9 +66,21 @@ class AppUser {
   final String password;
   final String bio;
 
+  /// Contact number collected in profile setup (Phase 6). Empty until
+  /// the user adds one — the app never invents a number for them.
+  final String phone;
+
   /// City the user is based in (listings inherit it on publish).
   final String city;
   final String neighborhood;
+
+  /// Phase 6 profile setup: false only for brand-new accounts, which
+  /// are routed through the 3-step setup right after first login.
+  /// Every seeded/demo user defaults to true so they are never prompted.
+  final bool onboardingCompleted;
+
+  /// Marketplace interests picked in profile setup (Step 3).
+  final List<String> interests;
   final LatLng homeLocation;
   final DateTime joinedAt;
   final bool phoneVerified;
@@ -86,7 +98,10 @@ class AppUser {
     this.email = '',
     this.password = '',
     required this.bio,
+    this.phone = '',
     this.city = '',
+    this.onboardingCompleted = true,
+    this.interests = const [],
     required this.neighborhood,
     required this.homeLocation,
     required this.joinedAt,
@@ -102,10 +117,14 @@ class AppUser {
     UserStats? stats,
     String? name,
     String? bio,
+    String? phone,
+    String? city,
     String? neighborhood,
     bool? phoneVerified,
     bool? emailVerified,
     bool? idVerified,
+    bool? onboardingCompleted,
+    List<String>? interests,
   }) {
     return AppUser(
       id: id,
@@ -113,7 +132,10 @@ class AppUser {
       email: email,
       password: password,
       bio: bio ?? this.bio,
-      city: city,
+      phone: phone ?? this.phone,
+      city: city ?? this.city,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+      interests: interests ?? this.interests,
       neighborhood: neighborhood ?? this.neighborhood,
       homeLocation: homeLocation,
       joinedAt: joinedAt,
@@ -126,6 +148,10 @@ class AppUser {
       badges: badges,
     );
   }
+
+  /// True when this user still has to finish the Phase 6 profile
+  /// setup (new accounts only — seeds default to completed).
+  bool get needsOnboarding => !onboardingCompleted;
 
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+'));
