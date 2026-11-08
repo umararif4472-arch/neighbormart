@@ -90,18 +90,18 @@ void main() {
       ('LoginScreen', const LoginScreen(), signedOut),
       ('SignUpScreen', const SignUpScreen(), signedOut),
       ('ExploreScreen', const ExploreScreen(), signedIn),
-      ('ListingDetailScreen', ListingDetailScreen(listingId: listingId), signedIn),
+      (
+        'ListingDetailScreen',
+        ListingDetailScreen(listingId: listingId),
+        signedIn,
+      ),
       ('ItemDetailScreen', ItemDetailScreen(itemId: itemId), signedIn),
       ('ActivityScreen', const ActivityScreen(), signedIn),
       ('ProfileScreen', const ProfileScreen(), signedIn),
       ('SettingsScreen', const SettingsScreen(), signedIn),
       ('MessagesScreen', const MessagesScreen(), signedIn),
       if (request != null)
-        (
-          'ChatScreen',
-          ChatScreen(requestId: request.id),
-          signedIn,
-        ),
+        ('ChatScreen', ChatScreen(requestId: request.id), signedIn),
       ('WishlistScreen', const WishlistScreen(), signedIn),
     ];
 

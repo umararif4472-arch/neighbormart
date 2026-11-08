@@ -127,8 +127,7 @@ class _LoginScreenState extends State<LoginScreen>
         child: Stack(
           children: [
             SingleChildScrollView(
-              keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(24),
               child: Align(
                 alignment: Alignment.topCenter,
@@ -153,8 +152,8 @@ class _LoginScreenState extends State<LoginScreen>
                           children: [
                             const Text('New here?'),
                             TextButton(
-                              onPressed: () =>
-                                  Navigator.of(context).pushReplacement(
+                              onPressed: () => Navigator.of(context)
+                                  .pushReplacement(
                                     MaterialPageRoute(
                                       builder: (_) => const SignUpScreen(),
                                     ),
@@ -421,10 +420,8 @@ class _LoginScreenState extends State<LoginScreen>
         // Based on the theme's labelLarge (resized) so the label
         // inherits the theme's font family instead of falling back
         // to the platform default.
-        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-          fontSize: 15.5,
-          letterSpacing: 0.1,
-        ),
+        textStyle: Theme.of(context).textTheme.labelLarge
+            ?.copyWith(fontSize: 15.5, letterSpacing: 0.1),
       ),
       // FittedBox(scaleDown): the label can never overflow the
       // button, even with very wide system fonts or large text
