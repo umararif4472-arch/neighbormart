@@ -27,7 +27,9 @@ export function filterItems(
 }
 
 /** Category counts for the browse header chips. */
-export function countByCategory(items: readonly Item[]): Array<{ category: ItemCategory; count: number }> {
+export function countByCategory(
+  items: readonly Item[],
+): Array<{ category: ItemCategory; count: number }> {
   const counts = new Map<ItemCategory, number>()
   for (const item of items) {
     counts.set(item.category, (counts.get(item.category) ?? 0) + 1)

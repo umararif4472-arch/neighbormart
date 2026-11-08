@@ -65,7 +65,8 @@ export function clone<T>(value: T): T {
 
 export function findItem(itemId: string): Item {
   const item = db.items.find((i) => i.id === itemId)
-  if (!item) throw new ApiError('not-found', 'That item doesn\u2019t exist — it may have been removed.')
+  if (!item)
+    throw new ApiError('not-found', 'That item doesn\u2019t exist — it may have been removed.')
   return item
 }
 

@@ -22,10 +22,7 @@ export function StarInput({ value, onChange, error, legend }: StarInputProps) {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <fieldset
-        className="flex flex-col gap-1.5"
-        onMouseLeave={() => setHover(0)}
-      >
+      <fieldset className="flex flex-col gap-1.5" onMouseLeave={() => setHover(0)}>
         <legend className="text-sm font-semibold text-bark">
           {legend}
           <span aria-hidden className="ml-1 text-terracotta-600">

@@ -52,7 +52,11 @@ export function Avatar({ name, src, size = 'md', className }: AvatarProps) {
       alt={`${name}'s avatar`}
       loading="lazy"
       onError={() => setFailed(true)}
-      className={cn('shrink-0 rounded-full object-cover ring-1 ring-bark/10', SIZES[size], className)}
+      className={cn(
+        'shrink-0 rounded-full object-cover ring-1 ring-bark/10',
+        SIZES[size],
+        className,
+      )}
     />
   )
 }

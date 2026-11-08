@@ -66,7 +66,13 @@ describe('REQUEST_TRANSITIONS (the machine)', () => {
 
   it('every stored status has a transition list defined', () => {
     const statuses: RequestStatus[] = [
-      'pending', 'approved', 'active', 'returned', 'reviewed', 'declined', 'cancelled',
+      'pending',
+      'approved',
+      'active',
+      'returned',
+      'reviewed',
+      'declined',
+      'cancelled',
     ]
     for (const status of statuses) {
       expect(Array.isArray(REQUEST_TRANSITIONS[status])).toBe(true)
@@ -111,7 +117,9 @@ describe('effectiveStatus (derived overdue)', () => {
 
 describe('isOverdue / isDueSoon', () => {
   it('overdue only applies to active requests with a due date', () => {
-    expect(isOverdue(request({ status: 'returned', dueAt: '2026-09-01T00:00:00' }), NOW)).toBe(false)
+    expect(isOverdue(request({ status: 'returned', dueAt: '2026-09-01T00:00:00' }), NOW)).toBe(
+      false,
+    )
     expect(isOverdue(request({ status: 'active', dueAt: null }), NOW)).toBe(false)
     expect(isOverdue(request({ status: 'active', dueAt: '2026-09-01T00:00:00' }), NOW)).toBe(true)
   })
@@ -120,7 +128,9 @@ describe('isOverdue / isDueSoon', () => {
     expect(isDueSoon(request({ status: 'active', dueAt: '2026-09-06T00:00:00' }), NOW)).toBe(true)
     expect(isDueSoon(request({ status: 'active', dueAt: '2026-09-09T00:00:00' }), NOW)).toBe(false)
     expect(isDueSoon(request({ status: 'active', dueAt: '2026-09-01T00:00:00' }), NOW)).toBe(false)
-    expect(isDueSoon(request({ status: 'returned', dueAt: '2026-09-06T00:00:00' }), NOW)).toBe(false)
+    expect(isDueSoon(request({ status: 'returned', dueAt: '2026-09-06T00:00:00' }), NOW)).toBe(
+      false,
+    )
   })
 })
 
@@ -158,11 +168,36 @@ describe('getReviewProgress (pending-review sub-state)', () => {
 
 describe('findScheduleConflicts (overlapping pending requests)', () => {
   const requests = [
-    request({ id: 'a', itemId: 'i-pasta', status: 'pending', period: { start: '2026-09-07T00:00:00', end: '2026-09-09T00:00:00' } }),
-    request({ id: 'b', itemId: 'i-pasta', status: 'pending', period: { start: '2026-09-08T00:00:00', end: '2026-09-10T00:00:00' } }),
-    request({ id: 'c', itemId: 'i-pasta', status: 'pending', period: { start: '2026-09-20T00:00:00', end: '2026-09-22T00:00:00' } }),
-    request({ id: 'd', itemId: 'i-other', status: 'pending', period: { start: '2026-09-08T00:00:00', end: '2026-09-10T00:00:00' } }),
-    request({ id: 'e', itemId: 'i-pasta', status: 'declined', period: { start: '2026-09-07T00:00:00', end: '2026-09-09T00:00:00' } }),
+    request({
+      id: 'a',
+      itemId: 'i-pasta',
+      status: 'pending',
+      period: { start: '2026-09-07T00:00:00', end: '2026-09-09T00:00:00' },
+    }),
+    request({
+      id: 'b',
+      itemId: 'i-pasta',
+      status: 'pending',
+      period: { start: '2026-09-08T00:00:00', end: '2026-09-10T00:00:00' },
+    }),
+    request({
+      id: 'c',
+      itemId: 'i-pasta',
+      status: 'pending',
+      period: { start: '2026-09-20T00:00:00', end: '2026-09-22T00:00:00' },
+    }),
+    request({
+      id: 'd',
+      itemId: 'i-other',
+      status: 'pending',
+      period: { start: '2026-09-08T00:00:00', end: '2026-09-10T00:00:00' },
+    }),
+    request({
+      id: 'e',
+      itemId: 'i-pasta',
+      status: 'declined',
+      period: { start: '2026-09-07T00:00:00', end: '2026-09-09T00:00:00' },
+    }),
   ]
 
   it('flags the request that overlaps another pending one on the same item', () => {
@@ -187,7 +222,14 @@ describe('findScheduleConflicts (overlapping pending requests)', () => {
 describe('STATUS_META', () => {
   it('covers every effective status with a label and tone', () => {
     const statuses = [
-      'pending', 'approved', 'active', 'overdue', 'returned', 'reviewed', 'declined', 'cancelled',
+      'pending',
+      'approved',
+      'active',
+      'overdue',
+      'returned',
+      'reviewed',
+      'declined',
+      'cancelled',
     ] as const
     for (const status of statuses) {
       expect(STATUS_META[status].label).toBeTruthy()

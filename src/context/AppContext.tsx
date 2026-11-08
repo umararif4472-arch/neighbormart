@@ -7,16 +7,17 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type {
-  AppNotification,
-  BorrowRequest,
-  Item,
-  Message,
-  Review,
-  User,
-} from '@/types'
+import type { AppNotification, BorrowRequest, Item, Message, Review, User } from '@/types'
 import { upsertById } from '@/utils/collections'
-import { toErrorMessage, authApi, itemsApi, notificationsApi, requestsApi, reviewsApi, usersApi } from '@/services'
+import {
+  toErrorMessage,
+  authApi,
+  itemsApi,
+  notificationsApi,
+  requestsApi,
+  reviewsApi,
+  usersApi,
+} from '@/services'
 
 /**
  * Global app state (single source of truth for cross-feature data):
@@ -185,10 +186,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [attempt])
 
-  const value = useMemo(
-    () => ({ state, dispatch, retryHydration }),
-    [state, retryHydration],
-  )
+  const value = useMemo(() => ({ state, dispatch, retryHydration }), [state, retryHydration])
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

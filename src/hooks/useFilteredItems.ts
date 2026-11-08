@@ -31,6 +31,6 @@ export function useFilteredItems(
       )
     }
     return filtered
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- primitives only
+    // Deps are the destructured primitives above, not the filters object.
   }, [items, query, categories, maxDistanceKm, availability, origin, sort])
 }

@@ -116,7 +116,10 @@ export function ReviewModal({ view, viewerRole, open, onClose }: ReviewModalProp
           />
 
           {error && (
-            <p role="alert" className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+            <p
+              role="alert"
+              className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+            >
               {error}
             </p>
           )}

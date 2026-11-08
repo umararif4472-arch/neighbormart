@@ -21,8 +21,12 @@ export function useAsync<T>(fn: () => Promise<T>, deps: ReadonlyArray<unknown>):
   const [error, setError] = useState<string | null>(null)
 
   // Keep the latest fn without adding it to deps (callers pass closures).
+  // Refs are written inside an effect, never during render; this effect is
+  // declared before the fetch effect, so fnRef is current when it runs.
   const fnRef = useRef(fn)
-  fnRef.current = fn
+  useEffect(() => {
+    fnRef.current = fn
+  })
 
   useEffect(() => {
     let alive = true

@@ -52,7 +52,13 @@ export function seedUsers(): User[] {
       stats: { successfulLends: 8, successfulBorrows: 9, onTimeReturns: 6, lateReturns: 1 },
       badges: [
         badge('b-first-lend', 'First Lend', '🎁', 'Lent their first item to a neighbor', 470),
-        badge('b-on-time-3', 'Hat-Trick Returns', '⏰', 'Three borrows returned by the due date', 230),
+        badge(
+          'b-on-time-3',
+          'Hat-Trick Returns',
+          '⏰',
+          'Three borrows returned by the due date',
+          230,
+        ),
       ],
     },
     {
@@ -69,9 +75,21 @@ export function seedUsers(): User[] {
       avgResponseMinutes: 20,
       stats: { successfulLends: 23, successfulBorrows: 9, onTimeReturns: 9, lateReturns: 0 },
       badges: [
-        badge('b-favorite', 'Neighborhood Favorite', '❤️', 'Keeps getting 5-star reviews from borrowers', 400),
+        badge(
+          'b-favorite',
+          'Neighborhood Favorite',
+          '❤️',
+          'Keeps getting 5-star reviews from borrowers',
+          400,
+        ),
         badge('b-lends-10', '10 Lends Club', '🏆', 'Ten successful lends and counting', 300),
-        badge('b-on-time-3', 'Hat-Trick Returns', '⏰', 'Three borrows returned by the due date', 180),
+        badge(
+          'b-on-time-3',
+          'Hat-Trick Returns',
+          '⏰',
+          'Three borrows returned by the due date',
+          180,
+        ),
       ],
     },
     {
@@ -110,7 +128,13 @@ export function seedUsers(): User[] {
       stats: { successfulLends: 9, successfulBorrows: 9, onTimeReturns: 8, lateReturns: 1 },
       badges: [
         badge('b-first-lend', 'First Lend', '🎁', 'Lent their first item to a neighbor', 650),
-        badge('b-on-time-3', 'Hat-Trick Returns', '⏰', 'Three borrows returned by the due date', 100),
+        badge(
+          'b-on-time-3',
+          'Hat-Trick Returns',
+          '⏰',
+          'Three borrows returned by the due date',
+          100,
+        ),
       ],
     },
     {
@@ -141,7 +165,9 @@ export function seedUsers(): User[] {
       responseRate: 0.78,
       avgResponseMinutes: 120,
       stats: { successfulLends: 6, successfulBorrows: 5, onTimeReturns: 4, lateReturns: 1 },
-      badges: [badge('b-first-lend', 'First Lend', '🎁', 'Lent their first item to a neighbor', 560)],
+      badges: [
+        badge('b-first-lend', 'First Lend', '🎁', 'Lent their first item to a neighbor', 560),
+      ],
     },
     {
       id: 'u-diego',
@@ -171,7 +197,9 @@ export function seedUsers(): User[] {
       responseRate: 0.72,
       avgResponseMinutes: 200,
       stats: { successfulLends: 5, successfulBorrows: 3, onTimeReturns: 1, lateReturns: 2 },
-      badges: [badge('b-first-lend', 'First Lend', '🎁', 'Lent their first item to a neighbor', 120)],
+      badges: [
+        badge('b-first-lend', 'First Lend', '🎁', 'Lent their first item to a neighbor', 120),
+      ],
     },
     {
       id: 'u-leo',

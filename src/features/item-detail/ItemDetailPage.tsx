@@ -42,10 +42,7 @@ export function ItemDetailPage() {
   const item = itemQuery.data
 
   // Active borrow info for "expected back" (service = source of truth).
-  const borrowQuery = useAsync(
-    () => requestsApi.getRequestsForItem(id ?? ''),
-    [id],
-  )
+  const borrowQuery = useAsync(() => requestsApi.getRequestsForItem(id ?? ''), [id])
   const activeBorrow = useMemo(
     () => borrowQuery.data?.find((r) => r.status === 'active' || r.status === 'approved') ?? null,
     [borrowQuery.data],
@@ -134,9 +131,11 @@ export function ItemDetailPage() {
                 </Badge>
               )}
               <Badge tone="terracotta">{item.category}</Badge>
-              {activeBorrow?.dueAt && item.availability === 'borrowed' && !isOverdue(activeBorrow) && (
-                <Badge tone="neutral">Expected back {formatDate(activeBorrow.dueAt)}</Badge>
-              )}
+              {activeBorrow?.dueAt &&
+                item.availability === 'borrowed' &&
+                !isOverdue(activeBorrow) && (
+                  <Badge tone="neutral">Expected back {formatDate(activeBorrow.dueAt)}</Badge>
+                )}
             </div>
             <h1 className="font-display text-2xl font-extrabold leading-tight text-bark sm:text-3xl">
               {item.title}
@@ -217,8 +216,12 @@ export function ItemDetailPage() {
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-bark">{item.title}</p>
             <p className="text-xs font-medium text-moss-700">
-              {item.borrowTerms.dailyFee != null ? `$${item.borrowTerms.dailyFee}/day` : 'Free to borrow'}
-              {item.borrowTerms.depositAmount != null ? ` · $${item.borrowTerms.depositAmount} deposit` : ''}
+              {item.borrowTerms.dailyFee != null
+                ? `$${item.borrowTerms.dailyFee}/day`
+                : 'Free to borrow'}
+              {item.borrowTerms.depositAmount != null
+                ? ` · $${item.borrowTerms.depositAmount} deposit`
+                : ''}
             </p>
           </div>
           {cta.kind === 'request' ? (
@@ -244,8 +247,7 @@ export function ItemDetailPage() {
 // ---------------------------------------------------------------------------
 
 type CtaState =
-  | { kind: 'request'; label: 'Request to borrow' }
-  | { kind: 'notice'; label: string; hint?: string }
+  { kind: 'request'; label: 'Request to borrow' } | { kind: 'notice'; label: string; hint?: string }
 
 /**
  * Pure CTA resolver — the edge cases from the spec live here, testable.

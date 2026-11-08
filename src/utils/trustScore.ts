@@ -1,4 +1,11 @@
-import type { ISODateString, Review, TrustHistory, TrustScoreResult, TrustTierName, User } from '@/types'
+import type {
+  ISODateString,
+  Review,
+  TrustHistory,
+  TrustScoreResult,
+  TrustTierName,
+  User,
+} from '@/types'
 import { daysBetween } from './dates'
 
 /**
@@ -102,7 +109,9 @@ export function calculateTrustScore(history: TrustHistory): TrustScoreResult {
     ? reviewsReceived.reduce((sum, r) => sum + clamp(r.rating, 1, 5), 0) / reviewsReceived.length
     : 0
   const avgRating = clamp(rawAvg, 0, 5)
-  const reviews = Math.round((reviewCount / TRUST_WEIGHTS.REVIEWS_COUNTED_MAX) * (avgRating / 5) * TRUST_WEIGHTS.REVIEWS_MAX)
+  const reviews = Math.round(
+    (reviewCount / TRUST_WEIGHTS.REVIEWS_COUNTED_MAX) * (avgRating / 5) * TRUST_WEIGHTS.REVIEWS_MAX,
+  )
 
   // 3. Verified profile info.
   const verification =
@@ -120,11 +129,7 @@ export function calculateTrustScore(history: TrustHistory): TrustScoreResult {
     clamp(history.responseRate, 0, 1) * TRUST_WEIGHTS.RESPONSIVENESS_MAX,
   )
 
-  const total = clamp(
-    onTimeReturns + reviews + verification + accountAge + responsiveness,
-    0,
-    100,
-  )
+  const total = clamp(onTimeReturns + reviews + verification + accountAge + responsiveness, 0, 100)
 
   return {
     total,

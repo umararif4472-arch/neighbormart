@@ -41,13 +41,19 @@ function Navbar() {
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
       'rounded-full px-3.5 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-terracotta-600',
-      isActive ? 'bg-terracotta-50 text-terracotta-700' : 'text-bark-light hover:bg-bark/5 hover:text-bark',
+      isActive
+        ? 'bg-terracotta-50 text-terracotta-700'
+        : 'text-bark-light hover:bg-bark/5 hover:text-bark',
     )
 
   return (
     <header className="sticky top-0 z-30 border-b border-bark/10 bg-cream/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
-        <Link to="/" aria-label="Borrow Don't Buy — home" className="focus-visible:outline-2 focus-visible:outline-terracotta-600">
+        <Link
+          to="/"
+          aria-label="Borrow Don't Buy — home"
+          className="focus-visible:outline-2 focus-visible:outline-terracotta-600"
+        >
           <LogoMark />
         </Link>
 
@@ -153,11 +159,15 @@ function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-8 text-center sm:px-6">
         <LogoMark />
         <p className="text-xs text-bark-light">
-          A neighborhood lending prototype — every item here is fictional, but the drill is real in spirit.
+          A neighborhood lending prototype — every item here is fictional, but the drill is real in
+          spirit.
         </p>
         <p className="text-xs text-bark-light">
           Trust is earned: on-time returns, honest reviews, and showing up for your street.{' '}
-          <Link to="/trust" className="font-semibold text-terracotta-700 underline-offset-2 hover:underline">
+          <Link
+            to="/trust"
+            className="font-semibold text-terracotta-700 underline-offset-2 hover:underline"
+          >
             How it works
           </Link>
         </p>
@@ -176,7 +186,10 @@ export function Layout() {
         Skip to content
       </a>
       <Navbar />
-      <main id="main-content" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-6 sm:px-6 md:pb-10">
+      <main
+        id="main-content"
+        className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-6 sm:px-6 md:pb-10"
+      >
         <Outlet />
       </main>
       <Footer />

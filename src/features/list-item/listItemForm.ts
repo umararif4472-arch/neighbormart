@@ -140,7 +140,10 @@ export function validateTermsStep(draft: ListItemDraft): Partial<Record<DraftFie
   return errors
 }
 
-function validateStep(stepIndex: number, draft: ListItemDraft): Partial<Record<DraftField, string>> {
+function validateStep(
+  stepIndex: number,
+  draft: ListItemDraft,
+): Partial<Record<DraftField, string>> {
   switch (stepIndex) {
     case 0:
       return validateBasicsStep(draft)
@@ -307,10 +310,11 @@ export function readDraftFromStorage(): { draft: ListItemDraft; stepIndex: numbe
           typeof d.depositAmount === 'number' && Number.isFinite(d.depositAmount)
             ? d.depositAmount
             : '',
-        dailyFee:
-          typeof d.dailyFee === 'number' && Number.isFinite(d.dailyFee) ? d.dailyFee : '',
+        dailyFee: typeof d.dailyFee === 'number' && Number.isFinite(d.dailyFee) ? d.dailyFee : '',
         pickupPreference:
-          d.pickupPreference === 'pickup' || d.pickupPreference === 'drop-off' || d.pickupPreference === 'either'
+          d.pickupPreference === 'pickup' ||
+          d.pickupPreference === 'drop-off' ||
+          d.pickupPreference === 'either'
             ? d.pickupPreference
             : 'either',
         pickupInstructions: typeof d.pickupInstructions === 'string' ? d.pickupInstructions : '',

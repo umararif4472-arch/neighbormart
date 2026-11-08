@@ -141,28 +141,28 @@ const LIVE: RequestSeed[] = [
  *   - The rest have exactly one review each and belong to other neighbors.
  */
 const HISTORICAL: Array<[string, string, string, number, BorrowRequest['status']]> = [
-  ['req-h1', 'i-drone', 'u-marcus', 24 * 40, 'returned'],   // Marcus → Tom's drone
-  ['req-h2', 'i-kayak', 'u-priya', 24 * 65, 'returned'],    // Priya → Tom's kayak
-  ['req-h3', 'i-washer', 'u-nina', 24 * 30, 'returned'],    // Nina → Tom's washer
-  ['req-h4', 'i-karaoke', 'u-priya', 24 * 90, 'returned'],  // Priya → Joan's karaoke
+  ['req-h1', 'i-drone', 'u-marcus', 24 * 40, 'returned'], // Marcus → Tom's drone
+  ['req-h2', 'i-kayak', 'u-priya', 24 * 65, 'returned'], // Priya → Tom's kayak
+  ['req-h3', 'i-washer', 'u-nina', 24 * 30, 'returned'], // Nina → Tom's washer
+  ['req-h4', 'i-karaoke', 'u-priya', 24 * 90, 'returned'], // Priya → Joan's karaoke
   ['req-h5', 'i-sewing', 'u-marcus', 24 * 120, 'returned'], // Marcus → Joan's sewing
-  ['req-h6', 'i-karaoke', 'u-sana', 24 * 200, 'returned'],  // Sana → Joan's karaoke
-  ['req-h7', 'i-tennis', 'u-joan', 24 * 50, 'returned'],    // Joan → Priya's tennis
-  ['req-h8', 'i-carpet', 'u-tom', 24 * 75, 'returned'],    // Tom → Priya's carpet cleaner
+  ['req-h6', 'i-karaoke', 'u-sana', 24 * 200, 'returned'], // Sana → Joan's karaoke
+  ['req-h7', 'i-tennis', 'u-joan', 24 * 50, 'returned'], // Joan → Priya's tennis
+  ['req-h8', 'i-carpet', 'u-tom', 24 * 75, 'returned'], // Tom → Priya's carpet cleaner
   ['req-h9', 'i-tennis', 'u-marcus', 24 * 150, 'returned'], // Marcus → Priya's tennis
-  ['req-h10', 'i-tent', 'u-leo', 24 * 20, 'returned'],      // Leo → Marcus's tent
-  ['req-h11', 'i-tent', 'u-joan', 24 * 160, 'returned'],    // Joan → Marcus's tent
-  ['req-h12', 'i-saw', 'u-diego', 24 * 100, 'returned'],    // Diego → Marcus's saw
-  ['req-h13', 'i-cider', 'u-priya', 24 * 250, 'returned'],  // Priya → Sana's cider press
-  ['req-h14', 'i-canner', 'u-marcus', 24 * 180, 'returned'],// Marcus → Sana's canner
-  ['req-h15', 'i-cider', 'u-joan', 24 * 320, 'returned'],   // Joan → Sana's cider press
+  ['req-h10', 'i-tent', 'u-leo', 24 * 20, 'returned'], // Leo → Marcus's tent
+  ['req-h11', 'i-tent', 'u-joan', 24 * 160, 'returned'], // Joan → Marcus's tent
+  ['req-h12', 'i-saw', 'u-diego', 24 * 100, 'returned'], // Diego → Marcus's saw
+  ['req-h13', 'i-cider', 'u-priya', 24 * 250, 'returned'], // Priya → Sana's cider press
+  ['req-h14', 'i-canner', 'u-marcus', 24 * 180, 'returned'], // Marcus → Sana's canner
+  ['req-h15', 'i-cider', 'u-joan', 24 * 320, 'returned'], // Joan → Sana's cider press
   ['req-h16', 'i-snowboard', 'u-priya', 24 * 210, 'returned'], // Priya → Diego's snowboard
-  ['req-h17', 'i-snowboard', 'u-joan', 24 * 240, 'returned'],  // Joan → Diego's snowboard
-  ['req-h18', 'i-lights', 'u-priya', 24 * 55, 'returned'],     // Priya → Nina's lights
-  ['req-h19', 'i-projector', 'u-maya', 24 * 15, 'returned'],   // Maya → Leo's projector (Maya reviewed; Leo owes)
-  ['req-h20', 'i-drill', 'u-leo', 24 * 25, 'returned'],        // Leo → Maya's drill (Leo reviewed; Maya owes)
-  ['req-h21', 'i-pasta', 'u-priya', 24 * 130, 'reviewed'],     // Priya → Maya's pasta roller (both reviewed)
-  ['req-h22', 'i-mixer', 'u-sana', 24 * 105, 'reviewed'],      // Sana → Maya's mixer (both reviewed)
+  ['req-h17', 'i-snowboard', 'u-joan', 24 * 240, 'returned'], // Joan → Diego's snowboard
+  ['req-h18', 'i-lights', 'u-priya', 24 * 55, 'returned'], // Priya → Nina's lights
+  ['req-h19', 'i-projector', 'u-maya', 24 * 15, 'returned'], // Maya → Leo's projector (Maya reviewed; Leo owes)
+  ['req-h20', 'i-drill', 'u-leo', 24 * 25, 'returned'], // Leo → Maya's drill (Leo reviewed; Maya owes)
+  ['req-h21', 'i-pasta', 'u-priya', 24 * 130, 'reviewed'], // Priya → Maya's pasta roller (both reviewed)
+  ['req-h22', 'i-mixer', 'u-sana', 24 * 105, 'reviewed'], // Sana → Maya's mixer (both reviewed)
 ]
 
 export function seedRequests(): BorrowRequest[] {

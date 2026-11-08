@@ -107,7 +107,10 @@ export async function createRequest(input: CreateRequestInput): Promise<RequestM
       periodsOverlap(request.period, input.period),
   )
   if (conflict) {
-    throw new ApiError('conflict', 'Someone already has a request for those dates — try different days.')
+    throw new ApiError(
+      'conflict',
+      'Someone already has a request for those dates — try different days.',
+    )
   }
 
   const request: BorrowRequest = {
@@ -225,9 +228,7 @@ export async function markReturned(
 
   // The on-time/late split is what feeds the trust score — this is the
   // moment the score's inputs change (visible on profiles immediately).
-  const onTime = request.dueAt
-    ? Date.parse(now) <= Date.parse(request.dueAt) + 86_399_000
-    : true
+  const onTime = request.dueAt ? Date.parse(now) <= Date.parse(request.dueAt) + 86_399_000 : true
   borrower.stats.successfulBorrows += 1
   if (onTime) borrower.stats.onTimeReturns += 1
   else borrower.stats.lateReturns += 1

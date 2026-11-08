@@ -98,7 +98,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             </span>
             <div className="min-w-0">
               <p className="font-display text-sm font-bold">{toast.title}</p>
-              {toast.body && <p className="mt-0.5 text-xs leading-relaxed opacity-90">{toast.body}</p>}
+              {toast.body && (
+                <p className="mt-0.5 text-xs leading-relaxed opacity-90">{toast.body}</p>
+              )}
             </div>
           </div>
         ))}

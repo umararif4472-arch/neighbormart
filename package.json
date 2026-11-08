@@ -3,13 +3,18 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Why buy it when your neighbor already owns one? A hyperlocal peer-to-peer lending network.",
+  "description": "Local marketplace to borrow, rent, buy and sell items, vehicles, properties and sports arenas near you.",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "react": "^19.1.0",
@@ -17,13 +22,21 @@
     "react-router-dom": "^7.6.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@tailwindcss/vite": "^4.1.10",
     "@types/node": "^22.20.5",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.5.0",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
     "tailwindcss": "^4.1.10",
     "typescript": "~5.8.3",
+    "typescript-eslint": "^8.72.1",
     "vite": "^6.3.5",
     "vitest": "^3.2.4"
   }

@@ -166,7 +166,8 @@ export function DashboardPage() {
         {TABS.map(({ id, label }) => {
           const count =
             id === 'lending'
-              ? incoming.filter((v) => v.effective === 'pending' || v.effective === 'overdue').length
+              ? incoming.filter((v) => v.effective === 'pending' || v.effective === 'overdue')
+                  .length
               : id === 'borrowing'
                 ? outgoing.filter((v) =>
                     ['pending', 'approved', 'active', 'overdue'].includes(v.effective),
@@ -201,7 +202,10 @@ export function DashboardPage() {
       </div>
 
       {actionError && (
-        <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p
+          role="alert"
+          className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+        >
           {actionError}
         </p>
       )}
@@ -264,7 +268,9 @@ export function DashboardPage() {
               <section key={group.status} aria-label={group.label} className="flex flex-col gap-3">
                 <h2 className="font-display text-lg font-bold text-bark">
                   {group.label}{' '}
-                  <span className="text-sm font-medium text-bark-light">({group.views.length})</span>
+                  <span className="text-sm font-medium text-bark-light">
+                    ({group.views.length})
+                  </span>
                 </h2>
                 <ul className="flex list-none flex-col gap-3">
                   {group.views.map((view) => (
@@ -379,7 +385,9 @@ export function DashboardPage() {
               <section key={group.status} aria-label={group.label} className="flex flex-col gap-3">
                 <h2 className="font-display text-lg font-bold text-bark">
                   {group.label}{' '}
-                  <span className="text-sm font-medium text-bark-light">({group.views.length})</span>
+                  <span className="text-sm font-medium text-bark-light">
+                    ({group.views.length})
+                  </span>
                 </h2>
                 <ul className="flex list-none flex-col gap-3">
                   {group.views.map((view) => (

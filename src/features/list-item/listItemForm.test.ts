@@ -79,7 +79,9 @@ describe('step validators', () => {
     expect(bad.pickupInstructions).toBeDefined()
     expect(Object.keys(validateTermsStep(VALID_DRAFT))).toHaveLength(0)
     // Empty deposit/fee are fine (optional).
-    expect(Object.keys(validateTermsStep({ ...VALID_DRAFT, depositAmount: '', dailyFee: '' }))).toHaveLength(0)
+    expect(
+      Object.keys(validateTermsStep({ ...VALID_DRAFT, depositAmount: '', dailyFee: '' })),
+    ).toHaveLength(0)
   })
 })
 
@@ -125,7 +127,10 @@ describe('listItemFormReducer', () => {
 
   it('adds and removes photos with a cap', () => {
     let state = initialListItemFormState
-    state = listItemFormReducer(state, { type: 'photos_add', urls: ['a.png', 'b.png', 'c.png', 'd.png'] })
+    state = listItemFormReducer(state, {
+      type: 'photos_add',
+      urls: ['a.png', 'b.png', 'c.png', 'd.png'],
+    })
     expect(state.draft.photos).toEqual(['a.png', 'b.png', 'c.png'])
     state = listItemFormReducer(state, { type: 'photo_remove', index: 1 })
     expect(state.draft.photos).toEqual(['a.png', 'c.png'])

@@ -47,7 +47,8 @@ export function MessagesPage() {
       <header>
         <h1 className="font-display text-2xl font-extrabold text-bark sm:text-3xl">Messages</h1>
         <p className="mt-1 text-sm text-bark-light">
-          Chats live with each borrow request — pickup logistics, thank-yous, and the occasional joke.
+          Chats live with each borrow request — pickup logistics, thank-yous, and the occasional
+          joke.
         </p>
       </header>
 
@@ -67,7 +68,11 @@ export function MessagesPage() {
                   to={`/messages/${request.id}`}
                   className="flex items-center gap-3 rounded-3xl border border-bark/10 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-terracotta-600"
                 >
-                  <Avatar name={counterpart?.name ?? 'Neighbor'} src={counterpart?.avatarUrl} size="sm" />
+                  <Avatar
+                    name={counterpart?.name ?? 'Neighbor'}
+                    src={counterpart?.avatarUrl}
+                    size="sm"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-bark">
                       {counterpart?.name ?? 'A neighbor'} · {itemTitle}
@@ -209,7 +214,9 @@ function ThreadView({ requestId }: { requestId: string }) {
                     </p>
                     {mine && <Avatar name={me.name} src={me.avatarUrl} size="xs" />}
                   </div>
-                  <p className="px-1 text-[11px] text-bark-light">{relativeTime(message.createdAt)}</p>
+                  <p className="px-1 text-[11px] text-bark-light">
+                    {relativeTime(message.createdAt)}
+                  </p>
                 </div>
               )
             })
@@ -244,4 +251,3 @@ function ThreadView({ requestId }: { requestId: string }) {
     </div>
   )
 }
-

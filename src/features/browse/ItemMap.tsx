@@ -30,8 +30,14 @@ export interface ItemMapProps {
 
 // Decorative pseudo-streets so the canvas reads as a neighborhood map.
 const STREETS = [
-  'M0 84 H800', 'M0 210 H800', 'M0 340 H800', 'M0 470 H800',
-  'M120 0 V600', 'M300 0 V600', 'M480 0 V600', 'M660 0 V600',
+  'M0 84 H800',
+  'M0 210 H800',
+  'M0 340 H800',
+  'M0 470 H800',
+  'M120 0 V600',
+  'M300 0 V600',
+  'M480 0 V600',
+  'M660 0 V600',
 ] as const
 
 const MAP_BOUNDS = { width: 800, height: 600, padding: 48 }
@@ -40,7 +46,13 @@ export function ItemMap({ items, usersById, origin, radiusKm, className }: ItemM
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const projection = useMemo(
-    () => createProjection(items.map((i) => i.location), origin, MAP_BOUNDS, radiusKm),
+    () =>
+      createProjection(
+        items.map((i) => i.location),
+        origin,
+        MAP_BOUNDS,
+        radiusKm,
+      ),
     [items, origin, radiusKm],
   )
 
@@ -56,7 +68,12 @@ export function ItemMap({ items, usersById, origin, radiusKm, className }: ItemM
   const originPoint = origin ? projection.project(origin) : null
 
   return (
-    <div className={cn('relative overflow-hidden rounded-3xl border border-bark/10 bg-moss-50 shadow-sm', className)}>
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-3xl border border-bark/10 bg-moss-50 shadow-sm',
+        className,
+      )}
+    >
       <svg
         viewBox={`0 0 ${MAP_BOUNDS.width} ${MAP_BOUNDS.height}`}
         preserveAspectRatio="none"
@@ -65,7 +82,12 @@ export function ItemMap({ items, usersById, origin, radiusKm, className }: ItemM
         className="block h-full w-full"
       >
         {/* Canvas */}
-        <rect width={MAP_BOUNDS.width} height={MAP_BOUNDS.height} className="fill-moss-50" rx="20" />
+        <rect
+          width={MAP_BOUNDS.width}
+          height={MAP_BOUNDS.height}
+          className="fill-moss-50"
+          rx="20"
+        />
         {/* Park patches for warmth */}
         <ellipse cx={170} cy={150} rx={90} ry={60} className="fill-moss-100" />
         <ellipse cx={620} cy={430} rx={110} ry={70} className="fill-moss-100" />
@@ -79,7 +101,13 @@ export function ItemMap({ items, usersById, origin, radiusKm, className }: ItemM
         />
         {/* Streets */}
         {STREETS.map((d, i) => (
-          <path key={i} d={d} className="stroke-white" strokeWidth={i < 4 ? 14 : 10} strokeLinecap="round" />
+          <path
+            key={i}
+            d={d}
+            className="stroke-white"
+            strokeWidth={i < 4 ? 14 : 10}
+            strokeLinecap="round"
+          />
         ))}
 
         {/* Radius ring (truthful to real km through the projection) */}
@@ -107,7 +135,13 @@ export function ItemMap({ items, usersById, origin, radiusKm, className }: ItemM
         {/* "You are here" home marker */}
         {originPoint && (
           <g>
-            <circle cx={originPoint.x} cy={originPoint.y} r={11} className="fill-white stroke-terracotta-600" strokeWidth={3} />
+            <circle
+              cx={originPoint.x}
+              cy={originPoint.y}
+              r={11}
+              className="fill-white stroke-terracotta-600"
+              strokeWidth={3}
+            />
             <circle cx={originPoint.x} cy={originPoint.y} r={4.5} className="fill-terracotta-600" />
           </g>
         )}
@@ -222,7 +256,12 @@ function MapPreviewCard({
         to={`/item/${item.id}`}
         className="shrink-0 overflow-hidden rounded-2xl focus-visible:outline-2 focus-visible:outline-terracotta-600"
       >
-        <ItemPhoto src={item.photos[0]} alt={item.title} category={item.category} className="h-20 w-20" />
+        <ItemPhoto
+          src={item.photos[0]}
+          alt={item.title}
+          category={item.category}
+          className="h-20 w-20"
+        />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-start justify-between gap-2">
@@ -248,7 +287,11 @@ function MapPreviewCard({
         </p>
         <div className="mt-auto flex items-center gap-2">
           <Badge tone={availabilityTone(item.availability)} dot>
-            {item.availability === 'available' ? 'Available' : item.availability === 'borrowed' ? 'Borrowed' : 'Unavailable'}
+            {item.availability === 'available'
+              ? 'Available'
+              : item.availability === 'borrowed'
+                ? 'Borrowed'
+                : 'Unavailable'}
           </Badge>
           <Link
             to={`/item/${item.id}`}

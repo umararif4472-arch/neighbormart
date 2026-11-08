@@ -113,7 +113,10 @@ describe('tierForScore', () => {
 
   it('exposes all four tiers in order', () => {
     expect(TRUST_TIERS.map((t) => t.name)).toEqual([
-      'New Neighbor', 'Reliable', 'Trusted', 'Community Pillar',
+      'New Neighbor',
+      'Reliable',
+      'Trusted',
+      'Community Pillar',
     ])
   })
 })
@@ -137,8 +140,15 @@ describe('buildTrustHistory', () => {
 
   const reviews: Review[] = [
     {
-      id: 'r1', requestId: 'q', itemId: 'i', reviewerId: 'a', revieweeId: 'u-test',
-      reviewerRole: 'lender', rating: 5, comment: '', createdAt: NOW,
+      id: 'r1',
+      requestId: 'q',
+      itemId: 'i',
+      reviewerId: 'a',
+      revieweeId: 'u-test',
+      reviewerRole: 'lender',
+      rating: 5,
+      comment: '',
+      createdAt: NOW,
     },
   ]
 

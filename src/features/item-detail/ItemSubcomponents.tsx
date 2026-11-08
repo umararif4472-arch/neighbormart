@@ -47,7 +47,9 @@ export function OwnerCard({ owner, className }: { owner: User; className?: strin
       <dl className="grid grid-cols-2 gap-2 text-xs">
         <div className="flex flex-col rounded-2xl bg-bark/5 p-3">
           <dt className="font-semibold text-bark-light">Successful lends</dt>
-          <dd className="font-display text-lg font-bold text-bark">{owner.stats.successfulLends}</dd>
+          <dd className="font-display text-lg font-bold text-bark">
+            {owner.stats.successfulLends}
+          </dd>
         </div>
         <div className="flex flex-col rounded-2xl bg-bark/5 p-3">
           <dt className="font-semibold text-bark-light">On-time returns</dt>
@@ -119,14 +121,18 @@ export function BorrowTermsCard({ item, origin }: BorrowTermsCardProps) {
             <span className="flex items-center gap-2 text-bark-light">
               <CheckIcon className="h-4 w-4" aria-hidden /> Deposit
             </span>
-            <span className="font-semibold text-bark">${terms.depositAmount} (refunded on return)</span>
+            <span className="font-semibold text-bark">
+              ${terms.depositAmount} (refunded on return)
+            </span>
           </li>
         )}
         <li className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-2 text-bark-light">
             <MapPinIcon className="h-4 w-4" aria-hidden /> Pickup
           </span>
-          <span className="text-right font-semibold text-bark">{PICKUP_LABEL[terms.pickupPreference]}</span>
+          <span className="text-right font-semibold text-bark">
+            {PICKUP_LABEL[terms.pickupPreference]}
+          </span>
         </li>
         {distanceKm != null && (
           <li className="flex items-center justify-between gap-3">

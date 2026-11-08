@@ -19,7 +19,13 @@ export interface ReviewCardProps {
 }
 
 /** One neighbor's review: stars, comment, who wrote it, when. */
-export function ReviewCard({ review, reviewer, showItem, perspective = 'about', className }: ReviewCardProps) {
+export function ReviewCard({
+  review,
+  reviewer,
+  showItem,
+  perspective = 'about',
+  className,
+}: ReviewCardProps) {
   const written = perspective === 'written'
   return (
     <article
@@ -80,14 +86,7 @@ export function ReviewsList({
   className,
 }: ReviewsListProps) {
   if (reviews.length === 0) {
-    return (
-      <EmptyState
-        emoji="🌱"
-        title={emptyTitle}
-        message={emptyMessage}
-        className={className}
-      />
-    )
+    return <EmptyState emoji="🌱" title={emptyTitle} message={emptyMessage} className={className} />
   }
 
   return (
@@ -96,9 +95,7 @@ export function ReviewsList({
         <ReviewCard
           key={review.id}
           review={review}
-          reviewer={usersById(
-            perspective === 'written' ? review.revieweeId : review.reviewerId,
-          )}
+          reviewer={usersById(perspective === 'written' ? review.revieweeId : review.reviewerId)}
           perspective={perspective}
         />
       ))}

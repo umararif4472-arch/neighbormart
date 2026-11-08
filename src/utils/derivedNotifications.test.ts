@@ -116,7 +116,12 @@ describe('buildNotificationFeed — lifecycle projection', () => {
   })
 
   it('declined → notice for the borrower only', () => {
-    const outgoing = request({ itemId: 'i-theirs', borrowerId: 'u-me', status: 'declined', respondedAt: '2026-09-04T11:00:00.000Z' })
+    const outgoing = request({
+      itemId: 'i-theirs',
+      borrowerId: 'u-me',
+      status: 'declined',
+      respondedAt: '2026-09-04T11:00:00.000Z',
+    })
     const { feed } = run([outgoing])
     expect(feed.find((n) => n.id === 'dnf-r1-declined')?.title).toBe('Declined this time')
   })
@@ -140,7 +145,11 @@ describe('buildNotificationFeed — lifecycle projection', () => {
   })
 
   it('returned + I still owe a review → actionable review-requested', () => {
-    const returned = request({ status: 'returned', returnedAt: '2026-09-03T18:00:00.000Z', dueAt: '2026-09-04T00:00:00' })
+    const returned = request({
+      status: 'returned',
+      returnedAt: '2026-09-03T18:00:00.000Z',
+      dueAt: '2026-09-04T00:00:00',
+    })
     const { feed } = run([returned], [])
     const item = feed.find((n) => n.id === 'dnf-r1-review-requested')
     expect(item?.kind).toBe('action')
@@ -151,8 +160,15 @@ describe('buildNotificationFeed — lifecycle projection', () => {
     const returned = request({ status: 'returned', returnedAt: '2026-09-03T18:00:00.000Z' })
     const reviews: Review[] = [
       {
-        id: 'rev-1', requestId: 'r1', itemId: 'i-mine', reviewerId: 'u-me', revieweeId: 'u-other',
-        reviewerRole: 'lender', rating: 5, comment: 'Great', createdAt: '2026-09-03T19:00:00.000Z',
+        id: 'rev-1',
+        requestId: 'r1',
+        itemId: 'i-mine',
+        reviewerId: 'u-me',
+        revieweeId: 'u-other',
+        reviewerRole: 'lender',
+        rating: 5,
+        comment: 'Great',
+        createdAt: '2026-09-03T19:00:00.000Z',
       },
     ]
     const { feed } = run([returned], reviews)
@@ -163,8 +179,14 @@ describe('buildNotificationFeed — lifecycle projection', () => {
 
   it('reviews received recently surface as info items', () => {
     const review: Review = {
-      id: 'rev-9', requestId: 'r-x', itemId: 'i-mine', reviewerId: 'u-nina', revieweeId: 'u-me',
-      reviewerRole: 'borrower', rating: 5, comment: 'Spotless return, cookies included.',
+      id: 'rev-9',
+      requestId: 'r-x',
+      itemId: 'i-mine',
+      reviewerId: 'u-nina',
+      revieweeId: 'u-me',
+      reviewerRole: 'borrower',
+      rating: 5,
+      comment: 'Spotless return, cookies included.',
       createdAt: '2026-09-02T10:00:00.000Z',
     }
     const { feed } = run([], [review])
@@ -177,9 +199,14 @@ describe('buildNotificationFeed — lifecycle projection', () => {
     const incoming = request()
     const stored = [
       {
-        id: 'n1', userId: 'u-me', type: 'message-received' as const,
-        title: 'New message from Tom', body: '…',
-        requestId: 'r1', itemId: 'i-mine', read: false,
+        id: 'n1',
+        userId: 'u-me',
+        type: 'message-received' as const,
+        title: 'New message from Tom',
+        body: '…',
+        requestId: 'r1',
+        itemId: 'i-mine',
+        read: false,
         createdAt: '2026-09-05T10:00:00.000Z',
       },
     ]
@@ -194,7 +221,11 @@ describe('buildNotificationFeed — lifecycle projection', () => {
   it('action items sort ahead of info regardless of time', () => {
     const incoming = request() // action, older createdAt
     const overdue = request({
-      id: 'r2', itemId: 'i-theirs', borrowerId: 'u-me', status: 'active', dueAt: '2026-09-01T00:00:00',
+      id: 'r2',
+      itemId: 'i-theirs',
+      borrowerId: 'u-me',
+      status: 'active',
+      dueAt: '2026-09-01T00:00:00',
     })
     const { feed } = run([incoming, overdue])
     expect(feed.every((n) => n.kind === 'action')).toBe(true)

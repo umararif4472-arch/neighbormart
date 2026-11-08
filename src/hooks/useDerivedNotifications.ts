@@ -26,5 +26,13 @@ export function useDerivedNotifications() {
       storedNotifications: state.notifications,
       now,
     })
-  }, [currentUser, state.requests, state.items, state.users, state.reviews, state.notifications, now])
+  }, [
+    currentUser,
+    state.requests,
+    state.items,
+    state.users,
+    state.reviews,
+    state.notifications,
+    now,
+  ])
 }

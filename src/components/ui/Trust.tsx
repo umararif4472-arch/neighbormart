@@ -23,7 +23,12 @@ export interface TrustBadgeProps {
 }
 
 /** Compact tier chip shown next to every user name. */
-export function TrustBadge({ tierName, withEmoji = true, size = 'sm', className }: TrustBadgeProps) {
+export function TrustBadge({
+  tierName,
+  withEmoji = true,
+  size = 'sm',
+  className,
+}: TrustBadgeProps) {
   const tier = tierByName(tierName)
   return (
     <span

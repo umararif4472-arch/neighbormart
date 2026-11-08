@@ -9,13 +9,16 @@ import { clone, nextId, getStore, simulateLatency } from './store'
 
 export async function getNotifications(userId: string): Promise<AppNotification[]> {
   await simulateLatency()
-  const list = getStore().notifications
-    .filter((n) => n.userId === userId)
+  const list = getStore()
+    .notifications.filter((n) => n.userId === userId)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
   return clone(list)
 }
 
-export async function markNotificationRead(notificationId: string, userId: string): Promise<AppNotification[]> {
+export async function markNotificationRead(
+  notificationId: string,
+  userId: string,
+): Promise<AppNotification[]> {
   await simulateLatency(80, 200)
   const notification = getStore().notifications.find((n) => n.id === notificationId)
   if (notification && notification.userId === userId) notification.read = true

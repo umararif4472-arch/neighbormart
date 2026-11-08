@@ -1,7 +1,12 @@
 import { useMemo } from 'react'
 import type { TrustScoreResult } from '@/types'
 import { useApp } from '@/context/AppContext'
-import { buildTrustHistory, calculateTrustScore, tierForScore, type TrustTier } from '@/utils/trustScore'
+import {
+  buildTrustHistory,
+  calculateTrustScore,
+  tierForScore,
+  type TrustTier,
+} from '@/utils/trustScore'
 
 /**
  * Derive any user's trust score from context (users + reviews) using the

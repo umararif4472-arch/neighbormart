@@ -1,18 +1,7 @@
-import type {
-  AppNotification,
-  BorrowRequest,
-  Item,
-  Review,
-  User,
-} from '@/types'
+import type { AppNotification, BorrowRequest, Item, Review, User } from '@/types'
 import { formatDate, formatDueLabel, relativeTime } from './dates'
 import { findById } from './collections'
-import {
-  effectiveStatus,
-  getReviewProgress,
-  isDueSoon,
-  isOverdue,
-} from './requestLifecycle'
+import { effectiveStatus, getReviewProgress, isDueSoon, isOverdue } from './requestLifecycle'
 
 /**
  * THE notification feed, derived — not a hardcoded list.
@@ -87,7 +76,9 @@ export function buildNotificationFeed(input: DerivedFeedInput): {
     const other = firstName(counterpart?.name)
     const status = effectiveStatus(request, now)
 
-    const push = (partial: Omit<DerivedNotification, 'id' | 'requestId' | 'itemId'> & { suffix: string }) => {
+    const push = (
+      partial: Omit<DerivedNotification, 'id' | 'requestId' | 'itemId'> & { suffix: string },
+    ) => {
       const { suffix, ...rest } = partial
       derived.push({
         id: `dnf-${request.id}-${suffix}`,

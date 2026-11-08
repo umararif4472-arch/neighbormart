@@ -1,1 +1,10 @@
-{"[dart]":{"editor.tabSize":2},"editor.formatOnSave":true,"editor.tabSize":2,"files.exclude":{"**/dist":true,"**/node_modules":true}}
+{
+  "[dart]": { "editor.defaultFormatter": "Dart-Code.dart-code", "editor.tabSize": 2 },
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "files.exclude": { "**/dist": true, "**/node_modules": true }
+}

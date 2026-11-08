@@ -72,7 +72,9 @@ export function RequestCard({
             <span className="font-semibold text-bark">{counterpartName}</span> ·{' '}
             {formatDateRange(request.period.start, request.period.end)}
             {request.dueAt && (effective === 'active' || overdue) && (
-              <span className={cn('font-semibold', overdue ? 'text-red-700' : 'text-terracotta-700')}>
+              <span
+                className={cn('font-semibold', overdue ? 'text-red-700' : 'text-terracotta-700')}
+              >
                 {' '}
                 · {formatDueLabel(request.dueAt)}
               </span>
@@ -120,12 +122,13 @@ export function RequestCard({
           ) : (
             <Badge tone="moss">Your review pending</Badge>
           )}
-          {review.awaitingReviewFrom && review.awaitingReviewFrom !== (viewerRole === 'lender' ? 'lender' : 'borrower') && (
-            <span>
-              Waiting for {counterpartName.split(' ')[0]}
-              {review.awaitingReviewFrom === 'both' ? ' to review too' : ''}.
-            </span>
-          )}
+          {review.awaitingReviewFrom &&
+            review.awaitingReviewFrom !== (viewerRole === 'lender' ? 'lender' : 'borrower') && (
+              <span>
+                Waiting for {counterpartName.split(' ')[0]}
+                {review.awaitingReviewFrom === 'both' ? ' to review too' : ''}.
+              </span>
+            )}
         </p>
       )}
 

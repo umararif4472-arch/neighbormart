@@ -43,10 +43,7 @@ export function LandingPage() {
   // "Fresh on the block" — the 3 newest listings, nearest-first ordering
   // is Browse's job; here we just show what's new.
   const freshItems = useMemo(
-    () =>
-      [...items]
-        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-        .slice(0, 3),
+    () => [...items].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 3),
     [items],
   )
 
@@ -68,9 +65,9 @@ export function LandingPage() {
             already owns one?
           </h1>
           <p className="max-w-xl text-base leading-relaxed text-bark-light sm:text-lg">
-            Borrow Don&apos;t Buy is the neighborhood&apos;s shared garage: tools, gear, and
-            party tricks from people within walking distance. No fees unless the owner asks,
-            no strangers — just neighbors building trust.
+            Borrow Don&apos;t Buy is the neighborhood&apos;s shared garage: tools, gear, and party
+            tricks from people within walking distance. No fees unless the owner asks, no strangers
+            — just neighbors building trust.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link to="/browse">
@@ -115,10 +112,15 @@ export function LandingPage() {
       {/* How it works */}
       <section aria-labelledby="how-it-works" className="flex flex-col gap-6">
         <div>
-          <h2 id="how-it-works" className="font-display text-2xl font-extrabold text-bark sm:text-3xl">
+          <h2
+            id="how-it-works"
+            className="font-display text-2xl font-extrabold text-bark sm:text-3xl"
+          >
             How it works
           </h2>
-          <p className="mt-1 text-sm text-bark-light">Three steps between your garage and your neighbor&apos;s project.</p>
+          <p className="mt-1 text-sm text-bark-light">
+            Three steps between your garage and your neighbor&apos;s project.
+          </p>
         </div>
         <ol className="grid list-none gap-4 sm:grid-cols-3">
           {HOW_IT_WORKS.map((step, index) => (
@@ -146,10 +148,15 @@ export function LandingPage() {
       <section aria-labelledby="fresh-listings" className="flex flex-col gap-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 id="fresh-listings" className="font-display text-2xl font-extrabold text-bark sm:text-3xl">
+            <h2
+              id="fresh-listings"
+              className="font-display text-2xl font-extrabold text-bark sm:text-3xl"
+            >
               Fresh on the block
             </h2>
-            <p className="mt-1 text-sm text-bark-light">Real items your neighbors are sharing right now.</p>
+            <p className="mt-1 text-sm text-bark-light">
+              Real items your neighbors are sharing right now.
+            </p>
           </div>
           <Link
             to="/browse"
@@ -195,13 +202,16 @@ export function LandingPage() {
       >
         <div className="flex flex-col gap-6">
           <div>
-            <h2 id="trust-explainer" className="font-display text-2xl font-extrabold text-bark sm:text-3xl">
+            <h2
+              id="trust-explainer"
+              className="font-display text-2xl font-extrabold text-bark sm:text-3xl"
+            >
               Trust is the currency
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-bark-light sm:text-base">
-              No payment processing, no deposits held hostage. Instead, every neighbor earns a
-              trust score from on-time returns, honest reviews, a verified profile, and simply
-              being responsive. Lend to the tiers you&apos;re comfortable with.
+              No payment processing, no deposits held hostage. Instead, every neighbor earns a trust
+              score from on-time returns, honest reviews, a verified profile, and simply being
+              responsive. Lend to the tiers you&apos;re comfortable with.
             </p>
           </div>
           <TrustTierLadder />
@@ -220,8 +230,8 @@ export function LandingPage() {
           Got a garage full of maybes?
         </h2>
         <p className="max-w-md text-sm text-terracotta-50 sm:text-base">
-          That ladder you used once could fix someone&apos;s gutter this weekend. List it in
-          two minutes — your neighbors will do the rest.
+          That ladder you used once could fix someone&apos;s gutter this weekend. List it in two
+          minutes — your neighbors will do the rest.
         </p>
         <Link to="/list-item">
           <Button size="lg" variant="secondary" className="border-terracotta-300">

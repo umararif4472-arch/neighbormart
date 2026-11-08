@@ -12,7 +12,12 @@ import { BrowseGridSkeleton } from '@/components/ui/Skeleton'
 import { ItemCard } from '@/components/items/ItemCard'
 import { ListIcon, MapPinIcon } from '@/components/icons'
 import { cn } from '@/utils/cn'
-import { DEFAULT_BROWSE_FILTERS, FilterBar, hasActiveFilters, type BrowseFilterState } from './FilterBar'
+import {
+  DEFAULT_BROWSE_FILTERS,
+  FilterBar,
+  hasActiveFilters,
+  type BrowseFilterState,
+} from './FilterBar'
 import { ItemMap } from './ItemMap'
 
 /**
@@ -65,12 +70,18 @@ export function BrowsePage() {
             Browse nearby
           </h1>
           <p className="mt-1 text-sm text-bark-light">
-            {currentUser ? `Around ${currentUser.neighborhood} — your neighbors' shared garage.` : "Your neighbors' shared garage."}
+            {currentUser
+              ? `Around ${currentUser.neighborhood} — your neighbors' shared garage.`
+              : "Your neighbors' shared garage."}
           </p>
         </div>
 
         {/* View toggle — filters carry over */}
-        <div role="group" aria-label="View mode" className="flex rounded-full border border-bark/15 bg-white p-1 shadow-sm">
+        <div
+          role="group"
+          aria-label="View mode"
+          className="flex rounded-full border border-bark/15 bg-white p-1 shadow-sm"
+        >
           <button
             type="button"
             onClick={() => setView('list')}
@@ -140,10 +151,16 @@ export function BrowsePage() {
       ) : visible.length === 0 ? (
         <EmptyState
           emoji="🔍"
-          title={filters.query ? `Nothing matches "${filters.query}"` : 'No items match your filters'}
+          title={
+            filters.query ? `Nothing matches "${filters.query}"` : 'No items match your filters'
+          }
           message="Try a wider radius, fewer categories, or a different search."
           action={
-            hasActiveFilters(filters) ? <Button variant="secondary" onClick={resetFilters}>Clear all filters</Button> : undefined
+            hasActiveFilters(filters) ? (
+              <Button variant="secondary" onClick={resetFilters}>
+                Clear all filters
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -152,7 +169,10 @@ export function BrowsePage() {
             <p aria-live="polite" className="text-xs font-medium text-bark-light">
               Showing {visible.length} of {items.length} items
             </p>
-            <label htmlFor="sort-by" className="flex items-center gap-1.5 text-xs font-semibold text-bark-light">
+            <label
+              htmlFor="sort-by"
+              className="flex items-center gap-1.5 text-xs font-semibold text-bark-light"
+            >
               Sort
               <select
                 id="sort-by"

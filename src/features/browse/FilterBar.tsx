@@ -80,7 +80,11 @@ export function FilterBar({
       </div>
 
       {/* Category chips (multi-select) */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar" role="group" aria-label="Filter by category">
+      <div
+        className="flex gap-2 overflow-x-auto no-scrollbar"
+        role="group"
+        aria-label="Filter by category"
+      >
         <button
           type="button"
           onClick={() => onPatch({ categories: [] })}

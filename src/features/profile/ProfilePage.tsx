@@ -53,9 +53,7 @@ export function ProfilePage() {
   )
   const totalReturns = user ? user.stats.onTimeReturns + user.stats.lateReturns : 0
   const returnRate =
-    user && totalReturns > 0
-      ? Math.round((user.stats.onTimeReturns / totalReturns) * 100)
-      : null
+    user && totalReturns > 0 ? Math.round((user.stats.onTimeReturns / totalReturns) * 100) : null
 
   if (!user) {
     return (
@@ -101,11 +99,15 @@ export function ProfilePage() {
         <dl className="flex flex-wrap justify-center gap-2 text-xs">
           <div className="rounded-2xl bg-bark/5 px-3 py-2">
             <dt className="font-semibold text-bark-light">Lends</dt>
-            <dd className="font-display text-base font-bold text-bark">{user.stats.successfulLends}</dd>
+            <dd className="font-display text-base font-bold text-bark">
+              {user.stats.successfulLends}
+            </dd>
           </div>
           <div className="rounded-2xl bg-bark/5 px-3 py-2">
             <dt className="font-semibold text-bark-light">Borrows</dt>
-            <dd className="font-display text-base font-bold text-bark">{user.stats.successfulBorrows}</dd>
+            <dd className="font-display text-base font-bold text-bark">
+              {user.stats.successfulBorrows}
+            </dd>
           </div>
           <div className="rounded-2xl bg-bark/5 px-3 py-2">
             <dt className="font-semibold text-bark-light">On-time rate</dt>

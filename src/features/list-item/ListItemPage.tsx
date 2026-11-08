@@ -13,12 +13,7 @@ import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ItemPhoto } from '@/components/items/ItemPhoto'
 import { CheckIcon, ChevronLeftIcon, XIcon, CameraIcon } from '@/components/icons'
-import {
-  LIST_ITEM_STEPS,
-  MAX_PHOTOS,
-  type DraftField,
-  type ListItemDraft,
-} from './listItemForm'
+import { LIST_ITEM_STEPS, MAX_PHOTOS, type DraftField, type ListItemDraft } from './listItemForm'
 
 /**
  * /list-item — multi-step listing flow.
@@ -103,10 +98,12 @@ export function ListItemPage() {
           <CheckIcon className="h-8 w-8" />
         </span>
         <div>
-          <h1 className="font-display text-2xl font-extrabold text-bark">It&apos;s live on the block! 🎉</h1>
+          <h1 className="font-display text-2xl font-extrabold text-bark">
+            It&apos;s live on the block! 🎉
+          </h1>
           <p className="mt-2 text-sm text-bark-light">
-            {published.title} is now visible to neighbors within walking distance. We&apos;ll
-            notify you the moment someone requests it.
+            {published.title} is now visible to neighbors within walking distance. We&apos;ll notify
+            you the moment someone requests it.
           </p>
         </div>
         <div className="flex w-full max-w-sm flex-col gap-3 rounded-3xl border border-bark/10 bg-white p-4 text-left shadow-sm">
@@ -133,7 +130,7 @@ export function ListItemPage() {
             </Link>
             <Button
               variant="secondary"
-            className="flex-1"
+              className="flex-1"
               onClick={() => {
                 const shareData = {
                   title: 'Borrow Don’t Buy',
@@ -155,7 +152,10 @@ export function ListItemPage() {
             </Button>
           </div>
         </div>
-        <Link to="/browse" className="text-sm font-semibold text-terracotta-700 underline-offset-4 hover:underline">
+        <Link
+          to="/browse"
+          className="text-sm font-semibold text-terracotta-700 underline-offset-4 hover:underline"
+        >
           Browse what neighbors are sharing →
         </Link>
       </div>
@@ -190,9 +190,15 @@ export function ListItemPage() {
           className="flex items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
         >
           <p>
-            Welcome back — we kept your draft ({LIST_ITEM_STEPS[form.stepIndex].toLowerCase()} step).
+            Welcome back — we kept your draft ({LIST_ITEM_STEPS[form.stepIndex].toLowerCase()}{' '}
+            step).
           </p>
-          <Button variant="ghost" size="sm" onClick={discard} className="shrink-0 text-amber-900 hover:bg-amber-100">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={discard}
+            className="shrink-0 text-amber-900 hover:bg-amber-100"
+          >
             Start over
           </Button>
         </div>
@@ -232,19 +238,41 @@ export function ListItemPage() {
       {/* Step panels */}
       <div className="rounded-3xl border border-bark/10 bg-white p-5 shadow-sm sm:p-6">
         {step === 'The basics' && (
-          <BasicsStep draft={draft} showErrors={form.showErrors} errors={form.errors} setField={setField} onPhotoFiles={onPhotoFiles} onRemovePhoto={(index) => dispatchForm({ type: 'photo_remove', index })} />
+          <BasicsStep
+            draft={draft}
+            showErrors={form.showErrors}
+            errors={form.errors}
+            setField={setField}
+            onPhotoFiles={onPhotoFiles}
+            onRemovePhoto={(index) => dispatchForm({ type: 'photo_remove', index })}
+          />
         )}
         {step === 'Details' && (
-          <DetailsStep draft={draft} showErrors={form.showErrors} errors={form.errors} setField={setField} />
+          <DetailsStep
+            draft={draft}
+            showErrors={form.showErrors}
+            errors={form.errors}
+            setField={setField}
+          />
         )}
         {step === 'Borrowing terms' && (
-          <TermsStep draft={draft} showErrors={form.showErrors} errors={form.errors} setField={setField} />
+          <TermsStep
+            draft={draft}
+            showErrors={form.showErrors}
+            errors={form.errors}
+            setField={setField}
+          />
         )}
-        {step === 'Preview' && <PreviewStep draft={draft} ownerName={owner.name} ownerAvatarUrl={owner.avatarUrl} />}
+        {step === 'Preview' && (
+          <PreviewStep draft={draft} ownerName={owner.name} ownerAvatarUrl={owner.avatarUrl} />
+        )}
       </div>
 
       {publishError && (
-        <p role="alert" className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+        <p
+          role="alert"
+          className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+        >
           {publishError}
         </p>
       )}
@@ -253,7 +281,9 @@ export function ListItemPage() {
       <div className="flex items-center justify-between gap-3">
         <Button
           variant="ghost"
-          onClick={() => (form.stepIndex === 0 ? navigate('/browse') : dispatchForm({ type: 'back' }))}
+          onClick={() =>
+            form.stepIndex === 0 ? navigate('/browse') : dispatchForm({ type: 'back' })
+          }
         >
           <ChevronLeftIcon className="h-4 w-4" />
           {form.stepIndex === 0 ? 'Cancel' : 'Back'}
@@ -321,7 +351,9 @@ function BasicsStep({
         ))}
       </SelectField>
       <p className="-mt-2 text-xs text-bark-light">
-        {draft.category ? CATEGORY_META[draft.category].blurb : 'Pick the closest fit — filters use it.'}
+        {draft.category
+          ? CATEGORY_META[draft.category].blurb
+          : 'Pick the closest fit — filters use it.'}
       </p>
 
       <TextField
@@ -366,7 +398,13 @@ function BasicsStep({
             >
               <CameraIcon className="h-6 w-6" aria-hidden />
               <span className="text-[11px] font-semibold">Add photo</span>
-              <input type="file" accept="image/*" multiple className="sr-only" onChange={onPhotoFiles} />
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="sr-only"
+                onChange={onPhotoFiles}
+              />
             </label>
           )}
         </div>
@@ -440,7 +478,9 @@ function TermsStep({
         value={draft.maxDurationDays}
         placeholder="7"
         hint="How long can a neighbor keep it? (1–60)"
-        onChange={(e) => setField('maxDurationDays', e.target.value === '' ? '' : Number(e.target.value))}
+        onChange={(e) =>
+          setField('maxDurationDays', e.target.value === '' ? '' : Number(e.target.value))
+        }
         error={fieldError(errors, showErrors, 'maxDurationDays')}
       />
 
@@ -453,7 +493,9 @@ function TermsStep({
           value={draft.depositAmount}
           placeholder="0"
           hint="Refunded on return. Leave empty for none."
-          onChange={(e) => setField('depositAmount', e.target.value === '' ? '' : Number(e.target.value))}
+          onChange={(e) =>
+            setField('depositAmount', e.target.value === '' ? '' : Number(e.target.value))
+          }
           error={fieldError(errors, showErrors, 'depositAmount')}
         />
         <TextField
@@ -464,7 +506,9 @@ function TermsStep({
           value={draft.dailyFee}
           placeholder="0"
           hint="Most items are free — leave empty."
-          onChange={(e) => setField('dailyFee', e.target.value === '' ? '' : Number(e.target.value))}
+          onChange={(e) =>
+            setField('dailyFee', e.target.value === '' ? '' : Number(e.target.value))
+          }
           error={fieldError(errors, showErrors, 'dailyFee')}
         />
       </div>
@@ -472,7 +516,9 @@ function TermsStep({
       <SelectField
         label="Pickup preference"
         value={draft.pickupPreference}
-        onChange={(e) => setField('pickupPreference', e.target.value as ListItemDraft['pickupPreference'])}
+        onChange={(e) =>
+          setField('pickupPreference', e.target.value as ListItemDraft['pickupPreference'])
+        }
       >
         <option value="either">Pickup or drop-off — whatever works</option>
         <option value="pickup">Pickup at my place</option>
@@ -503,12 +549,24 @@ function PreviewStep({
   ownerAvatarUrl: string
 }) {
   const summary = useMemo(
-    () => [
-      ['Category', `${CATEGORY_META[draft.category as keyof typeof CATEGORY_META]?.emoji ?? '📦'} ${draft.category}`],
-      ['Max duration', `${draft.maxDurationDays} days`],
-      ['Deposit', draft.depositAmount === '' || draft.depositAmount === 0 ? 'None' : `$${draft.depositAmount}`],
-      ['Daily fee', draft.dailyFee === '' || draft.dailyFee === 0 ? 'Free' : `$${draft.dailyFee}`],
-    ] as const,
+    () =>
+      [
+        [
+          'Category',
+          `${CATEGORY_META[draft.category as keyof typeof CATEGORY_META]?.emoji ?? '📦'} ${draft.category}`,
+        ],
+        ['Max duration', `${draft.maxDurationDays} days`],
+        [
+          'Deposit',
+          draft.depositAmount === '' || draft.depositAmount === 0
+            ? 'None'
+            : `$${draft.depositAmount}`,
+        ],
+        [
+          'Daily fee',
+          draft.dailyFee === '' || draft.dailyFee === 0 ? 'Free' : `$${draft.dailyFee}`,
+        ],
+      ] as const,
     [draft],
   )
 
@@ -531,8 +589,12 @@ function PreviewStep({
           <Badge tone="success" dot className="w-fit">
             Available
           </Badge>
-          <p className="font-display text-lg font-bold text-bark">{draft.title || 'Untitled listing'}</p>
-          <p className="whitespace-pre-line text-sm leading-relaxed text-bark-light">{draft.description}</p>
+          <p className="font-display text-lg font-bold text-bark">
+            {draft.title || 'Untitled listing'}
+          </p>
+          <p className="whitespace-pre-line text-sm leading-relaxed text-bark-light">
+            {draft.description}
+          </p>
           <p className="text-sm text-bark">
             <span className="font-semibold">Condition: </span>
             {draft.condition}
@@ -554,7 +616,9 @@ function PreviewStep({
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {summary.map(([label, value]) => (
           <div key={label} className="flex flex-col gap-0.5 rounded-2xl bg-bark/5 p-3">
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-bark-light">{label}</dt>
+            <dt className="text-[11px] font-semibold uppercase tracking-wide text-bark-light">
+              {label}
+            </dt>
             <dd className="text-sm font-semibold text-bark">{value}</dd>
           </div>
         ))}

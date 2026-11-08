@@ -15,6 +15,7 @@ Convert the "Borrow Don't Buy" hyperlocal lending network into a mobile applicat
 > [!IMPORTANT]
 > **Prototype Data Strategy**:
 > We will create the Flutter app inside a new `mobile/` directory. For the initial prototype phase, we will provide a **hybrid data repository**:
+>
 > 1. By default, it runs with rich, realistic in-memory mock data (identical to the web app with Maya Chen, 15 neighborhood items, trust scores, and active requests) for instant, frictionless mobile testing without requiring backend/database dependencies.
 > 2. It will include an API client pre-configured to connect to your Next.js `/api` endpoints (`http://localhost:3000/api` or LAN IP for physical phones) whenever you choose to test with the live database.
 
@@ -62,6 +63,7 @@ mobile/
 ### 1. Initialize Flutter Project
 
 #### [NEW] [mobile/](file:///c:/Users/D%20E%20L%20L/OneDrive/Desktop/Borrow%20Don%27t%20Buy/mobile)
+
 - Generate a clean Flutter project in `mobile/` with package name `borrow_dont_buy`.
 - Configure `pubspec.yaml` with required dependencies:
   - `provider` (simple, reactive state management)
@@ -71,44 +73,53 @@ mobile/
 ### 2. Core Models & Business Logic
 
 #### [NEW] [mobile/lib/data/models/](file:///c:/Users/D%20E%20L%20L/OneDrive/Desktop/Borrow%20Don%27t%20Buy/mobile/lib/data/models)
+
 - `item.dart`: Item model with title, category, photos, maxBorrowDays, deposit, lat/lng, owner.
 - `user.dart`: User model with trust score, verifications, bio, points balance.
 - `borrow_request.dart`: Request model with status (`pending`, `approved`, `active`, `returned`), dates, handoff type.
 - `wishlist_item.dart`: Community wishlist item with targetPoints, requestCount, pointsPledged.
 
 #### [NEW] [mobile/lib/core/utils/trust_score.dart](file:///c:/Users/D%20E%20L%20L/OneDrive/Desktop/Borrow%20Don%27t%20Buy/mobile/lib/core/utils/trust_score.dart)
+
 - Port the pure 0–100 trust score algorithm from the web project (returns: 40pts, reviews: 25pts, phone verification: 10pts, account age: 10pts, responsiveness: 15pts).
 
 ### 3. State Management & Repositories
 
 #### [NEW] [mobile/lib/state/app_state.dart](file:///c:/Users/D%20E%20L%20L/OneDrive/Desktop/Borrow%20Don%27t%20Buy/mobile/lib/state/app_state.dart)
+
 - Manages current user (`Maya Chen`), active items list, search queries, category filters, borrow requests, and wishlist pledges with instant reactive updates.
 
 ### 4. UI Screens & Features
 
 #### [NEW] [mobile/lib/ui/features/explore/explore_screen.dart](file:///c:/Users/D%20E%20L%20L/OneDrive/Desktop/Borrow%20Don%27t%20Buy/mobile/lib/ui/features/explore/explore_screen.dart)
+
 - Search header with neighborhood location indicator ("Richmond, VA").
 - Horizontal category chips (Tools, Outdoor, Lawn & Garden, Kitchen, etc.).
 - Distance radius filter chip.
 - Responsive grid / list of item cards showing photo, distance tag, daily fee / deposit, and owner trust badge.
 
 #### [NEW] [mobile/lib/ui/features/item_detail/item_detail_screen.dart](file:///c:/Users/D%20E%20L%20L/OneDrive/Desktop/Borrow%20Don%27t%20Buy/mobile/lib/ui/features/item_detail/item_detail_screen.dart)
+
 - Photo banner with condition badge.
 - Owner card with trust tier and rating breakdown.
 - Bottom floating bar with "Borrow Item" button triggering a borrow modal (select dates, handoff preference: in-person / porch drop, note to owner).
 
 #### [NEW] [mobile/lib/ui/features/list_item/list_item_screen.dart](file:///c:/Users/D%20E%20L%20L/OneDrive/Desktop/Borrow%20Don%27t%20Buy/mobile/lib/ui/features/list_item/list_item_screen.dart)
+
 - Mobile-friendly listing wizard to add an item to the neighborhood catalog with validation.
 
 #### [NEW] [mobile/lib/ui/features/activity/activity_screen.dart](file:///c:/Users/D%20E%20L%20L/OneDrive/Desktop/Borrow%20Don%27t%20Buy/mobile/lib/ui/features/activity/activity_screen.dart)
+
 - Tabbed view: "Borrowing" vs "Lending".
 - Live status chips (`Pending`, `Approved`, `Active`, `Returned`).
 - Action buttons: Approve/Decline requests, Mark as Handed Off / Returned.
 
 #### [NEW] [mobile/lib/ui/features/wishlist/wishlist_screen.dart](file:///c:/Users/D%20E%20L%20L/OneDrive/Desktop/Borrow%20Don%27t%20Buy/mobile/lib/ui/features/wishlist/wishlist_screen.dart)
+
 - Community wishlist with progress bars and "Pledge Points" or "I Need This Too" actions.
 
 #### [NEW] [mobile/lib/ui/features/profile/profile_screen.dart](file:///c:/Users/D%20E%20L%20L/OneDrive/Desktop/Borrow%20Don%27t%20Buy/mobile/lib/ui/features/profile/profile_screen.dart)
+
 - Visual trust meter (0-100), reputation badge, account details, points balance, and listed items tab.
 
 ---
@@ -116,6 +127,7 @@ mobile/
 ## Verification Plan
 
 ### Automated Tests
+
 - Unit tests for trust score calculation and mock state updates:
   ```bash
   cd mobile
@@ -123,6 +135,7 @@ mobile/
   ```
 
 ### Build & Run Verification
+
 - Build and run the prototype on Windows desktop or Chrome:
   ```bash
   cd mobile

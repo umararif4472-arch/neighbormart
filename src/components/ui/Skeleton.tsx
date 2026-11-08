@@ -8,7 +8,10 @@ export function Skeleton({ className }: { className?: string }) {
 /** Card-shaped skeleton matching ItemCard's layout (used in browse grids). */
 export function ItemCardSkeleton() {
   return (
-    <div className="flex flex-col overflow-hidden rounded-3xl border border-bark/10 bg-white shadow-sm" aria-hidden>
+    <div
+      className="flex flex-col overflow-hidden rounded-3xl border border-bark/10 bg-white shadow-sm"
+      aria-hidden
+    >
       <Skeleton className="aspect-[4/3] w-full rounded-none rounded-t-3xl" />
       <div className="flex flex-col gap-3 p-4">
         <Skeleton className="h-5 w-3/4" />

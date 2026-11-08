@@ -78,7 +78,10 @@ export function formatResponseTime(minutes: number): string {
 }
 
 /** "just now" / "5m ago" / "3h ago" / "2d ago" / falls back to date. */
-export function relativeTime(iso: ISODateString, nowIso: ISODateString = new Date().toISOString()): string {
+export function relativeTime(
+  iso: ISODateString,
+  nowIso: ISODateString = new Date().toISOString(),
+): string {
   const then = Date.parse(iso)
   const now = Date.parse(nowIso)
   if (Number.isNaN(then) || Number.isNaN(now)) return ''

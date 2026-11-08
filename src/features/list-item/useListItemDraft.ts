@@ -27,7 +27,7 @@ export function useListItemDraft() {
     if (stored) {
       dispatch({ type: 'restored', draft: stored.draft, stepIndex: stored.stepIndex })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+    // Mount only: dispatch is stable and storage is read exactly once.
   }, [])
 
   // Persist whenever a dirty draft changes (skips pristine/empty drafts).

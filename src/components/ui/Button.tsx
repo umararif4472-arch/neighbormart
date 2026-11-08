@@ -30,7 +30,16 @@ const SIZES: Record<ButtonSize, string> = {
 
 /** The one button in the app — rounded, warm, keyboard-friendly. */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'primary', size = 'md', loading = false, ariaDisabled, className, children, disabled, ...rest },
+  {
+    variant = 'primary',
+    size = 'md',
+    loading = false,
+    ariaDisabled,
+    className,
+    children,
+    disabled,
+    ...rest
+  },
   ref,
 ) {
   return (

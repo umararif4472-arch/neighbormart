@@ -92,7 +92,15 @@ export function useMyRequests() {
     if (!currentUser) return []
     return state.requests
       .map((request) =>
-        buildView(request, state.items, state.users, state.requests, state.reviews, now, currentUser.id),
+        buildView(
+          request,
+          state.items,
+          state.users,
+          state.requests,
+          state.reviews,
+          now,
+          currentUser.id,
+        ),
       )
       .filter((view): view is RequestView => view !== null)
   }, [state.requests, state.items, state.users, state.reviews, now, currentUser])

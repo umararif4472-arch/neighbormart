@@ -13,7 +13,7 @@ import { localDateFromToday } from '@/utils/dates'
 /** Small deterministic jitter so co-located items don't stack perfectly. */
 function jitter(base: number, salt: number): number {
   const wave = Math.sin(salt * 12.9898) * 43758.5453
-  return base + ((wave - Math.floor(wave)) - 0.5) * 0.004
+  return base + (wave - Math.floor(wave) - 0.5) * 0.004
 }
 
 function photo(seed: string): string {
@@ -53,7 +53,8 @@ const SEEDS: ItemSeed[] = [
     depositAmount: 20,
     dailyFee: null,
     pickupPreference: 'either',
-    pickupInstructions: 'Home most evenings — porch pickup on Richmond St, or I can drop within a couple of blocks.',
+    pickupInstructions:
+      'Home most evenings — porch pickup on Richmond St, or I can drop within a couple of blocks.',
     listedDaysAgo: 210,
   },
   {
@@ -70,7 +71,8 @@ const SEEDS: ItemSeed[] = [
     depositAmount: null,
     dailyFee: null,
     pickupPreference: 'pickup',
-    pickupInstructions: 'Porch pickup. Text when you\u2019re close and I\u2019ll set it by the door.',
+    pickupInstructions:
+      'Porch pickup. Text when you\u2019re close and I\u2019ll set it by the door.',
     listedDaysAgo: 120,
   },
   {
@@ -104,7 +106,8 @@ const SEEDS: ItemSeed[] = [
     depositAmount: 50,
     dailyFee: 5,
     pickupPreference: 'pickup',
-    pickupInstructions: 'Garage off the alley — I\u2019ll leave it open, tent\u2019s right by the door.',
+    pickupInstructions:
+      'Garage off the alley — I\u2019ll leave it open, tent\u2019s right by the door.',
     listedDaysAgo: 30,
   },
   {
@@ -121,7 +124,8 @@ const SEEDS: ItemSeed[] = [
     depositAmount: 30,
     dailyFee: null,
     pickupPreference: 'either',
-    pickupInstructions: 'Driveway pickup. I\u2019ll show you the startup trick so it doesn\u2019t stall.',
+    pickupInstructions:
+      'Driveway pickup. I\u2019ll show you the startup trick so it doesn\u2019t stall.',
     listedDaysAgo: 400,
   },
   {
@@ -138,7 +142,8 @@ const SEEDS: ItemSeed[] = [
     depositAmount: 25,
     dailyFee: null,
     pickupPreference: 'pickup',
-    pickupInstructions: 'Porch pickup on Sellwood Blvd. I\u2019ll carry it to your car — it\u2019s heavier than it looks.',
+    pickupInstructions:
+      'Porch pickup on Sellwood Blvd. I\u2019ll carry it to your car — it\u2019s heavier than it looks.',
     listedDaysAgo: 500,
   },
   {
@@ -291,7 +296,8 @@ const SEEDS: ItemSeed[] = [
     depositAmount: 60,
     dailyFee: 5,
     pickupPreference: 'either',
-    pickupInstructions: 'The buzzer\u2019s broken — knock loud. Or message me and I\u2019ll meet you out front.',
+    pickupInstructions:
+      'The buzzer\u2019s broken — knock loud. Or message me and I\u2019ll meet you out front.',
     listedDaysAgo: 500,
   },
   {
@@ -359,7 +365,8 @@ const SEEDS: ItemSeed[] = [
     depositAmount: null,
     dailyFee: null,
     pickupPreference: 'either',
-    pickupInstructions: 'I\u2019m around most days — message and we\u2019ll sort a time. Photos coming this weekend, I just moved in!',
+    pickupInstructions:
+      'I\u2019m around most days — message and we\u2019ll sort a time. Photos coming this weekend, I just moved in!',
     listedDaysAgo: 18,
   },
 ]

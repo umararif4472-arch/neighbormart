@@ -32,7 +32,9 @@ export function RequestBorrowModal({ item, owner, open, onClose }: RequestBorrow
   const { sendRequest, toErrorMessage } = useMyRequests()
   const currentUser = state.currentUser
 
-  const today = useMemo(() => todayInputValue(), [open])
+  // Plain call, not a memo: "today" must be fresh whenever the modal
+  // re-renders (e.g. after being reopened on a later day).
+  const today = todayInputValue()
   const [startInput, setStartInput] = useState(today)
   const [endInput, setEndInput] = useState('')
   const [note, setNote] = useState('')
@@ -147,7 +149,10 @@ export function RequestBorrowModal({ item, owner, open, onClose }: RequestBorrow
           />
 
           {serviceError && (
-            <p role="alert" className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+            <p
+              role="alert"
+              className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+            >
               {serviceError}
             </p>
           )}

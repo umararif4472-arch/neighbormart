@@ -1,25 +1,42 @@
-# Dependencies & builds
-node_modules
-dist
-.vite
-coverage
+# Dependencies
+node_modules/
 
-# Logs & local files
-*.local
+# Build output
+dist/
+dist-ssr/
+.vite/
+*.tsbuildinfo
+
+# Tests & coverage
+coverage/
+
+# Logs
 *.log
 npm-debug.log*
-.DS_Store
-Thumbs.db
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Editor
-.idea/
-*.iml
-!.vscode/extensions.json
-!.vscode/settings.json
-
-# Secrets — never commit
+# Environment & secrets — never commit real values (see .env.example)
 .env
 .env.*
 !.env.example
+
+# Firebase / hosting local state
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.vercel/
+
+# Editor & OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+# .vscode is intentionally TRACKED: it only holds shared, team-useful
+# settings (format on save, ESLint/Prettier, recommended extensions).
+# Personal VS Code state stays out via the workspace-file rule below.
+*.code-workspace
 
 # Flutter build output is ignored inside mobile/ by its own .gitignore

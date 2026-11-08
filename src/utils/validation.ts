@@ -57,10 +57,7 @@ export function validateNote(note: string): string | undefined {
 }
 
 /** Inclusive day count between two calendar stamps ("Sep 6–Sep 8" = 3 days). */
-export function borrowDurationDays(
-  startIso: string,
-  endIso: string,
-): number | null {
+export function borrowDurationDays(startIso: string, endIso: string): number | null {
   const start = Date.parse(startIso)
   const end = Date.parse(endIso)
   if (Number.isNaN(start) || Number.isNaN(end) || end < start) return null

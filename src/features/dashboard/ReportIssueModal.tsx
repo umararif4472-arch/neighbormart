@@ -100,7 +100,10 @@ export function ReportIssueModal({ view, open, onClose }: ReportIssueModalProps)
 
           <fieldset className="flex flex-col gap-2">
             <legend className="text-sm font-semibold text-bark">
-              What went wrong?<span aria-hidden className="ml-1 text-terracotta-600">*</span>
+              What went wrong?
+              <span aria-hidden className="ml-1 text-terracotta-600">
+                *
+              </span>
             </legend>
             {REASONS.map((option) => (
               <label
@@ -125,10 +128,14 @@ export function ReportIssueModal({ view, open, onClose }: ReportIssueModalProps)
                   aria-hidden
                   className={cn(
                     'h-4 w-4 rounded-full border-2',
-                    reason === option ? 'border-terracotta-600 bg-terracotta-600' : 'border-bark/30',
+                    reason === option
+                      ? 'border-terracotta-600 bg-terracotta-600'
+                      : 'border-bark/30',
                   )}
                 >
-                  {reason === option && <span className="block h-full w-full scale-50 rounded-full bg-white" />}
+                  {reason === option && (
+                    <span className="block h-full w-full scale-50 rounded-full bg-white" />
+                  )}
                 </span>
                 {option}
               </label>
@@ -151,7 +158,10 @@ export function ReportIssueModal({ view, open, onClose }: ReportIssueModalProps)
           />
 
           {error && (
-            <p role="alert" className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+            <p
+              role="alert"
+              className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+            >
               {error}
             </p>
           )}

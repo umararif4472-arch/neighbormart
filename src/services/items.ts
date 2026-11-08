@@ -37,7 +37,11 @@ export function validateCreateItemInput(input: CreateItemInput): Record<string, 
   if (input.condition.trim().length < 3) {
     errors.condition = 'Add a short condition note (e.g. "Good — works great").'
   }
-  if (!Number.isInteger(input.maxDurationDays) || input.maxDurationDays < 1 || input.maxDurationDays > 60) {
+  if (
+    !Number.isInteger(input.maxDurationDays) ||
+    input.maxDurationDays < 1 ||
+    input.maxDurationDays > 60
+  ) {
     errors.maxDurationDays = 'Max borrow duration must be 1–60 days.'
   }
   if (input.depositAmount != null && (input.depositAmount < 0 || input.depositAmount > 500)) {

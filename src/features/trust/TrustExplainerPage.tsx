@@ -125,7 +125,9 @@ export function TrustExplainerPage() {
                 </span>
                 <div>
                   <p className="font-display text-sm font-bold text-bark">{factor.name}</p>
-                  <p className="text-xs font-semibold text-terracotta-700">up to {factor.max} pts</p>
+                  <p className="text-xs font-semibold text-terracotta-700">
+                    up to {factor.max} pts
+                  </p>
                 </div>
               </div>
               <p className="text-sm leading-relaxed text-bark-light">{factor.how}</p>
@@ -186,9 +188,9 @@ export function TrustExplainerPage() {
         </h2>
         <p className="text-sm leading-relaxed text-bark-light">
           After every completed borrow, both neighbors review each other — one review each, no
-          second chances to retaliate or flatter. Only your{' '}
-          {TRUST_WEIGHTS.REVIEWS_COUNTED_MAX} most recent count toward the score, and average
-          rating matters as much as count: three thoughtful 5-star reviews beat ten rushed 3-stars.
+          second chances to retaliate or flatter. Only your {TRUST_WEIGHTS.REVIEWS_COUNTED_MAX} most
+          recent count toward the score, and average rating matters as much as count: three
+          thoughtful 5-star reviews beat ten rushed 3-stars.
         </p>
       </section>
 

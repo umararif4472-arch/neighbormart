@@ -25,7 +25,11 @@ export function StarRating({ value, size = 'sm', className }: StarRatingProps) {
   const row = (filled: boolean) => (
     <span aria-hidden className="flex shrink-0 gap-0.5">
       {[0, 1, 2, 3, 4].map((i) => (
-        <StarIcon key={i} filled={filled} className={cn(SIZES[size], filled ? 'text-amber-400' : 'text-bark/20')} />
+        <StarIcon
+          key={i}
+          filled={filled}
+          className={cn(SIZES[size], filled ? 'text-amber-400' : 'text-bark/20')}
+        />
       ))}
     </span>
   )

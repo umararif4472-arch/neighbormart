@@ -41,7 +41,10 @@ export function canTransition(from: RequestStatus, to: RequestStatus): boolean {
  * Validate a transition. Returns a friendly error message on failure —
  * services throw ApiError('conflict', msg); UIs can inline it.
  */
-export function assertTransition(from: RequestStatus, to: RequestStatus): { ok: true } | { ok: false; error: string } {
+export function assertTransition(
+  from: RequestStatus,
+  to: RequestStatus,
+): { ok: true } | { ok: false; error: string } {
   if (from === to) return { ok: false, error: `This request is already ${from}.` }
   if (isTerminalStatus(from)) {
     return { ok: false, error: `This request is ${from} — nothing further can happen.` }
@@ -99,13 +102,20 @@ export function effectiveStatus(
 
 export type StatusTone = 'success' | 'warning' | 'danger' | 'neutral' | 'terracotta' | 'moss'
 
-export const STATUS_META: Record<EffectiveRequestStatus, { label: string; tone: StatusTone; hint: string }> = {
+export const STATUS_META: Record<
+  EffectiveRequestStatus,
+  { label: string; tone: StatusTone; hint: string }
+> = {
   pending: { label: 'Pending', tone: 'warning', hint: 'Awaiting the lender’s decision' },
   approved: { label: 'Approved', tone: 'success', hint: 'Pickup not yet confirmed' },
   active: { label: 'Out now', tone: 'terracotta', hint: 'Borrow in progress' },
   overdue: { label: 'Overdue', tone: 'danger', hint: 'Past the agreed return date' },
   returned: { label: 'Pending review', tone: 'moss', hint: 'Returned — review still outstanding' },
-  reviewed: { label: 'Reviewed ✓', tone: 'neutral', hint: 'Both neighbors shared their experience' },
+  reviewed: {
+    label: 'Reviewed ✓',
+    tone: 'neutral',
+    hint: 'Both neighbors shared their experience',
+  },
   declined: { label: 'Declined', tone: 'danger', hint: 'The lender declined this time' },
   cancelled: { label: 'Cancelled', tone: 'neutral', hint: 'Withdrawn before approval' },
 }
@@ -161,7 +171,12 @@ export interface ScheduleConflict {
  */
 export function findScheduleConflicts(
   candidate: { id?: string; itemId: string; period: { start: ISODateString; end: ISODateString } },
-  requests: ReadonlyArray<{ id: string; itemId: string; status: Status; period: { start: ISODateString; end: ISODateString } }>,
+  requests: ReadonlyArray<{
+    id: string
+    itemId: string
+    status: Status
+    period: { start: ISODateString; end: ISODateString }
+  }>,
 ): ScheduleConflict[] {
   return requests
     .filter(

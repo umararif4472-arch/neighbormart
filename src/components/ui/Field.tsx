@@ -1,4 +1,10 @@
-import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import {
+  useId,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from 'react'
 import { cn } from '@/utils/cn'
 
 /**
@@ -24,7 +30,15 @@ export interface FieldShellProps {
   className?: string
 }
 
-function FieldShell({ label, htmlFor, error, hint, required, children, className }: FieldShellProps) {
+function FieldShell({
+  label,
+  htmlFor,
+  error,
+  hint,
+  required,
+  children,
+  className,
+}: FieldShellProps) {
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
       <label htmlFor={htmlFor} className="text-sm font-semibold text-bark">
@@ -79,7 +93,15 @@ export interface TextAreaFieldProps extends TextareaHTMLAttributes<HTMLTextAreaE
   hint?: string | undefined
 }
 
-export function TextAreaField({ label, error, hint, className, id, rows = 4, ...rest }: TextAreaFieldProps) {
+export function TextAreaField({
+  label,
+  error,
+  hint,
+  className,
+  id,
+  rows = 4,
+  ...rest
+}: TextAreaFieldProps) {
   const autoId = useId()
   const inputId = id ?? autoId
   const invalid = Boolean(error)
@@ -103,7 +125,15 @@ export interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement
   children: ReactNode
 }
 
-export function SelectField({ label, error, hint, className, id, children, ...rest }: SelectFieldProps) {
+export function SelectField({
+  label,
+  error,
+  hint,
+  className,
+  id,
+  children,
+  ...rest
+}: SelectFieldProps) {
   const autoId = useId()
   const inputId = id ?? autoId
   const invalid = Boolean(error)
