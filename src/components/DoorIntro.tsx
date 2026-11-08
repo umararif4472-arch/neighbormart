@@ -199,7 +199,7 @@ export function DoorIntro() {
             <button
               type="button"
               onClick={retryHydration}
-              className="rounded-full bg-brand-cream px-5 py-2.5 text-sm font-semibold text-terracotta-700 shadow-sm transition-transform hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-cream"
+              className="rounded-full bg-brand-cream px-5 py-2.5 text-sm font-semibold text-door shadow-sm transition-transform hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-cream"
             >
               Try again
             </button>
