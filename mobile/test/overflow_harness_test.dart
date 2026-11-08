@@ -33,7 +33,7 @@ import 'package:neighbor_mart/ui/features/not_found/not_found_screen.dart';
 import 'package:neighbor_mart/ui/features/notifications/notifications_screen.dart';
 import 'package:neighbor_mart/ui/features/onboarding/onboarding_screen.dart';
 import 'package:neighbor_mart/ui/features/onboarding/profile_setup_screen.dart';
-import 'package:neighbor_mart/ui/features/onboarding/splash_screen.dart';
+import 'package:neighbor_mart/ui/features/onboarding/door_intro.dart';
 import 'package:neighbor_mart/ui/features/profile/edit_profile_screen.dart';
 import 'package:neighbor_mart/ui/features/profile/manage_items_screen.dart';
 import 'package:neighbor_mart/ui/features/profile/profile_screen.dart';
@@ -171,7 +171,16 @@ void main() {
       (_) => const ForgotPasswordScreen(),
     ),
     _Case('LandingScreen', signedOut, (_) => const LandingScreen()),
-    _Case('SplashScreen', signedOut, (_) => const SplashScreen()),
+    _Case(
+      'DoorIntro',
+      signedOut,
+      (_) => DoorIntro(
+        bootstrap: () async {},
+        signedIn: false,
+        onComplete: () {},
+        child: const SizedBox.shrink(),
+      ),
+    ),
     _Case('OnboardingScreen', signedOut, (_) => const OnboardingScreen()),
     _Case(
       'ProfileSetupScreen',
