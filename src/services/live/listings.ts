@@ -8,7 +8,7 @@ import {
   orderBy,
   query,
   updateDoc,
-} from 'firebase/firestore'
+} from 'firebase/firestore/lite'
 import type { ItemListing, LatLng, Listing, ListingFilters, ListingStatus, User } from '@/types'
 import { EMPTY_LISTING_FILTERS } from '@/types'
 import { DEFAULT_CURRENCY } from '@/config'

@@ -58,7 +58,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         aria-label={title}
         tabIndex={-1}
         className={cn(
-          'relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl outline-none',
+          'relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-surface shadow-2xl outline-none',
           'sm:max-w-lg sm:rounded-3xl',
           className,
         )}

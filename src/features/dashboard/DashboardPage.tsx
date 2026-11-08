@@ -166,7 +166,7 @@ export function DashboardPage() {
           </p>
         </div>
         {score && (
-          <div className="flex items-center gap-3 rounded-3xl border border-bark/10 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-3 rounded-3xl border border-bark/10 bg-surface px-4 py-3 shadow-sm">
             <Avatar
               name={state.currentUser?.name ?? 'You'}
               src={state.currentUser?.avatarUrl}
@@ -192,7 +192,7 @@ export function DashboardPage() {
       <div
         role="tablist"
         aria-label="Dashboard sections"
-        className="no-scrollbar flex w-full max-w-full gap-1 overflow-x-auto rounded-full border border-bark/10 bg-white p-1 shadow-sm sm:w-fit"
+        className="no-scrollbar flex w-full max-w-full gap-1 overflow-x-auto rounded-full border border-bark/10 bg-surface p-1 shadow-sm sm:w-fit"
       >
         {TABS.map(({ id, label }) => {
           const count =
@@ -273,7 +273,7 @@ export function DashboardPage() {
                   ).map(([label, value]) => (
                     <div
                       key={label}
-                      className="flex flex-col rounded-2xl border border-bark/10 bg-white p-3 shadow-sm"
+                      className="flex flex-col rounded-2xl border border-bark/10 bg-surface p-3 shadow-sm"
                     >
                       <dt className="text-[11px] font-semibold uppercase tracking-wide text-bark-light">
                         {label}
@@ -289,7 +289,7 @@ export function DashboardPage() {
                     return (
                       <li
                         key={item.id}
-                        className="flex flex-wrap items-center gap-3 rounded-3xl border border-bark/10 bg-white p-3 shadow-sm"
+                        className="flex flex-wrap items-center gap-3 rounded-3xl border border-bark/10 bg-surface p-3 shadow-sm"
                       >
                         <span aria-hidden className="text-2xl">
                           {listingEmoji(item)}

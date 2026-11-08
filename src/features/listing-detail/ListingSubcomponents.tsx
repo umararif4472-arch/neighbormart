@@ -48,7 +48,7 @@ export function OwnerCard({
   return (
     <section
       aria-label={`About the owner, ${owner.name}`}
-      className={`flex flex-col gap-4 rounded-3xl border border-bark/10 bg-white p-5 shadow-sm ${className ?? ''}`}
+      className={`flex flex-col gap-4 rounded-3xl border border-bark/10 bg-surface p-5 shadow-sm ${className ?? ''}`}
     >
       <div className="flex items-start gap-3">
         <Avatar name={owner.name} src={owner.avatarUrl} size="lg" />
@@ -138,7 +138,7 @@ export function ListingTermsCard({ listing, origin }: ListingTermsCardProps) {
   return (
     <section
       aria-label="Borrowing terms"
-      className="flex flex-col gap-3 rounded-3xl border border-bark/10 bg-white p-5 shadow-sm"
+      className="flex flex-col gap-3 rounded-3xl border border-bark/10 bg-surface p-5 shadow-sm"
     >
       <h2 className="font-display text-lg font-bold text-bark">Borrowing terms</h2>
 
@@ -252,7 +252,7 @@ export function SectionFactsCard({ listing }: { listing: Listing }) {
   return (
     <section
       aria-label="Listing facts"
-      className="flex flex-col gap-3 rounded-3xl border border-bark/10 bg-white p-5 shadow-sm"
+      className="flex flex-col gap-3 rounded-3xl border border-bark/10 bg-surface p-5 shadow-sm"
     >
       <h2 className="font-display text-lg font-bold text-bark">The facts</h2>
       <ul className="flex flex-col gap-2.5 text-sm">

@@ -1,64 +1,196 @@
 import 'package:flutter/material.dart';
 
+import 'theme_preference.dart';
+
+/// Brand palette (Phase 7 refresh, matched to the web app): warm
+/// terracotta primary, moss-green trust accent, cream/parchment
+/// surfaces, bark ink. Dark mode is a warm charcoal built from the
+/// same hues — never blue-grey.
 class AppColors {
-  static const terracotta = Color(0xFFA44B2D);
-  static const terracottaDark = Color(0xFF8A3B21);
-  static const moss = Color(0xFF5B7553);
+  // Light
+  static const terracotta = Color(0xFFC05F3B);
+  static const terracottaDark = Color(0xFFA44B2D);
+  static const moss = Color(0xFF4A7040);
   static const mossDark = Color(0xFF47603F);
-  static const cream = Color(0xFFFDF8F1);
-  static const creamDark = Color(0xFFF3E8D8);
-  static const bark = Color(0xFF3E2F28);
-  static const barkLight = Color(0xFF7A6A61);
+  static const cream = Color(0xFFFBF7F0);
+  static const creamSurface = Color(0xFFFFFDF9);
+  static const creamDark = Color(0xFFF4EDE1);
+  static const bark = Color(0xFF44392F);
+  static const barkLight = Color(0xFF7A6A5B);
   static const sand = Color(0xFFE8DCC8);
   static const amber = Color(0xFFC17A28);
   static const errorRed = Color(0xFFB3261E);
+
+  // Dark (warm charcoal)
+  static const darkCanvas = Color(0xFF16120E);
+  static const darkSurface = Color(0xFF211B15);
+  static const darkSurfaceVariant = Color(0xFF2B241C);
+  static const darkInk = Color(0xFFF3EDE4);
+  static const darkInkSoft = Color(0xFFC9BBA9);
+  static const darkPrimary = Color(0xFFE0A181);
+  static const darkOnPrimary = Color(0xFF2A1608);
+  static const darkMoss = Color(0xFFA6C89D);
+  static const darkBorder = Color(0xFF4A3E31);
+  static const darkError = Color(0xFFF2B8B5);
 }
 
-ThemeData buildAppTheme() {
-  final scheme = ColorScheme.fromSeed(
-    seedColor: AppColors.terracotta,
-    primary: AppColors.terracotta,
-    onPrimary: Colors.white,
-    secondary: AppColors.moss,
-    onSecondary: Colors.white,
-    surface: AppColors.cream,
-    onSurface: AppColors.bark,
-    error: AppColors.errorRed,
-    brightness: Brightness.light,
+/// Maps the persisted [ThemePreference] to Flutter's [ThemeMode].
+ThemeMode themeModeForPreference(ThemePreference preference) =>
+    switch (preference) {
+      ThemePreference.system => ThemeMode.system,
+      ThemePreference.light => ThemeMode.light,
+      ThemePreference.dark => ThemeMode.dark,
+    };
+
+/// Subtle fade + slight upward slide for page pushes (Phase 7).
+/// Reduced-motion users get the page with no transition at all.
+class FadeSlidePageTransitionsBuilder extends PageTransitionsBuilder {
+  const FadeSlidePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    if (MediaQuery.disableAnimationsOf(context)) return child;
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.03),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// All the colors one brightness needs, so light and dark share a
+/// single theme builder.
+class _Palette {
+  final Brightness brightness;
+  final Color canvas;
+  final Color surface;
+  final Color surfaceVariant;
+  final Color ink;
+  final Color inkSoft;
+  final Color primary;
+  final Color onPrimary;
+  final Color trust;
+  final Color onTrust;
+  final Color border;
+  final Color error;
+  final Color onError;
+
+  const _Palette({
+    required this.brightness,
+    required this.canvas,
+    required this.surface,
+    required this.surfaceVariant,
+    required this.ink,
+    required this.inkSoft,
+    required this.primary,
+    required this.onPrimary,
+    required this.trust,
+    required this.onTrust,
+    required this.border,
+    required this.error,
+    required this.onError,
+  });
+}
+
+const _lightPalette = _Palette(
+  brightness: Brightness.light,
+  canvas: AppColors.cream,
+  surface: AppColors.creamSurface,
+  surfaceVariant: AppColors.creamDark,
+  ink: AppColors.bark,
+  inkSoft: AppColors.barkLight,
+  primary: AppColors.terracotta,
+  onPrimary: Colors.white,
+  trust: AppColors.moss,
+  onTrust: Colors.white,
+  border: AppColors.sand,
+  error: AppColors.errorRed,
+  onError: Colors.white,
+);
+
+const _darkPalette = _Palette(
+  brightness: Brightness.dark,
+  canvas: AppColors.darkCanvas,
+  surface: AppColors.darkSurface,
+  surfaceVariant: AppColors.darkSurfaceVariant,
+  ink: AppColors.darkInk,
+  inkSoft: AppColors.darkInkSoft,
+  primary: AppColors.darkPrimary,
+  onPrimary: AppColors.darkOnPrimary,
+  trust: AppColors.darkMoss,
+  onTrust: Color(0xFF1C2B18),
+  border: AppColors.darkBorder,
+  error: AppColors.darkError,
+  onError: Color(0xFF601410),
+);
+
+ThemeData _buildTheme(_Palette p) {
+  final scheme = ColorScheme(
+    brightness: p.brightness,
+    primary: p.primary,
+    onPrimary: p.onPrimary,
+    secondary: p.trust,
+    onSecondary: p.onTrust,
+    surface: p.surface,
+    onSurface: p.ink,
+    surfaceContainerHighest: p.surfaceVariant,
+    onSurfaceVariant: p.inkSoft,
+    outline: p.border,
+    error: p.error,
+    onError: p.onError,
   );
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    scaffoldBackgroundColor: AppColors.cream,
-    textTheme: const TextTheme(
+    scaffoldBackgroundColor: p.canvas,
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {TargetPlatform.android: FadeSlidePageTransitionsBuilder()},
+    ),
+    textTheme: TextTheme(
       headlineSmall: TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.w700,
-        color: AppColors.bark,
+        color: p.ink,
       ),
       titleLarge: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w700,
-        color: AppColors.bark,
+        color: p.ink,
       ),
       titleMedium: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        color: AppColors.bark,
+        color: p.ink,
       ),
-      bodyLarge: TextStyle(fontSize: 16, color: AppColors.bark),
-      bodyMedium: TextStyle(fontSize: 14, color: AppColors.bark),
-      bodySmall: TextStyle(fontSize: 12, color: AppColors.barkLight),
-      labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+      bodyLarge: TextStyle(fontSize: 16, color: p.ink),
+      bodyMedium: TextStyle(fontSize: 14, color: p.ink),
+      bodySmall: TextStyle(fontSize: 12, color: p.inkSoft),
+      labelLarge: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
     ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.cream,
-      foregroundColor: AppColors.bark,
+    appBarTheme: AppBarTheme(
+      backgroundColor: p.canvas,
+      foregroundColor: p.ink,
       elevation: 0,
       centerTitle: false,
     ),
     cardTheme: CardThemeData(
-      color: Colors.white,
+      color: p.surface,
       elevation: 1,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -66,62 +198,67 @@ ThemeData buildAppTheme() {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.terracotta,
-        foregroundColor: Colors.white,
+        backgroundColor: p.primary,
+        foregroundColor: p.onPrimary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.terracotta,
-        foregroundColor: Colors.white,
+        backgroundColor: p.primary,
+        foregroundColor: p.onPrimary,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.terracotta,
-        side: const BorderSide(color: AppColors.terracotta),
+        foregroundColor: p.primary,
+        side: BorderSide(color: p.primary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     chipTheme: ChipThemeData(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      side: const BorderSide(color: AppColors.sand),
+      side: BorderSide(color: p.border),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Colors.white,
+      fillColor: p.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.sand),
+        borderSide: BorderSide(color: p.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.sand),
+        borderSide: BorderSide(color: p.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.terracotta, width: 1.6),
+        borderSide: BorderSide(color: p.primary, width: 1.6),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: Colors.white,
-      indicatorColor: AppColors.creamDark,
+      backgroundColor: p.surface,
+      indicatorColor: p.surfaceVariant,
       labelTextStyle: WidgetStateProperty.all(
         const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       ),
     ),
-    progressIndicatorTheme: const ProgressIndicatorThemeData(
-      color: AppColors.moss,
-    ),
+    dividerTheme: DividerThemeData(color: p.border),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: p.trust),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: AppColors.bark,
-      contentTextStyle: const TextStyle(color: Colors.white),
+      backgroundColor: p.ink,
+      contentTextStyle: TextStyle(color: p.canvas),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       behavior: SnackBarBehavior.floating,
     ),
   );
 }
+
+/// The light theme (cream canvas, terracotta primary).
+ThemeData buildAppTheme() => _buildTheme(_lightPalette);
+
+/// The dark theme (warm charcoal canvas, lighter terracotta primary).
+ThemeData buildDarkAppTheme() => _buildTheme(_darkPalette);

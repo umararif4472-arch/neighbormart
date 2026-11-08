@@ -8,7 +8,7 @@ import {
   where,
   writeBatch,
   doc,
-} from 'firebase/firestore'
+} from 'firebase/firestore/lite'
 import type { AppNotification, NotificationType } from '@/types'
 import { getDb } from '../firebase'
 import { COLLECTIONS, fromDocs, stripUndefined } from './firestoreData'

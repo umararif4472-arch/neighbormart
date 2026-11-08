@@ -166,7 +166,7 @@ export function ListingMap({ listings, usersById, origin, radiusKm, className }:
       {/* Legend */}
       <div className="pointer-events-none absolute left-3 top-3 rounded-2xl bg-white/90 px-3 py-2 text-[11px] font-medium text-bark-light shadow-sm backdrop-blur-sm">
         <span className="mr-2 inline-flex items-center gap-1">
-          <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-terracotta-600 bg-white" />
+          <span className="inline-block h-2.5 w-2.5 rounded-full border-2 border-terracotta-600 bg-surface" />
           You
         </span>
         <span>Pins show listings near you — tap one for details</span>
@@ -184,7 +184,7 @@ export function ListingMap({ listings, usersById, origin, radiusKm, className }:
 
       {placed.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-cream/70 p-6 text-center">
-          <p className="rounded-2xl bg-white px-4 py-3 text-sm font-medium text-bark-light shadow-sm">
+          <p className="rounded-2xl bg-surface px-4 py-3 text-sm font-medium text-bark-light shadow-sm">
             Nothing on the map matches your filters.
           </p>
         </div>
@@ -224,7 +224,7 @@ function PinButton({
         'absolute -translate-x-1/2 -translate-y-full cursor-pointer rounded-full border-2 shadow-md transition-transform',
         'h-9 w-9 text-base leading-none focus-visible:outline-2 focus-visible:outline-terracotta-600',
         selected
-          ? 'z-20 scale-125 border-terracotta-600 bg-white'
+          ? 'z-20 scale-125 border-terracotta-600 bg-surface'
           : 'z-10 border-white bg-cream hover:scale-110 hover:border-terracotta-400',
         dimmed && 'opacity-60 saturate-50',
       )}
@@ -259,7 +259,7 @@ function MapPreviewCard({
     <div
       role="dialog"
       aria-label={`${listing.title} preview`}
-      className="absolute inset-x-3 bottom-3 z-30 flex gap-3 rounded-3xl border border-bark/10 bg-white p-3 shadow-xl"
+      className="absolute inset-x-3 bottom-3 z-30 flex gap-3 rounded-3xl border border-bark/10 bg-surface p-3 shadow-xl"
     >
       <Link
         to={`/listing/${listing.id}`}

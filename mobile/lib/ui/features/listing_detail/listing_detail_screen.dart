@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/cloudinary_config.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/section_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/borrow_request.dart';
@@ -47,10 +48,12 @@ class ListingDetailScreen extends StatelessWidget {
                     width: double.infinity,
                     fit: BoxFit.cover,
                     loadingBuilder: (context, child, progress) =>
-                        progress == null ? child : _emojiBanner(listing),
-                    errorBuilder: (_, _, _) => _emojiBanner(listing),
+                        progress == null
+                        ? child
+                        : _emojiBanner(context, listing),
+                    errorBuilder: (_, _, _) => _emojiBanner(context, listing),
                   )
-                : _emojiBanner(listing),
+                : _emojiBanner(context, listing),
           ),
           const SizedBox(height: 16),
           Row(
@@ -63,7 +66,32 @@ class ListingDetailScreen extends StatelessWidget {
                       ?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
-              Chip(label: Text(listingTypeLabel(listing))),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Chip(label: Text(listingTypeLabel(listing))),
+                  const SizedBox(height: 4),
+                  // Section badge in the section's accent (Phase 7).
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: sectionAccentContainerOf(context, listing.section),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      kSectionLabel[listing.section] ?? '',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: sectionAccentOf(context, listing.section),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 4),
@@ -108,9 +136,9 @@ class ListingDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _emojiBanner(Listing listing) => Container(
+  Widget _emojiBanner(BuildContext context, Listing listing) => Container(
     height: 220,
-    color: AppColors.creamDark,
+    color: Theme.of(context).colorScheme.surfaceContainerHighest,
     alignment: Alignment.center,
     child: Text(
       kSectionEmoji[listing.section] ?? '📦',

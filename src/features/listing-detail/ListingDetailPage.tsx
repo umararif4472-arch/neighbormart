@@ -185,7 +185,7 @@ export function ListingDetailPage() {
               {listing.description}
             </p>
             {condition && (
-              <p className="rounded-2xl border border-bark/10 bg-white p-3 text-sm text-bark">
+              <p className="rounded-2xl border border-bark/10 bg-surface p-3 text-sm text-bark">
                 <span className="font-semibold">Condition: </span>
                 {condition}
               </p>
@@ -379,7 +379,7 @@ function CtaNotice({ cta }: { cta: CtaState & { kind: 'notice' } }) {
   return (
     <div
       aria-label={cta.label}
-      className="flex flex-col items-center gap-1 rounded-2xl border border-bark/10 bg-white px-4 py-3 text-center shadow-sm"
+      className="flex flex-col items-center gap-1 rounded-2xl border border-bark/10 bg-surface px-4 py-3 text-center shadow-sm"
     >
       <p className="text-sm font-semibold text-bark">{cta.label}</p>
       {cta.hint && <p className="text-xs text-bark-light">{cta.hint}</p>}

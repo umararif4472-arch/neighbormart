@@ -130,7 +130,7 @@ export function ArenaBookingPanel({ listing, owner, requests }: ArenaBookingPane
     return (
       <section
         aria-label="Booking sent"
-        className="flex flex-col items-center gap-3 rounded-3xl border border-bark/10 bg-white p-5 text-center shadow-sm"
+        className="flex flex-col items-center gap-3 rounded-3xl border border-bark/10 bg-surface p-5 text-center shadow-sm"
       >
         <span
           aria-hidden
@@ -154,7 +154,7 @@ export function ArenaBookingPanel({ listing, owner, requests }: ArenaBookingPane
     <section
       id="arena-booking"
       aria-label={`Book a slot at ${listing.title}`}
-      className="flex scroll-mt-24 flex-col gap-4 rounded-3xl border border-bark/10 bg-white p-5 shadow-sm"
+      className="flex scroll-mt-24 flex-col gap-4 rounded-3xl border border-bark/10 bg-surface p-5 shadow-sm"
     >
       <div>
         <h2 className="font-display text-lg font-bold text-bark">Book a slot</h2>
@@ -184,7 +184,7 @@ export function ArenaBookingPanel({ listing, owner, requests }: ArenaBookingPane
                 'flex shrink-0 flex-col items-center rounded-2xl border px-3 py-2 text-xs transition-colors',
                 active
                   ? 'border-terracotta-600 bg-terracotta-600 text-white'
-                  : 'border-bark/15 bg-white text-bark-light hover:border-terracotta-300',
+                  : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300',
               )}
             >
               <span className="font-semibold">{label.top}</span>
@@ -210,7 +210,7 @@ export function ArenaBookingPanel({ listing, owner, requests }: ArenaBookingPane
                 'rounded-xl border px-2 py-2 text-xs font-semibold transition-colors',
                 state === 'booked' &&
                   'cursor-not-allowed border-bark/10 bg-bark/5 text-bark-light line-through',
-                state === 'tooSoon' && 'cursor-not-allowed border-bark/10 bg-white text-bark/30',
+                state === 'tooSoon' && 'cursor-not-allowed border-bark/10 bg-surface text-bark/30',
                 state === 'free' &&
                   !isSelected &&
                   'border-moss-300 bg-moss-50 text-moss-900 hover:border-moss-500',

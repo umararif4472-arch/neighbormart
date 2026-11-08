@@ -10,6 +10,17 @@
       content="NeighborMart is your local marketplace: borrow, rent, buy, or sell items, vehicles, properties, and sports arenas near you."
     />
     <title>NeighborMart — borrow, rent, buy & sell near you</title>
+    <script>
+      // Apply the stored/system theme before first paint (no flash).
+      // Mirrors src/utils/theme.ts — keep the key + logic in sync.
+      try {
+        var pref = localStorage.getItem('neighbormart:theme') || 'system'
+        var dark =
+          pref === 'dark' ||
+          (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) document.documentElement.classList.add('dark')
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

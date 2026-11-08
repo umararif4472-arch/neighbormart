@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/section_colors.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/widgets/listing_card_skeleton.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
 import '../../../data/models/listing.dart';
@@ -20,7 +22,8 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> {
+class _ExploreScreenState extends State<ExploreScreen>
+    with SingleTickerProviderStateMixin {
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   String _query = '';
@@ -29,13 +32,44 @@ class _ExploreScreenState extends State<ExploreScreen> {
   bool _onlyAvailable = false;
   bool _showMap = false;
 
+  /// Initial-load placeholders (Phase 7): the catalog is local and
+  /// instant, but the first paint still gets a brief skeleton pass so
+  /// the screen never flashes from empty to full. Reduced-motion
+  /// users skip straight to content.
+  bool _showSkeleton = true;
+  AnimationController? _intro;
+  bool _introStarted = false;
+
   /// Phase 5 section switch: null keeps the original Items & Tools
   /// explore (categories, map, grouping); a section swaps in the
   /// unified-listing card list for vehicles / properties / arenas.
   ListingSection? _section;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_introStarted) return;
+    _introStarted = true;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _showSkeleton = false;
+      return;
+    }
+    _intro =
+        AnimationController(
+            vsync: this,
+            duration: const Duration(milliseconds: 600),
+          )
+          ..addStatusListener((status) {
+            if (status == AnimationStatus.completed && mounted) {
+              setState(() => _showSkeleton = false);
+            }
+          })
+          ..forward();
+  }
+
+  @override
   void dispose() {
+    _intro?.dispose();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
@@ -140,6 +174,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   child: ChoiceChip(
                     label: const Text('🧰 Items & Tools'),
                     selected: _section == null,
+                    selectedColor: sectionAccentContainerOf(
+                      context,
+                      ListingSection.items,
+                    ),
                     onSelected: (_) => setState(() => _section = null),
                   ),
                 ),
@@ -153,6 +191,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     child: ChoiceChip(
                       label: Text('${kSectionEmoji[s]} ${kSectionLabel[s]}'),
                       selected: _section == s,
+                      selectedColor: sectionAccentContainerOf(context, s),
                       onSelected: (_) => setState(() => _section = s),
                     ),
                   ),
@@ -266,7 +305,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ),
             ),
           Expanded(
-            child: _section != null
+            child: _showSkeleton
+                ? const ListingListSkeleton(key: ValueKey('skeleton'))
+                : _section != null
                 ? SectionListingList(
                     key: ValueKey('section-${_section!.name}'),
                     state: state,
@@ -401,7 +442,7 @@ class _CategorySectionHeader extends StatelessWidget {
               Icon(
                 categoryIcon(category),
                 size: 20,
-                color: AppColors.terracotta,
+                color: sectionAccentOf(context, ListingSection.items),
               ),
               const SizedBox(width: 8),
               Expanded(

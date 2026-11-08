@@ -114,7 +114,7 @@ export function ReportIssueModal({ view, open, onClose }: ReportIssueModalProps)
                   'focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-terracotta-600',
                   reason === option
                     ? 'border-terracotta-600 bg-terracotta-50 text-terracotta-900 font-semibold'
-                    : 'border-bark/15 bg-white text-bark hover:border-terracotta-300',
+                    : 'border-bark/15 bg-surface text-bark hover:border-terracotta-300',
                 )}
               >
                 <input
@@ -135,7 +135,7 @@ export function ReportIssueModal({ view, open, onClose }: ReportIssueModalProps)
                   )}
                 >
                   {reason === option && (
-                    <span className="block h-full w-full scale-50 rounded-full bg-white" />
+                    <span className="block h-full w-full scale-50 rounded-full bg-surface" />
                   )}
                 </span>
                 {option}

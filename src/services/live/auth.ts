@@ -8,7 +8,7 @@ import {
   updateProfile,
   type User as FirebaseUser,
 } from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc } from 'firebase/firestore/lite'
 import type { User } from '@/types'
 import { ApiError } from '../errors'
 import { getDb, getFirebaseAuth } from '../firebase'

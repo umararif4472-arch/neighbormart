@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/theme_preference.dart';
 import '../../../state/app_state.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -14,6 +15,37 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
+          const ListTile(
+            leading: Icon(Icons.brightness_6_outlined),
+            title: Text('Appearance'),
+            subtitle: Text('Theme for the whole app — saved on this device'),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SegmentedButton<ThemePreference>(
+              segments: const [
+                ButtonSegment(
+                  value: ThemePreference.system,
+                  icon: Icon(Icons.brightness_auto_outlined),
+                  label: Text('System'),
+                ),
+                ButtonSegment(
+                  value: ThemePreference.light,
+                  icon: Icon(Icons.light_mode_outlined),
+                  label: Text('Light'),
+                ),
+                ButtonSegment(
+                  value: ThemePreference.dark,
+                  icon: Icon(Icons.dark_mode_outlined),
+                  label: Text('Dark'),
+                ),
+              ],
+              selected: {state.themePreference},
+              onSelectionChanged: (selection) =>
+                  context.read<AppState>().setThemePreference(selection.first),
+            ),
+          ),
+          const Divider(height: 32),
           SwitchListTile(
             title: const Text('Notifications'),
             subtitle: const Text(

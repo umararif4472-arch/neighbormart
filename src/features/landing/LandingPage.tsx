@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { useListings } from '@/hooks/useListings'
 import { LISTING_SECTIONS } from '@/types'
@@ -12,22 +12,46 @@ import { ItemCardSkeleton } from '@/components/ui/Skeleton'
 import { ListingCard } from '@/components/listings/ListingCard'
 import { TrustTierLadder } from '@/components/ui/Trust'
 import { cn } from '@/utils/cn'
+import { sectionAccent } from '@/utils/sectionAccent'
 
 const HOW_IT_WORKS = [
   {
-    emoji: '🏷️',
-    title: 'List',
-    text: 'Snap a photo of the thing gathering dust — the drill, the tent, the karaoke machine — and set your borrow terms.',
+    emoji: '📸',
+    title: 'Post',
+    text: 'Snap a few photos, set your price or borrow terms, and publish — a drill, a car, a spare room, even a cricket pitch by the hour.',
   },
   {
-    emoji: '🔎',
-    title: 'Discover',
-    text: 'Search what your neighbors own, filtered by walking distance. Cheaper than buying, friendlier than renting.',
+    emoji: '💬',
+    title: 'Connect',
+    text: 'Neighbors send a request or an offer, you chat, check their trust score, and agree on pickup, dates, or a booking slot.',
   },
   {
     emoji: '🤝',
-    title: 'Borrow',
-    text: 'Send a request, agree on pickup, return it with a thank-you. Every on-time return builds your reputation.',
+    title: 'Deal',
+    text: 'Meet, hand over, and mark it done. Reviews and on-time returns grow both trust scores for the next deal.',
+  },
+] as const
+
+const FAQS = [
+  {
+    q: 'How do payments work?',
+    a: 'NeighborMart does not process payments in this release. You and your neighbor agree on the deal in chat and settle directly — cash on pickup is most common. Prices, deposits and fees are always shown up front on the listing.',
+  },
+  {
+    q: 'What can I list?',
+    a: 'Four sections: Items & Tools (borrow, rent, sell), Vehicles (rent by hour/day/week/month, or sell), Properties (rent or sell), and Sports Arenas & Venues (booked by the hour or day). If a neighbor nearby could use it, it belongs here.',
+  },
+  {
+    q: 'What is the trust score?',
+    a: 'A 0–100 score from on-time returns, completed deals, reviews, profile verification and responsiveness. It helps neighbors decide who to deal with — and it grows with every good deal you complete.',
+  },
+  {
+    q: 'Is it free to use?',
+    a: 'Yes — listing, borrowing, renting, buying and selling on NeighborMart is free. Borrowing is always free by definition; rentals and sales are priced by the owner.',
+  },
+  {
+    q: 'How do arena bookings work?',
+    a: 'Arenas show a day strip and time slots. Pick your day, choose one or more back-to-back slots, and send the booking — the owner approves it and the slots are blocked for everyone else.',
   },
 ] as const
 
@@ -38,6 +62,9 @@ const HOW_IT_WORKS = [
  */
 export function LandingPage() {
   const { state } = useApp()
+  const navigate = useNavigate()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [openFaq, setOpenFaq] = useState<number | null>(0)
   const { listings, loading } = useListings()
   const currentUser = state.currentUser
   const origin = currentUser?.homeLocation ?? null
@@ -89,6 +116,34 @@ export function LandingPage() {
             grounds from people nearby — borrow them free, rent them, or buy them outright. No
             strangers, just neighbors building trust.
           </p>
+          <form
+            role="search"
+            aria-label="Search listings"
+            className="flex max-w-xl items-center gap-2 rounded-full border border-bark/15 bg-surface p-1.5 shadow-sm transition-shadow focus-within:shadow-md"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const q = searchQuery.trim()
+              navigate(q ? `/browse?q=${encodeURIComponent(q)}` : '/browse')
+            }}
+          >
+            <span aria-hidden className="pl-2.5 text-lg">
+              🔎
+            </span>
+            <label htmlFor="hero-search" className="sr-only">
+              Search tools, cars, homes, arenas…
+            </label>
+            <input
+              id="hero-search"
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Try “drill”, “Corolla”, “padel”…"
+              className="min-w-0 flex-1 bg-transparent text-sm text-bark outline-none placeholder:text-bark-light"
+            />
+            <Button type="submit" size="md" className="shrink-0 rounded-full">
+              Search
+            </Button>
+          </form>
           <div className="flex flex-wrap gap-3">
             <Link to="/browse">
               <Button size="lg">Browse items near you</Button>
@@ -111,7 +166,7 @@ export function LandingPage() {
               <div
                 key={item.id}
                 className={cn(
-                  'absolute h-44 w-56 overflow-hidden rounded-3xl border-4 border-white bg-white shadow-xl',
+                  'absolute h-44 w-56 overflow-hidden rounded-3xl border-4 border-white bg-surface shadow-xl',
                   offsets[index],
                 )}
                 style={{ transform: `rotate(${rotations[index]}deg)` }}
@@ -140,27 +195,36 @@ export function LandingPage() {
           </p>
         </div>
         <ul className="grid list-none grid-cols-2 gap-4 lg:grid-cols-4">
-          {LISTING_SECTIONS.map((section) => (
-            <li key={section}>
-              <Link
-                to={section === 'items' ? '/browse' : `/${section}`}
-                className="flex h-full flex-col gap-2 rounded-3xl border border-bark/10 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-terracotta-600"
-              >
-                <span aria-hidden className="text-3xl">
-                  {SECTION_META[section].emoji}
-                </span>
-                <span className="font-display text-base font-bold text-bark">
-                  {SECTION_META[section].label}
-                </span>
-                <span className="text-xs leading-relaxed text-bark-light">
-                  {SECTION_META[section].blurb}
-                </span>
-                <span className="mt-auto pt-1 text-xs font-semibold text-terracotta-700">
-                  {sectionCounts.get(section) ?? 0} listings →
-                </span>
-              </Link>
-            </li>
-          ))}
+          {LISTING_SECTIONS.map((section) => {
+            const accent = sectionAccent(section)
+            return (
+              <li key={section}>
+                <Link
+                  to={section === 'items' ? '/browse' : `/${section}`}
+                  className="group flex h-full flex-col gap-2 rounded-3xl border border-bark/10 bg-surface p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-terracotta-600"
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'flex h-12 w-12 items-center justify-center rounded-2xl text-2xl transition-transform group-hover:scale-110',
+                      accent.chip,
+                    )}
+                  >
+                    {SECTION_META[section].emoji}
+                  </span>
+                  <span className="font-display text-base font-bold text-bark">
+                    {SECTION_META[section].label}
+                  </span>
+                  <span className="text-xs leading-relaxed text-bark-light">
+                    {SECTION_META[section].blurb}
+                  </span>
+                  <span className={cn('mt-auto pt-1 text-xs font-semibold', accent.text)}>
+                    {sectionCounts.get(section) ?? 0} listings →
+                  </span>
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       </section>
 
@@ -174,14 +238,14 @@ export function LandingPage() {
             How it works
           </h2>
           <p className="mt-1 text-sm text-bark-light">
-            Three steps between your garage and your neighbor&apos;s project.
+            Post it, connect with a neighbor, close the deal — for every section.
           </p>
         </div>
         <ol className="grid list-none gap-4 sm:grid-cols-3">
           {HOW_IT_WORKS.map((step, index) => (
             <li
               key={step.title}
-              className="relative flex flex-col gap-3 rounded-3xl border border-bark/10 bg-white p-6 shadow-sm"
+              className="relative flex flex-col gap-3 rounded-3xl border border-bark/10 bg-surface p-6 shadow-sm"
             >
               <span className="absolute right-5 top-4 font-display text-3xl font-extrabold text-terracotta-100">
                 {index + 1}
@@ -273,7 +337,7 @@ export function LandingPage() {
             ))}
           </ul>
         ) : (
-          <p className="rounded-3xl border border-dashed border-bark/15 bg-white/60 p-6 text-center text-sm text-bark-light">
+          <p className="rounded-3xl border border-dashed border-bark/15 bg-surface/60 p-6 text-center text-sm text-bark-light">
             The block is quiet — nothing listed yet. Be the first!
           </p>
         )}
@@ -282,7 +346,7 @@ export function LandingPage() {
       {/* Trust explainer teaser */}
       <section
         aria-labelledby="trust-explainer"
-        className="rounded-[2.5rem] border border-moss-200 bg-moss-50 p-6 sm:p-10"
+        className="rounded-[2.5rem] border border-moss-200 bg-moss-50 p-6 dark:border-moss-800 dark:bg-moss-900/40 sm:p-10"
       >
         <div className="flex flex-col gap-6">
           <div>
@@ -301,10 +365,54 @@ export function LandingPage() {
           <TrustTierLadder />
           <Link
             to="/trust"
-            className="text-sm font-semibold text-moss-800 underline-offset-4 hover:underline"
+            className="text-sm font-semibold text-moss-800 underline-offset-4 hover:underline dark:text-moss-200"
           >
             See exactly how the score is calculated →
           </Link>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section aria-labelledby="faq" className="flex flex-col gap-6">
+        <div>
+          <h2 id="faq" className="font-display text-2xl font-extrabold text-bark sm:text-3xl">
+            Questions, answered
+          </h2>
+          <p className="mt-1 text-sm text-bark-light">The things every new neighbor asks first.</p>
+        </div>
+        <div className="flex flex-col gap-3">
+          {FAQS.map((faq, i) => {
+            const open = openFaq === i
+            return (
+              <div
+                key={faq.q}
+                className="overflow-hidden rounded-3xl border border-bark/10 bg-surface shadow-sm"
+              >
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  aria-controls={`faq-panel-${i}`}
+                  onClick={() => setOpenFaq(open ? null : i)}
+                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left font-display text-base font-bold text-bark transition-colors hover:bg-bark/5 focus-visible:outline-2 focus-visible:outline-terracotta-600"
+                >
+                  {faq.q}
+                  <span
+                    aria-hidden
+                    className={cn('text-terracotta-600 transition-transform', open && 'rotate-180')}
+                  >
+                    ▾
+                  </span>
+                </button>
+                <div
+                  id={`faq-panel-${i}`}
+                  hidden={!open}
+                  className="px-5 pb-5 text-sm leading-relaxed text-bark-light"
+                >
+                  {faq.a}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </section>
 

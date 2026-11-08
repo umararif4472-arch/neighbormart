@@ -17,7 +17,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
   primary:
     'bg-terracotta-600 text-white hover:bg-terracotta-700 active:bg-terracotta-800 shadow-sm',
   secondary:
-    'bg-white text-bark border border-bark/15 hover:border-terracotta-300 hover:text-terracotta-700 shadow-sm',
+    'bg-surface text-bark border border-bark/15 hover:border-terracotta-300 hover:text-terracotta-700 shadow-sm',
   ghost: 'text-terracotta-700 hover:bg-terracotta-50',
   danger: 'bg-red-600 text-white hover:bg-red-700',
 }

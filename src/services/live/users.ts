@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore/lite'
 import type { User } from '@/types'
 import { ApiError } from '../errors'
 import { getDb } from '../firebase'

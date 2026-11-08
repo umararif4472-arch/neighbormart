@@ -8,6 +8,8 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge, listingStatusTone } from '@/components/ui/Badge'
 import { TrustBadge } from '@/components/ui/Trust'
 import { ListingPhoto } from './ListingPhoto'
+import { sectionAccent } from '@/utils/sectionAccent'
+import { SECTION_META } from '@/utils/categoryMeta'
 
 export interface ListingCardProps {
   listing: Listing
@@ -56,7 +58,7 @@ export function ListingCard({
   return (
     <article
       className={cn(
-        'group flex flex-col overflow-hidden rounded-3xl border border-bark/10 bg-white shadow-sm transition-all',
+        'group flex flex-col overflow-hidden rounded-3xl border border-bark/10 bg-surface shadow-sm transition-all',
         'hover:-translate-y-0.5 hover:shadow-md focus-within:-translate-y-0.5',
         className,
       )}
@@ -72,6 +74,14 @@ export function ListingCard({
           className="aspect-[4/3] w-full"
           variant="card"
         />
+        <span
+          className={cn(
+            'absolute right-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-sm backdrop-blur-sm',
+            sectionAccent(listing.section).chip,
+          )}
+        >
+          {SECTION_META[listing.section].emoji} {SECTION_META[listing.section].label.split(' ')[0]}
+        </span>
         <Badge
           tone={listingStatusTone(listing.status)}
           dot

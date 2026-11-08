@@ -201,7 +201,7 @@ export function SignInPage() {
 
       {/* Sign-in card */}
       <section
-        className="nm-fade-up flex flex-col justify-center gap-5 rounded-[2rem] border border-bark/10 bg-white p-6 shadow-sm sm:p-8"
+        className="nm-fade-up flex flex-col justify-center gap-5 rounded-[2rem] border border-bark/10 bg-surface p-6 shadow-sm sm:p-8"
         style={{ animationDelay: '0.2s' }}
       >
         <div className="flex flex-col gap-1.5">
@@ -219,7 +219,7 @@ export function SignInPage() {
           onClick={() => void handleGoogle()}
           disabled={busy !== null}
           aria-busy={busy === 'google' || undefined}
-          className="flex h-[52px] w-full cursor-pointer items-center justify-center gap-3 rounded-full border border-bark/20 bg-white px-6 text-base font-semibold text-bark shadow-sm transition hover:border-bark/35 hover:shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-600 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
+          className="flex h-[52px] w-full cursor-pointer items-center justify-center gap-3 rounded-full border border-bark/20 bg-white px-6 text-base font-semibold text-[#3c4043] shadow-sm transition hover:border-bark/35 hover:shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-600 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
         >
           {busy === 'google' ? <Spinner size="sm" /> : <GoogleGlyph />}
           {busy === 'google' ? 'Signing in with Google…' : 'Continue with Google'}

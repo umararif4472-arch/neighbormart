@@ -16,6 +16,7 @@ import { BrowseGridSkeleton } from '@/components/ui/Skeleton'
 import { ListingCard } from '@/components/listings/ListingCard'
 import { ListIcon, MapPinIcon } from '@/components/icons'
 import { cn } from '@/utils/cn'
+import { sectionAccent } from '@/utils/sectionAccent'
 import {
   DEFAULT_BROWSE_FILTERS,
   FilterBar,
@@ -47,7 +48,11 @@ export function BrowsePage({ routeSection }: { routeSection?: ListingSection } =
   const currentUser = state.currentUser
   const origin = currentUser?.homeLocation ?? null
 
-  const [filters, setFilters] = useState<BrowseFilterState>(DEFAULT_BROWSE_FILTERS)
+  // The landing hero search lands here as ?q=… — seed the query filter.
+  const [filters, setFilters] = useState<BrowseFilterState>(() => ({
+    ...DEFAULT_BROWSE_FILTERS,
+    query: searchParams.get('q') ?? '',
+  }))
   const [sort, setSort] = useState<SortMode>('distance')
   const [view, setView] = useState<'list' | 'map'>('list')
 
@@ -122,6 +127,17 @@ export function BrowsePage({ routeSection }: { routeSection?: ListingSection } =
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-extrabold text-bark sm:text-3xl">
+            {section !== 'items' && (
+              <span
+                aria-hidden
+                className={cn(
+                  'mr-2 inline-flex h-10 w-10 items-center justify-center rounded-2xl align-middle text-xl',
+                  sectionAccent(section).chip,
+                )}
+              >
+                {SECTION_META[section].emoji}
+              </span>
+            )}
             {section === 'items' ? 'Browse nearby' : SECTION_META[section].label}
           </h1>
           <p className="mt-1 text-sm text-bark-light">
@@ -137,7 +153,7 @@ export function BrowsePage({ routeSection }: { routeSection?: ListingSection } =
         <div
           role="group"
           aria-label="View mode"
-          className="flex rounded-full border border-bark/15 bg-white p-1 shadow-sm"
+          className="flex rounded-full border border-bark/15 bg-surface p-1 shadow-sm"
         >
           <button
             type="button"
@@ -245,7 +261,7 @@ export function BrowsePage({ routeSection }: { routeSection?: ListingSection } =
                 id="sort-by"
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortMode)}
-                className="h-8 cursor-pointer rounded-full border border-bark/15 bg-white px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
+                className="h-8 cursor-pointer rounded-full border border-bark/15 bg-surface px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
               >
                 <option value="distance">Nearest first</option>
                 <option value="newest">Newest first</option>

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/cloudinary_config.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/section_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/listing.dart';
 import '../../../state/app_state.dart';
@@ -89,10 +90,10 @@ class ListingCard extends StatelessWidget {
                         height: 72,
                         fit: BoxFit.cover,
                         loadingBuilder: (context, child, progress) =>
-                            progress == null ? child : _emojiTile(),
-                        errorBuilder: (_, _, _) => _emojiTile(),
+                            progress == null ? child : _emojiTile(context),
+                        errorBuilder: (_, _, _) => _emojiTile(context),
                       )
-                    : _emojiTile(),
+                    : _emojiTile(context),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -135,6 +136,26 @@ class ListingCard extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
                   ),
+                  const SizedBox(height: 4),
+                  // Section badge in the section's accent (Phase 7).
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: sectionAccentContainerOf(context, listing.section),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      kSectionLabel[listing.section] ?? '',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: sectionAccentOf(context, listing.section),
+                      ),
+                    ),
+                  ),
                   if (listing.status != ListingStatus.active)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
@@ -156,10 +177,11 @@ class ListingCard extends StatelessWidget {
     );
   }
 
-  Widget _emojiTile() => Container(
+  Widget _emojiTile(BuildContext context) => Container(
     width: 72,
     height: 72,
-    color: AppColors.cream,
+    // Theme surface variant, so the tile stays tonal in dark mode too.
+    color: Theme.of(context).colorScheme.surfaceContainerHighest,
     alignment: Alignment.center,
     child: Text(
       kSectionEmoji[listing.section] ?? '📦',

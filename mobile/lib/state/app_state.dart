@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/theme/theme_preference.dart';
 import '../core/utils/trust_score.dart';
 import '../core/utils/formatters.dart';
 import '../core/utils/profile_setup_validation.dart';
@@ -64,6 +65,10 @@ class AppState extends ChangeNotifier {
   bool isLoggedIn = true;
   bool onboardingSeen = true;
   bool notificationsEnabled = true;
+
+  /// Appearance choice (Phase 7): system until the user picks one in
+  /// Settings; [restoreFromPrefs] applies the persisted value.
+  ThemePreference themePreference = ThemePreference.system;
   final Set<String> _favoriteItemIds = {};
   SharedPreferences? _prefs;
 
@@ -546,6 +551,9 @@ class AppState extends ChangeNotifier {
   Future<void> restoreFromPrefs(SharedPreferences prefs) async {
     _prefs = prefs;
     onboardingSeen = prefs.getBool(_kOnboardingSeen) ?? false;
+    themePreference = themePreferenceFromStorage(
+      prefs.getString(kThemePreferencePrefsKey),
+    );
     _applySavedProfileSetups(prefs);
     final savedId = prefs.getString(_kSessionUserId);
     if (savedId != null && userByIdOrNull(savedId) != null) {
@@ -803,6 +811,17 @@ class AppState extends ChangeNotifier {
 
   void setNotificationsEnabled(bool value) {
     notificationsEnabled = value;
+    notifyListeners();
+  }
+
+  /// Applies a new appearance choice immediately and persists it.
+  Future<void> setThemePreference(ThemePreference preference) async {
+    if (preference == themePreference) return;
+    themePreference = preference;
+    await _prefs?.setString(
+      kThemePreferencePrefsKey,
+      themePreferenceToStorage(preference),
+    );
     notifyListeners();
   }
 

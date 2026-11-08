@@ -126,7 +126,7 @@ export function TrustTierLadder({ className }: { className?: string }) {
       {TRUST_TIERS.map((tier, index) => (
         <li
           key={tier.name}
-          className="flex flex-col gap-1.5 rounded-3xl border border-bark/10 bg-white p-4 shadow-sm"
+          className="flex flex-col gap-1.5 rounded-3xl border border-bark/10 bg-surface p-4 shadow-sm"
         >
           <span className="text-sm font-bold text-bark-light">Tier {index + 1}</span>
           <TrustBadge tierName={tier.name} size="md" />

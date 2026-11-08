@@ -48,11 +48,17 @@ class NeighborMartApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AppState>.value(
       value: state,
-      child: MaterialApp(
-        title: "NeighborMart",
-        debugShowCheckedModeBanner: false,
-        theme: buildAppTheme(),
-        home: const AppRoot(),
+      // Consumer so a theme-preference change in Settings re-themes
+      // the whole app immediately, without a restart.
+      child: Consumer<AppState>(
+        builder: (context, appState, _) => MaterialApp(
+          title: "NeighborMart",
+          debugShowCheckedModeBanner: false,
+          theme: buildAppTheme(),
+          darkTheme: buildDarkAppTheme(),
+          themeMode: themeModeForPreference(appState.themePreference),
+          home: const AppRoot(),
+        ),
       ),
     );
   }

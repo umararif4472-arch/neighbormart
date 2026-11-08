@@ -22,11 +22,11 @@ const chipClass = (active: boolean) =>
     'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
     active
       ? 'border-terracotta-600 bg-terracotta-600 text-white'
-      : 'border-bark/15 bg-white text-bark-light hover:border-terracotta-300 hover:text-terracotta-700',
+      : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300 hover:text-terracotta-700',
   )
 
 const selectClass =
-  'h-8 cursor-pointer rounded-full border border-bark/15 bg-white px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600'
+  'h-8 cursor-pointer rounded-full border border-bark/15 bg-surface px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600'
 
 function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
@@ -97,7 +97,7 @@ export function SectionFilters({ section, listings, filters, onPatch }: SectionF
               onChange={(e) =>
                 onPatch({ yearMin: e.target.value === '' ? null : Number(e.target.value) })
               }
-              className="h-8 w-24 rounded-full border border-bark/15 bg-white px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
+              className="h-8 w-24 rounded-full border border-bark/15 bg-surface px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
             />
             <label htmlFor="year-max" className="text-xs font-semibold text-bark-light">
               to
@@ -110,7 +110,7 @@ export function SectionFilters({ section, listings, filters, onPatch }: SectionF
               onChange={(e) =>
                 onPatch({ yearMax: e.target.value === '' ? null : Number(e.target.value) })
               }
-              className="h-8 w-24 rounded-full border border-bark/15 bg-white px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
+              className="h-8 w-24 rounded-full border border-bark/15 bg-surface px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
             />
             <label className="ml-2 inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-bark-light">
               <input
@@ -201,7 +201,7 @@ export function SectionFilters({ section, listings, filters, onPatch }: SectionF
               onChange={(e) =>
                 onPatch({ minCapacity: e.target.value === '' ? null : Number(e.target.value) })
               }
-              className="h-8 w-24 rounded-full border border-bark/15 bg-white px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
+              className="h-8 w-24 rounded-full border border-bark/15 bg-surface px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
             />
             <span className="ml-2 text-xs font-semibold text-bark-light">Facilities</span>
             {FACILITY_LABELS.map(({ key, label }) => (

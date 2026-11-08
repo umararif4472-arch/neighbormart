@@ -114,7 +114,7 @@ const DEAL_TYPES: Array<{ value: ListingType | 'all'; label: string }> = [
 ]
 
 const selectClass =
-  'h-8 cursor-pointer rounded-full border border-bark/15 bg-white px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600'
+  'h-8 cursor-pointer rounded-full border border-bark/15 bg-surface px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600'
 
 /**
  * Search + category chips + radius/status selects. Query input is
@@ -146,7 +146,7 @@ export function FilterBar({
           value={filters.query}
           onChange={(e) => onPatch({ query: e.target.value })}
           placeholder="Search tools, tents, karaoke machines…"
-          className="w-full rounded-full border border-bark/15 bg-white py-3 pl-12 pr-11 text-sm text-bark shadow-sm transition-colors placeholder:text-bark-light/60 focus-visible:outline-2 focus-visible:outline-terracotta-600"
+          className="w-full rounded-full border border-bark/15 bg-surface py-3 pl-12 pr-11 text-sm text-bark shadow-sm transition-colors placeholder:text-bark-light/60 focus-visible:outline-2 focus-visible:outline-terracotta-600"
         />
         {filters.query && (
           <button
@@ -175,7 +175,7 @@ export function FilterBar({
               'shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors',
               filters.categories.length === 0
                 ? 'border-terracotta-600 bg-terracotta-600 text-white'
-                : 'border-bark/15 bg-white text-bark-light hover:border-terracotta-300 hover:text-terracotta-700',
+                : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300 hover:text-terracotta-700',
             )}
           >
             All
@@ -198,7 +198,7 @@ export function FilterBar({
                   'shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors',
                   active
                     ? 'border-terracotta-600 bg-terracotta-600 text-white'
-                    : 'border-bark/15 bg-white text-bark-light hover:border-terracotta-300 hover:text-terracotta-700',
+                    : 'border-bark/15 bg-surface text-bark-light hover:border-terracotta-300 hover:text-terracotta-700',
                 )}
               >
                 <span aria-hidden className="mr-1">
@@ -223,7 +223,7 @@ export function FilterBar({
               'shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors',
               filters.listingType === deal.value
                 ? 'border-moss-600 bg-moss-600 text-white'
-                : 'border-bark/15 bg-white text-bark-light hover:border-moss-400 hover:text-moss-800',
+                : 'border-bark/15 bg-surface text-bark-light hover:border-moss-400 hover:text-moss-800',
             )}
           >
             {deal.label}
@@ -280,7 +280,7 @@ export function FilterBar({
           onChange={(e) =>
             onPatch({ priceMin: e.target.value === '' ? null : Number(e.target.value) })
           }
-          className="h-8 w-24 rounded-full border border-bark/15 bg-white px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
+          className="h-8 w-24 rounded-full border border-bark/15 bg-surface px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
         />
         <span aria-hidden className="text-xs text-bark-light">
           –
@@ -296,7 +296,7 @@ export function FilterBar({
           onChange={(e) =>
             onPatch({ priceMax: e.target.value === '' ? null : Number(e.target.value) })
           }
-          className="h-8 w-24 rounded-full border border-bark/15 bg-white px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
+          className="h-8 w-24 rounded-full border border-bark/15 bg-surface px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
         />
       </div>
 
@@ -311,7 +311,7 @@ export function FilterBar({
           onChange={(e) =>
             onPatch({ radiusKm: e.target.value === 'any' ? null : Number(e.target.value) })
           }
-          className="h-8 cursor-pointer rounded-full border border-bark/15 bg-white px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
+          className="h-8 cursor-pointer rounded-full border border-bark/15 bg-surface px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
         >
           <option value="any">any distance</option>
           <option value={1}>1 km</option>
@@ -327,7 +327,7 @@ export function FilterBar({
           id="status-filter"
           value={filters.status}
           onChange={(e) => onPatch({ status: e.target.value as ListingStatus | 'all' })}
-          className="h-8 cursor-pointer rounded-full border border-bark/15 bg-white px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
+          className="h-8 cursor-pointer rounded-full border border-bark/15 bg-surface px-3 text-xs font-medium text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
         >
           <option value="all">All statuses</option>
           <option value="active">Available</option>

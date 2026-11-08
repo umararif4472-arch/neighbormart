@@ -46,7 +46,7 @@ export function RequestCard({
   return (
     <article
       className={cn(
-        'flex flex-col gap-3 rounded-3xl border bg-white p-4 shadow-sm transition-opacity',
+        'flex flex-col gap-3 rounded-3xl border bg-surface p-4 shadow-sm transition-opacity',
         overdue ? 'border-red-300 bg-red-50/40' : 'border-bark/10',
         busy && 'opacity-60',
         className,

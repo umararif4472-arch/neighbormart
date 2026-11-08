@@ -91,7 +91,7 @@ export function TrustExplainerPage() {
       {score && (
         <section
           aria-labelledby="your-score"
-          className="flex flex-col gap-4 rounded-[2.5rem] border border-bark/10 bg-white p-6 shadow-sm sm:p-8"
+          className="flex flex-col gap-4 rounded-[2.5rem] border border-bark/10 bg-surface p-6 shadow-sm sm:p-8"
         >
           <div className="flex items-center justify-between gap-3">
             <h2 id="your-score" className="font-display text-xl font-extrabold text-bark">
@@ -121,7 +121,7 @@ export function TrustExplainerPage() {
           {factors.map((factor) => (
             <li
               key={factor.name}
-              className="flex flex-col gap-2 rounded-3xl border border-bark/10 bg-white p-5 shadow-sm sm:flex-row sm:gap-4"
+              className="flex flex-col gap-2 rounded-3xl border border-bark/10 bg-surface p-5 shadow-sm sm:flex-row sm:gap-4"
             >
               <div className="flex items-center gap-3 sm:w-56 sm:shrink-0">
                 <span
@@ -152,7 +152,7 @@ export function TrustExplainerPage() {
           On-time vs. late — the math isn&apos;t cosmetic
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-3xl border border-moss-300 bg-white p-4">
+          <div className="rounded-3xl border border-moss-300 bg-surface p-4">
             <p className="flex items-center gap-2 text-sm font-bold text-moss-800">
               <CheckIcon className="h-4 w-4" aria-hidden /> 8 returns, all on time
             </p>
@@ -161,7 +161,7 @@ export function TrustExplainerPage() {
             </p>
             <p className="mt-1 text-xs text-bark-light">rate 8/8 × volume 8/8 = full marks</p>
           </div>
-          <div className="rounded-3xl border border-red-200 bg-white p-4">
+          <div className="rounded-3xl border border-red-200 bg-surface p-4">
             <p className="flex items-center gap-2 text-sm font-bold text-red-700">
               <span aria-hidden>⏳</span> 8 returns, 2 late
             </p>

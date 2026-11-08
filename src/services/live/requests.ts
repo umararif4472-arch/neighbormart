@@ -7,7 +7,7 @@ import {
   query,
   where,
   writeBatch,
-} from 'firebase/firestore'
+} from 'firebase/firestore/lite'
 import type {
   AppNotification,
   ArenaSlot,

@@ -1,4 +1,13 @@
-import { addDoc, collection, doc, getDoc, getDocs, orderBy, query, where } from 'firebase/firestore'
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  where,
+} from 'firebase/firestore/lite'
 import type { AppNotification, BorrowRequest, Listing, Message } from '@/types'
 import { ApiError } from '../errors'
 import { getDb } from '../firebase'

@@ -15,7 +15,7 @@ import { cn } from '@/utils/cn'
  */
 
 const CONTROL_BASE =
-  'w-full rounded-2xl border bg-white px-3.5 py-2.5 text-sm text-bark placeholder:text-bark-light/60 transition-colors outline-offset-1 focus-visible:outline-2 focus-visible:outline-terracotta-600'
+  'w-full rounded-2xl border bg-surface px-3.5 py-2.5 text-sm text-bark placeholder:text-bark-light/60 transition-colors outline-offset-1 focus-visible:outline-2 focus-visible:outline-terracotta-600'
 
 const controlTone = (invalid: boolean) =>
   invalid ? 'border-red-400 bg-red-50/40' : 'border-bark/15 hover:border-bark/25'

@@ -1,7 +1,8 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { useDerivedNotifications } from '@/hooks/useDerivedNotifications'
 import { Avatar } from '@/components/ui/Avatar'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { authApi, isFirebaseConfigured } from '@/services'
 import { BellIcon, HomeIcon, ChatIcon, PlusIcon, ListIcon, UserIcon } from '@/components/icons'
 import { cn } from '@/utils/cn'
@@ -43,7 +44,7 @@ function Navbar() {
     cn(
       'rounded-full px-3.5 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-terracotta-600',
       isActive
-        ? 'bg-terracotta-50 text-terracotta-700'
+        ? 'bg-terracotta-50 text-terracotta-700 dark:bg-terracotta-900 dark:text-terracotta-100'
         : 'text-bark-light hover:bg-bark/5 hover:text-bark',
     )
 
@@ -89,6 +90,7 @@ function Navbar() {
 
         {/* Bell + avatar (all sizes) */}
         <div className="ml-auto flex items-center gap-2 md:ml-2">
+          <ThemeToggle />
           <Link
             to="/dashboard"
             aria-label={`Notifications${attentionCount > 0 ? ` — ${attentionCount} need attention` : ''}`}
@@ -141,7 +143,7 @@ function MobileTabBar() {
   const tab = ({ isActive }: { isActive: boolean }) =>
     cn(
       'flex flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-terracotta-600',
-      isActive ? 'text-terracotta-700' : 'text-bark-light',
+      isActive ? 'text-terracotta-700 dark:text-terracotta-300' : 'text-bark-light',
     )
 
   return (
@@ -187,8 +189,8 @@ function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-8 text-center sm:px-6">
         <LogoMark />
         <p className="text-xs text-bark-light">
-          A neighborhood lending prototype — every item here is fictional, but the drill is real in
-          spirit.
+          Your local marketplace for borrowing, renting, buying and selling — items, vehicles,
+          properties and arenas, right on your street.
         </p>
         <p className="text-xs text-bark-light">
           Trust is earned: on-time returns, honest reviews, and showing up for your street.{' '}
@@ -205,6 +207,7 @@ function Footer() {
 }
 
 export function Layout() {
+  const location = useLocation()
   return (
     <div className="flex min-h-dvh flex-col">
       <a
@@ -218,7 +221,9 @@ export function Layout() {
         id="main-content"
         className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-6 sm:px-6 md:pb-10"
       >
-        <Outlet />
+        <div key={location.pathname} className="nm-page">
+          <Outlet />
+        </div>
       </main>
       <Footer />
       <MobileTabBar />

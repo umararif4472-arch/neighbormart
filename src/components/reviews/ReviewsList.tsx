@@ -30,7 +30,7 @@ export function ReviewCard({
   return (
     <article
       className={cn(
-        'flex flex-col gap-2.5 rounded-3xl border border-bark/10 bg-white p-4 shadow-sm',
+        'flex flex-col gap-2.5 rounded-3xl border border-bark/10 bg-surface p-4 shadow-sm',
         className,
       )}
     >

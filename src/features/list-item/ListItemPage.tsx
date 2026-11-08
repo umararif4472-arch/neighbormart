@@ -190,7 +190,7 @@ export function ListItemPage() {
         Step {form.stepIndex + 1} of {LIST_ITEM_STEPS.length}: {step}
       </p>
 
-      <div className="rounded-3xl border border-bark/10 bg-white p-5 shadow-sm sm:p-6">
+      <div className="rounded-3xl border border-bark/10 bg-surface p-5 shadow-sm sm:p-6">
         {form.stepIndex === 0 && (
           <SectionStep
             draft={draft}
@@ -308,7 +308,7 @@ function SectionStep({ draft, errors, showErrors, setField }: StepProps) {
               'flex flex-col items-start gap-1 rounded-2xl border p-3 text-left transition-colors',
               draft.section === section
                 ? 'border-terracotta-600 bg-terracotta-50'
-                : 'border-bark/15 bg-white hover:border-terracotta-300',
+                : 'border-bark/15 bg-surface hover:border-terracotta-300',
             )}
           >
             <span className="text-2xl" aria-hidden>
@@ -331,7 +331,7 @@ function SectionStep({ draft, errors, showErrors, setField }: StepProps) {
               'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors',
               draft.listingType === type
                 ? 'border-moss-600 bg-moss-600 text-white'
-                : 'border-bark/15 bg-white text-bark-light hover:border-moss-400',
+                : 'border-bark/15 bg-surface text-bark-light hover:border-moss-400',
             )}
           >
             {DEAL_LABEL[type]}

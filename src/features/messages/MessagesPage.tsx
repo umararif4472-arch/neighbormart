@@ -66,7 +66,7 @@ export function MessagesPage() {
               <li key={request.id}>
                 <Link
                   to={`/messages/${request.id}`}
-                  className="flex items-center gap-3 rounded-3xl border border-bark/10 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-terracotta-600"
+                  className="flex items-center gap-3 rounded-3xl border border-bark/10 bg-surface p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-terracotta-600"
                 >
                   <Avatar
                     name={counterpart?.name ?? 'Neighbor'}
@@ -159,7 +159,7 @@ function ThreadView({ requestId }: { requestId: string }) {
       </Link>
 
       {/* Thread header: counterpart + item + LIVE request status */}
-      <header className="flex shrink-0 items-center gap-3 rounded-3xl border border-bark/10 bg-white p-4 shadow-sm">
+      <header className="flex shrink-0 items-center gap-3 rounded-3xl border border-bark/10 bg-surface p-4 shadow-sm">
         <Avatar name={counterpart?.name ?? 'A neighbor'} src={counterpart?.avatarUrl} size="sm" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-bark">
@@ -175,7 +175,7 @@ function ThreadView({ requestId }: { requestId: string }) {
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto rounded-3xl border border-bark/10 bg-white p-4 shadow-sm">
+      <div className="flex-1 overflow-y-auto rounded-3xl border border-bark/10 bg-surface p-4 shadow-sm">
         <div aria-live="polite" className="flex flex-col gap-3">
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-bark-light">
@@ -237,7 +237,7 @@ function ThreadView({ requestId }: { requestId: string }) {
           placeholder="Write a message…"
           maxLength={1000}
           autoComplete="off"
-          className="h-12 flex-1 rounded-full border border-bark/15 bg-white px-4 text-sm text-bark shadow-sm placeholder:text-bark-light/60 focus-visible:outline-2 focus-visible:outline-terracotta-600"
+          className="h-12 flex-1 rounded-full border border-bark/15 bg-surface px-4 text-sm text-bark shadow-sm placeholder:text-bark-light/60 focus-visible:outline-2 focus-visible:outline-terracotta-600"
         />
         <Button type="submit" size="lg" loading={sending} disabled={!draft.trim()}>
           Send

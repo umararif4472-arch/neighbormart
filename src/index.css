@@ -1,9 +1,20 @@
 @import "tailwindcss";
 
+/* Dark mode is class-based (a `.dark` class on <html>, managed by
+ * src/utils/theme.ts) rather than media-only, so the header toggle can
+ * override the system preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
  * NeighborMart theme — warm, neighborly, trustworthy.
  * Terracotta (primary/action), moss green (trust/success), cream+bark
  * (canvas + warm text). No corporate blue SaaS gradients here.
+ *
+ * Phase 7: the neutral tokens (cream/parchment/bark) and the new
+ * semantic tokens (surface + per-section accents) are backed by CSS
+ * variables that flip under `.dark`, so every existing utility built on
+ * them (bg-cream, text-bark, bg-parchment, border-bark/10, …) becomes
+ * dark-aware without touching component classes.
  */
 @theme {
   /* Terracotta — the "do something" color */
@@ -30,20 +41,62 @@
   --color-moss-800: #2d4528;
   --color-moss-900: #1f311c;
 
-  /* Warm neutrals */
-  --color-cream: #fbf7f0;
-  --color-parchment: #f4ede1;
-  --color-bark: #44392f;
-  --color-bark-light: #7a6a5b;
+  /* Warm neutrals — variable-backed so they flip in dark mode */
+  --color-cream: var(--nm-canvas);
+  --color-parchment: var(--nm-surface-2);
+  --color-bark: var(--nm-ink);
+  --color-bark-light: var(--nm-ink-soft);
+
+  /* Card/panel surface (was hard-coded bg-white across components) */
+  --color-surface: var(--nm-surface);
+
+  /* Per-section accents — one warm palette, a hue per section. Text and
+   * icon use; soft backgrounds come from opacity modifiers (bg-…/10). */
+  --color-accent-items: var(--nm-accent-items);
+  --color-accent-vehicles: var(--nm-accent-vehicles);
+  --color-accent-properties: var(--nm-accent-properties);
+  --color-accent-arenas: var(--nm-accent-arenas);
 
   /* Friendly rounded display face for headings (system fallbacks) */
   --font-display: "Georgia", "Trebuchet MS", ui-serif, serif;
   --font-sans: "Segoe UI", "Trebuchet MS", system-ui, -apple-system, sans-serif;
 }
 
+:root {
+  --nm-canvas: #fbf7f0;
+  --nm-surface: #fffdf9;
+  --nm-surface-2: #f4ede1;
+  --nm-ink: #44392f;
+  --nm-ink-soft: #7a6a5b;
+  --nm-accent-items: #b45309;
+  --nm-accent-vehicles: #1d4ed8;
+  --nm-accent-properties: #7e22ce;
+  --nm-accent-arenas: #15803d;
+}
+
+.dark {
+  --nm-canvas: #171310;
+  --nm-surface: #221c16;
+  --nm-surface-2: #2b241c;
+  --nm-ink: #f3ede4;
+  --nm-ink-soft: #c9bba9;
+  --nm-accent-items: #fbbf24;
+  --nm-accent-vehicles: #60a5fa;
+  --nm-accent-properties: #c084fc;
+  --nm-accent-arenas: #4ade80;
+  color-scheme: dark;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
+  }
+
+  /* One consistent, visible keyboard focus ring everywhere (WCAG AA). */
+  :focus-visible {
+    outline: 2px solid var(--color-terracotta-600);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   body {
@@ -173,6 +226,50 @@
   .nm-float,
   .nm-logo-pop,
   .nm-fade-up {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Phase 7 — page transitions + micro-interactions.                    */
+/* ------------------------------------------------------------------ */
+
+@keyframes nm-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/** Applied to the routed page wrapper (keyed by pathname in Layout). */
+@utility nm-page {
+  animation: nm-page-in 0.28s ease-out both;
+}
+
+@keyframes nm-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/** Little heart-pop for favorite buttons when toggled on. */
+@utility nm-pop {
+  animation: nm-pop 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nm-page,
+  .nm-pop {
     animation: none;
   }
 }

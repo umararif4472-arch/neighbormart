@@ -1,4 +1,4 @@
-import type { DocumentSnapshot, QueryDocumentSnapshot } from 'firebase/firestore'
+import type { DocumentSnapshot, QueryDocumentSnapshot } from 'firebase/firestore/lite'
 
 /**
  * Firestore <-> model mapping helpers for the live service layer.

@@ -55,7 +55,7 @@ function ContactPrefsCard({ user }: { user: User }) {
   return (
     <section
       aria-labelledby="contact-prefs"
-      className="flex flex-col gap-3 rounded-3xl border border-bark/10 bg-white p-5 shadow-sm"
+      className="flex flex-col gap-3 rounded-3xl border border-bark/10 bg-surface p-5 shadow-sm"
     >
       <div>
         <h2 id="contact-prefs" className="font-display text-lg font-bold text-bark">
@@ -166,7 +166,7 @@ export function ProfilePage() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-8">
       {/* Header */}
-      <header className="flex flex-col items-center gap-4 rounded-[2.5rem] border border-bark/10 bg-white p-6 text-center shadow-sm sm:p-8">
+      <header className="flex flex-col items-center gap-4 rounded-[2.5rem] border border-bark/10 bg-surface p-6 text-center shadow-sm sm:p-8">
         <Avatar name={user.name} src={user.avatarUrl} size="lg" />
         <div>
           <div className="flex flex-wrap items-center justify-center gap-2">

@@ -143,7 +143,7 @@ export function OnboardingPage() {
 
       <form
         onSubmit={(e) => void handleSubmit(e)}
-        className="nm-fade-up flex flex-col gap-4 rounded-[2rem] border border-bark/10 bg-white p-6 shadow-sm sm:p-8"
+        className="nm-fade-up flex flex-col gap-4 rounded-[2rem] border border-bark/10 bg-surface p-6 shadow-sm sm:p-8"
         key={stepIndex}
       >
         {stepIndex === 0 && (
@@ -246,7 +246,7 @@ export function OnboardingPage() {
                       'cursor-pointer rounded-full border px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-600',
                       selected
                         ? 'border-terracotta-600 bg-terracotta-600 text-white'
-                        : 'border-bark/15 bg-white text-bark hover:border-terracotta-300 hover:text-terracotta-700',
+                        : 'border-bark/15 bg-surface text-bark hover:border-terracotta-300 hover:text-terracotta-700',
                     )}
                   >
                     {selected ? '✓ ' : ''}
