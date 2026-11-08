@@ -284,7 +284,7 @@ class _DoorIntroState extends State<DoorIntro>
                 ConstrainedBox(
                   constraints: const BoxConstraints(minHeight: 56),
                   child: _failed
-                      ? _failure()
+                      ? _failure(context)
                       : _slow
                       ? const Text(
                           'This is taking longer than usual…',
@@ -364,10 +364,10 @@ class _DoorIntroState extends State<DoorIntro>
     final opacity = _reduceMotion ? 1.0 : inT * outT;
     return Opacity(
       opacity: opacity.clamp(0.0, 1.0),
-      child: const Text(
+      child: Text(
         kAppTagline,
         textAlign: TextAlign.center,
-        style: TextStyle(
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
           fontSize: 17,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.2,
@@ -377,14 +377,15 @@ class _DoorIntroState extends State<DoorIntro>
     );
   }
 
-  Widget _failure() {
+  Widget _failure(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
+        Text(
           "Something didn't load. Check your connection and try again.",
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: AppColors.cream),
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: AppColors.cream),
         ),
         const SizedBox(height: 8),
         OutlinedButton(

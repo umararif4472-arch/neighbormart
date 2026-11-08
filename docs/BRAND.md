@@ -98,4 +98,37 @@ verbatim), door intro (`DoorIntro.tsx`).
 
 ## File usage — Flutter
 
-_Pending — appended by the Flutter brand pass._
+Kit originals are kept verbatim: `flutter/*.png` in
+`mobile/assets/brand/source/` (build-time generator inputs, not
+bundled) and the full `svg/` set in `mobile/assets/brand/`
+(bundled). Name/tagline live in `lib/core/config.dart`
+(`kAppName` / `kAppTagline`).
+
+| Kit file | Destination / placement |
+| --- | --- |
+| `flutter/app_icon.png` | Launcher icon source (`flutter_launcher_icons` in `mobile/pubspec.yaml`) |
+| `flutter/adaptive_foreground.png` / `adaptive_background.png` | Adaptive icon foreground/background drawables under `android/app/src/main/res/drawable-*/` |
+| `flutter/adaptive_monochrome.png` | Adaptive icon **monochrome** layer (themed icons) — generated natively by flutter_launcher_icons 0.14.4; `mipmap-anydpi-v26/ic_launcher.xml` references it |
+| `flutter/splash.png` | Native splash image (`flutter_native_splash`, terracotta `#A44B2D`, light + dark + Android 12) — matches the door intro's first frame |
+| `svg/logo-symbol.svg` | `BrandMark` on light backgrounds (> 48px): login, landing hero |
+| `svg/logo-symbol-dark.svg` | `BrandMark` on dark backgrounds: login, landing, onboarding (dark) |
+| `svg/logo-symbol-simple.svg` | `BrandMark` at ≤ 48px on light: onboarding header (36px) |
+| `svg/splash-closed-door.svg` | Geometry source for the door intro painter (`door_intro.dart`): frame/leaf paths, knob and mat inlined 1:1 in the kit's 512 space so the leaf can swing on its left hinge |
+| `svg/logo-wordmark-*.svg` | Reference only in Flutter: flutter_svg cannot render SVG `<text>`, so the wordmark is styled text in the Poppins two-tone split ("Neighbor" ink/cream, "Mart" terracotta / `#D9805F` on dark) beside `BrandMark` |
+| Remaining `svg/` files | Bundled in `mobile/assets/brand/` for future placements |
+
+Surfaces: door intro (`lib/ui/features/onboarding/door_intro.dart`,
+root gate in `lib/ui/app_root.dart`; bootstrap runs underneath it
+from `lib/main.dart`), login (`login_screen.dart` +
+`login_backdrop.dart` — mesh in kit tokens, floating icons in the
+exact section accents), landing hero, onboarding header, Settings
+About (name + tagline via the config constants).
+
+Section accents in Flutter mirror the web split:
+`sectionAccentColor` is the exact kit hex (graphics) and
+`sectionAccentTextColor` carries the AA text shades tabulated
+above; the dark container wash is 16% so the Items badge (exact
+amber text on its own tint) clears 4.5:1. Guard:
+`mobile/test/dark_mode_contrast_test.dart` (brand pairs + section
+text shades) and `mobile/test/phase7_theme_test.dart` (exact kit
+hexes).
