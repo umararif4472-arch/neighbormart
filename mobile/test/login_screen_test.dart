@@ -6,14 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:neighbor_mart/core/firebase/firebase_init.dart';
 import 'package:neighbor_mart/core/theme/app_theme.dart';
+import 'package:neighbor_mart/core/widgets/shared_widgets.dart';
 import 'package:neighbor_mart/state/app_state.dart';
-import 'package:neighbor_mart/ui/features/auth/animated_login_background.dart';
 import 'package:neighbor_mart/ui/features/auth/login_screen.dart';
 
-/// Tests for the Phase 10 animated login screen: rendering, the
-/// sign-in paths it exposes (mock email login + the Google path's
-/// not-configured surface — the real Google call needs a device and
-/// a live Firebase project, so it is not exercised here), the
+/// Tests for the login screen: rendering, the sign-in paths it
+/// exposes (mock email login + the Google path's not-configured
+/// surface — the real Google call needs a device and a live
+/// Firebase project, so it is not exercised here), the
 /// reduced-motion variant, and demo UI staying out of live builds.
 ///
 /// Golden tests double as the design screenshots: the app's real
@@ -84,11 +84,10 @@ void main() {
 
   AppState signedOut() => AppState()..signOut();
 
-  /// The drift animation loops forever, so pumpAndSettle is never an
-  /// option on this screen — advance the clock in steps instead.
+  /// The only motion left is a 300ms fade-in — run it out.
   Future<void> settleEntrance(WidgetTester tester) async {
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 1700));
+    await tester.pump(const Duration(milliseconds: 350));
   }
 
   group('rendering', () {
@@ -102,11 +101,11 @@ void main() {
       await settleEntrance(tester);
 
       expect(find.text('NeighborMart'), findsOneWidget);
+      // The tagline is one plain Text with the exact copy.
       expect(
         find.text('Borrow, rent, buy and sell, right on your block'),
         findsOneWidget,
       );
-      expect(find.byType(AnimatedLoginBackground), findsOneWidget);
       expect(find.byType(GoogleGLogo), findsOneWidget);
       expect(find.text('Continue with Google'), findsOneWidget);
       // The Google button honours the 52px minimum height.
@@ -114,7 +113,11 @@ void main() {
       expect(googleButton.height, greaterThanOrEqualTo(52));
       expect(find.text('or'), findsOneWidget);
       expect(find.byType(TextFormField), findsNWidgets(2));
-      expect(find.text('Welcome back, neighbor'), findsOneWidget);
+      expect(find.text('Welcome back'), findsOneWidget);
+      expect(
+        find.text('Log in to borrow, rent, buy and sell on your block.'),
+        findsOneWidget,
+      );
       expect(find.text('Log in'), findsOneWidget);
       expect(find.text('Forgot password?'), findsOneWidget);
       expect(find.text('Create an account'), findsOneWidget);
@@ -287,22 +290,15 @@ void main() {
     Future<void> pumpShot(
       WidgetTester tester, {
       required ThemeData theme,
-      bool reduceMotion = false,
-      Duration advance = const Duration(milliseconds: 1700),
     }) async {
       tester.view.physicalSize = const Size(780, 1688);
       tester.view.devicePixelRatio = 2.0;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
-        harness(
-          signedOut(),
-          theme: theme,
-          reduceMotion: reduceMotion,
-          realFont: true,
-        ),
+        harness(signedOut(), theme: theme, realFont: true),
       );
       await tester.pump();
-      if (advance > Duration.zero) await tester.pump(advance);
+      await tester.pump(const Duration(milliseconds: 350));
       expect(tester.takeException(), isNull);
     }
 
@@ -329,45 +325,5 @@ void main() {
         );
       },
     );
-
-    testWidgets(
-      'login — reduced motion, static frame',
-      skip: const bool.fromEnvironment('SKIP_GOLDENS'),
-      (tester) async {
-        await pumpShot(
-          tester,
-          theme: buildAppTheme(),
-          reduceMotion: true,
-          advance: Duration.zero,
-        );
-        await expectLater(
-          find.byType(LoginScreen),
-          matchesGoldenFile('goldens/login_reduced.png'),
-        );
-      },
-    );
-
-    for (final (name, ms) in <(String, int)>[
-      ('frame_0', 120),
-      ('frame_1', 480),
-      ('frame_2', 850),
-      ('frame_3', 1500),
-    ]) {
-      testWidgets(
-        'login — entrance $name',
-        skip: const bool.fromEnvironment('SKIP_GOLDENS'),
-        (tester) async {
-          await pumpShot(
-            tester,
-            theme: buildAppTheme(),
-            advance: Duration(milliseconds: ms),
-          );
-          await expectLater(
-            find.byType(LoginScreen),
-            matchesGoldenFile('goldens/login_$name.png'),
-          );
-        },
-      );
-    }
   });
 }

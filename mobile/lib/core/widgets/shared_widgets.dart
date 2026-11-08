@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -430,4 +431,65 @@ class _SuccessDialogState extends State<_SuccessDialog>
       ),
     );
   }
+}
+
+/// The multicolour Google 'G', painted (no asset) so it stays
+/// crisp at any size. Moved here from the old animated login
+/// backdrop so any auth surface can use it.
+class GoogleGLogo extends StatelessWidget {
+  final double size;
+
+  const GoogleGLogo({super.key, this.size = 22});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(size: Size.square(size), painter: _GoogleGPainter());
+  }
+}
+
+class _GoogleGPainter extends CustomPainter {
+  static const _blue = Color(0xFF4285F4);
+  static const _red = Color(0xFFEA4335);
+  static const _yellow = Color(0xFFFBBC05);
+  static const _green = Color(0xFF34A853);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = size.width * 0.235;
+    final radius = (size.width - stroke) / 2;
+    final center = Offset(size.width / 2, size.height / 2);
+    final ring = Rect.fromCircle(center: center, radius: radius);
+
+    Paint arc(Color color) => Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
+
+    // Angles are radians, clockwise-positive, 0 at 3 o'clock. Each
+    // segment starts a hair before the previous one ends so no
+    // hairline gap shows between colours.
+    // Red over the top.
+    canvas.drawArc(ring, -0.13 * math.pi, -0.76 * math.pi, false, arc(_red));
+    // Yellow down the left to the lower-left.
+    canvas.drawArc(ring, -0.88 * math.pi, -0.42 * math.pi, false, arc(_yellow));
+    // Green along the bottom.
+    canvas.drawArc(ring, 0.71 * math.pi, -0.40 * math.pi, false, arc(_green));
+    // Blue up the right side, meeting the red.
+    canvas.drawArc(ring, 0.32 * math.pi, -0.47 * math.pi, false, arc(_blue));
+    // The blue bar, exactly the ring's thickness so it merges with
+    // the blue arc at 3 o'clock.
+    canvas.drawRect(
+      Rect.fromLTRB(
+        center.dx - stroke * 0.12,
+        center.dy - stroke / 2,
+        size.width - stroke * 0.05,
+        center.dy + stroke / 2,
+      ),
+      Paint()..color = _blue,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GoogleGPainter oldDelegate) => false;
 }
