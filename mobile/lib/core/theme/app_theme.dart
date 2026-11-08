@@ -24,16 +24,17 @@ class AppColors {
   static const amber = Color(0xFFC17A28);
   static const errorRed = Color(0xFFB3261E);
 
-  // Dark (warm charcoal)
-  static const darkCanvas = Color(0xFF16120E);
-  static const darkSurface = Color(0xFF211B15);
-  static const darkSurfaceVariant = Color(0xFF2B241C);
+  // Dark (warm charcoal) — lifted one step in 2026-11 so the dark
+  // theme reads as warm brown-grey, not near-black.
+  static const darkCanvas = Color(0xFF201B16);
+  static const darkSurface = Color(0xFF2A251F);
+  static const darkSurfaceVariant = Color(0xFF38312A);
   static const darkInk = Color(0xFFF3EDE4);
   static const darkInkSoft = Color(0xFFC9BBA9);
   static const darkPrimary = Color(0xFFE0A181);
   static const darkOnPrimary = Color(0xFF2A1608);
   static const darkMoss = Color(0xFFA6C89D);
-  static const darkBorder = Color(0xFF4A3E31);
+  static const darkBorder = Color(0xFF5A4E40);
   static const darkError = Color(0xFFF2B8B5);
 }
 

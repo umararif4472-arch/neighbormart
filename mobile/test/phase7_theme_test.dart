@@ -13,12 +13,12 @@ import 'package:neighbor_mart/ui/features/profile/settings_screen.dart';
 
 void main() {
   group('theme preference storage codec', () {
-    test('parses stored values, defaulting to system', () {
+    test('parses stored values, defaulting to light on first launch', () {
       expect(themePreferenceFromStorage('light'), ThemePreference.light);
       expect(themePreferenceFromStorage('dark'), ThemePreference.dark);
       expect(themePreferenceFromStorage('system'), ThemePreference.system);
-      expect(themePreferenceFromStorage(null), ThemePreference.system);
-      expect(themePreferenceFromStorage('sepia'), ThemePreference.system);
+      expect(themePreferenceFromStorage(null), ThemePreference.light);
+      expect(themePreferenceFromStorage('sepia'), ThemePreference.light);
     });
 
     test('round-trips through storage strings', () {
@@ -49,12 +49,12 @@ void main() {
       expect(state.themePreference, ThemePreference.dark);
     });
 
-    test('defaults to system with no saved value', () async {
+    test('defaults to light with no saved value', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final state = AppState();
       await state.restoreFromPrefs(prefs);
-      expect(state.themePreference, ThemePreference.system);
+      expect(state.themePreference, ThemePreference.light);
     });
 
     test('setThemePreference persists and notifies', () async {
@@ -64,9 +64,11 @@ void main() {
       await state.restoreFromPrefs(prefs);
       var notified = 0;
       state.addListener(() => notified++);
-      await state.setThemePreference(ThemePreference.light);
-      expect(state.themePreference, ThemePreference.light);
-      expect(prefs.getString('neighbormart:theme-mode'), 'light');
+      // First-launch default is now light, so switch to dark to
+      // exercise the change + persist path.
+      await state.setThemePreference(ThemePreference.dark);
+      expect(state.themePreference, ThemePreference.dark);
+      expect(prefs.getString('neighbormart:theme-mode'), 'dark');
       expect(notified, 1);
     });
   });

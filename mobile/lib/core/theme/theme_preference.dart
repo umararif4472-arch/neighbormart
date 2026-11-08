@@ -9,13 +9,14 @@ enum ThemePreference { system, light, dark }
 const String kThemePreferencePrefsKey = 'neighbormart:theme-mode';
 
 /// Parses a stored value back into a [ThemePreference]. Anything
-/// missing or unrecognized falls back to [ThemePreference.system],
-/// matching the first-launch default.
+/// missing or unrecognized falls back to [ThemePreference.light] —
+/// the first-launch default is light; a stored explicit choice
+/// (including 'system') always wins once the user has picked one.
 ThemePreference themePreferenceFromStorage(String? raw) => switch (raw) {
   'light' => ThemePreference.light,
   'dark' => ThemePreference.dark,
   'system' => ThemePreference.system,
-  _ => ThemePreference.system,
+  _ => ThemePreference.light,
 };
 
 /// The stored string for a [ThemePreference].
