@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:neighbor_mart/core/theme/app_theme.dart';
 import 'package:neighbor_mart/data/models/listing.dart';
 import 'package:neighbor_mart/state/app_state.dart';
@@ -100,6 +101,11 @@ void main() {
   // the test font; the layouts are hardened to survive both.
   var realFontLoaded = false;
   setUpAll(() async {
+    // Screens that load async state (the ListItem wizard's draft)
+    // read SharedPreferences; without a mock the platform channel
+    // never answers and those screens would sit in their loading
+    // state for the whole sweep — coverage in name only.
+    SharedPreferences.setMockInitialValues({});
     TestWidgetsFlutterBinding.ensureInitialized();
     if (const bool.fromEnvironment('SKIP_GOLDENS')) return;
     final fontsDir =
@@ -161,17 +167,12 @@ void main() {
       signedIn,
       (_) => const ProfileSetupScreen(),
       interact: (tester) async {
-        // Fill whatever text fields step 1 shows, then try to
-        // advance — validation may hold us on step 1 (which still
-        // renders the error state, also worth covering).
-        final fields = find.byType(TextFormField);
-        final count = fields.evaluate().length;
-        for (var i = 0; i < count; i++) {
-          await tester.enterText(fields.at(i), 'Test value 123');
-        }
-        final cont = find.text('Continue');
-        if (cont.evaluate().isNotEmpty) {
-          await tester.ensureVisible(cont.first);
+        // The form prefills from the seeded user (valid name,
+        // city, area, interests), so Continue advances for real:
+        // tap through steps 2 and 3 so they render too.
+        for (var step = 0; step < 2; step++) {
+          final cont = find.text('Continue');
+          if (cont.evaluate().isEmpty) break;
           await tester.tap(cont.first);
           await tester.pump(const Duration(milliseconds: 400));
         }
@@ -250,11 +251,40 @@ void main() {
       signedIn,
       (_) => const ListItemScreen(),
       interact: (tester) async {
-        // Advance through the wizard steps via its Continue button.
-        for (var step = 0; step < 2; step++) {
-          final cont = find.text('Continue');
-          if (cont.evaluate().isEmpty) break;
-          await tester.ensureVisible(cont.first);
+        // Continue validates each step, so fill valid values to
+        // genuinely advance: step 1 needs title (>=4 chars),
+        // description (>=10) and condition; step 2 needs max
+        // borrow days (1-30). Fields are anchored by label and
+        // scrolled into view first — the form is a lazy ListView,
+        // so off-screen fields are not even built yet.
+        Future<void> fill(String label, String value) async {
+          final labelFinder = find.text(label);
+          if (labelFinder.evaluate().isEmpty) return;
+          await tester.scrollUntilVisible(
+            labelFinder,
+            120,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.enterText(
+            find.ancestor(
+              of: labelFinder,
+              matching: find.byType(TextFormField),
+            ),
+            value,
+          );
+        }
+
+        await fill('Title *', 'Cordless Drill');
+        await fill('Description *', 'Sturdy drill, bits included');
+        await fill('Condition *', 'Good, works well');
+        var cont = find.text('Continue');
+        if (cont.evaluate().isNotEmpty) {
+          await tester.tap(cont.first);
+          await tester.pump(const Duration(milliseconds: 400));
+        }
+        await fill('Max borrow days *', '7');
+        cont = find.text('Continue');
+        if (cont.evaluate().isNotEmpty) {
           await tester.tap(cont.first);
           await tester.pump(const Duration(milliseconds: 400));
         }
