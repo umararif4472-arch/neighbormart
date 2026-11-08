@@ -19,11 +19,48 @@ dependencies:
   firebase_auth: ^7.0.1
   cloud_firestore: ^7.1.0
   google_sign_in: ^7.2.0
+  flutter_svg: ^2.2.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.7
 
 flutter:
   uses-material-design: true
+  # Open Door brand assets (verbatim from the brand kit — see
+  # docs/BRAND.md). Only the SVGs are bundled; the large source PNGs
+  # in assets/brand/source/ are build-time inputs for the launcher
+  # icon / native splash generators below, not app assets.
+  assets:
+    - assets/brand/
+
+# Launcher icons from the brand kit's flutter/ PNGs (Open Door).
+# Regenerate with: dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/brand/source/app_icon.png"
+  adaptive_icon_background: "assets/brand/source/adaptive_background.png"
+  adaptive_icon_foreground: "assets/brand/source/adaptive_foreground.png"
+  adaptive_icon_monochrome: "assets/brand/source/adaptive_monochrome.png"
+  min_sdk_android: 24
+
+# Native splash: the kit's closed door on brand terracotta, in both
+# modes — it is the door intro's first frame, so the handoff from
+# the OS splash into the animated intro is seamless.
+# Regenerate with: dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#A44B2D"
+  image: assets/brand/source/splash.png
+  color_dark: "#A44B2D"
+  image_dark: assets/brand/source/splash.png
+  android_12:
+    color: "#A44B2D"
+    image: assets/brand/source/splash.png
+    color_dark: "#A44B2D"
+    image_dark: assets/brand/source/splash.png
+    icon_background_color: "#A44B2D"
+    icon_background_color_dark: "#A44B2D"
