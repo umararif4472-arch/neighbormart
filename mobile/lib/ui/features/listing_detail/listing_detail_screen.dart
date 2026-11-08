@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/cloudinary_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/shared_widgets.dart';
@@ -41,10 +42,12 @@ class ListingDetailScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             child: listing.photos.isNotEmpty
                 ? Image.network(
-                    listing.photos.first,
+                    detailImageUrl(listing.photos.first),
                     height: 220,
                     width: double.infinity,
                     fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) =>
+                        progress == null ? child : _emojiBanner(listing),
                     errorBuilder: (_, _, _) => _emojiBanner(listing),
                   )
                 : _emojiBanner(listing),

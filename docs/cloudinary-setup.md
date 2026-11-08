@@ -31,10 +31,17 @@ the browser bundle). Never put the Cloudinary API key or API secret in
 4. Under **Upload restrictions / Transformations on upload** (wording varies
    slightly by console version):
    - **Allowed formats:** `jpg`, `png`, `webp` (images only — no video/PDF)
-   - **Maximum file size:** `5 MB` (5,242,880 bytes)
-   - Optional backstops: max image width `2000` px (the app already
-     compresses client-side to ~1600 px).
+   - **Maximum file size:** the current Cloudinary console has NO
+     max-file-size field on upload presets (checked on the live account,
+     2026-11-08) — the 5 MB limit is enforced client-side in the app
+     before every upload instead (web + Flutter validators).
+   - Max width: also no dedicated field — set as an incoming
+     transformation `c_limit,w_2000` on the preset (done on the live
+     account); the app also compresses client-side to ~1600 px.
 5. **Save** the preset.
+
+> Live account (created 2026-11-08): cloud name `sgwcguwo`, free plan,
+> preset `neighbormart_listings` exactly as above.
 
 ## 3. Put the two values in `.env.local`
 

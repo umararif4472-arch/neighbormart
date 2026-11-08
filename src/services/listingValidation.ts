@@ -8,6 +8,37 @@ import type {
   VehicleDetails,
 } from '@/types'
 import { ITEM_CATEGORIES, PROPERTY_TYPES } from '@/types'
+import { CLOUDINARY_CLOUD_NAME, PHOTO_LIMITS_BY_SECTION, isCloudinaryUrl } from '@/utils/cloudinary'
+
+/**
+ * Photo rules (Phase 4), shared by every create path: count within the
+ * section cap, every entry an https URL, and — when this build has a
+ * Cloudinary cloud configured — every photo an uploaded Cloudinary URL
+ * from OUR cloud. Temporary previews and pasted foreign links can never
+ * be published. (In unconfigured dev/test builds the Cloudinary check
+ * is skipped; the live Firestore rules enforce it in production.)
+ */
+export function validatePhotos(photos: string[], section: ListingSection): Record<string, string> {
+  const errors: Record<string, string> = {}
+  const cap = PHOTO_LIMITS_BY_SECTION[section]
+  if (photos.length > cap) {
+    errors.photos = `At most ${cap} photos for this section.`
+    return errors
+  }
+  for (const photo of photos) {
+    if (typeof photo !== 'string' || !photo.startsWith('https://')) {
+      errors.photos =
+        'Photos must be finished uploads — a preview or local file can’t be published.'
+      return errors
+    }
+    if (CLOUDINARY_CLOUD_NAME && !isCloudinaryUrl(photo)) {
+      errors.photos =
+        'Photos must be uploaded through NeighborMart — outside image links can’t be published.'
+      return errors
+    }
+  }
+  return errors
+}
 
 /**
  * Shared create-listing validation — used by BOTH service backends (mock
@@ -63,6 +94,7 @@ export function validateCreateItemListingInput(
   if (input.pickupInstructions.trim().length < 5) {
     errors.pickupInstructions = 'Tell neighbors where/how to pick up (5+ characters).'
   }
+  Object.assign(errors, validatePhotos(input.photos, 'items'))
   return errors
 }
 
@@ -115,6 +147,7 @@ export function validateCreateListingInput(input: CreateListingInput): Record<st
   if (Number.isFinite(input.price) && input.price > MAX_PRICE) {
     errors.price = `Price must be Rs ${MAX_PRICE.toLocaleString('en-PK')} or less.`
   }
+  Object.assign(errors, validatePhotos(input.photos, input.section))
 
   switch (input.section) {
     case 'items': {

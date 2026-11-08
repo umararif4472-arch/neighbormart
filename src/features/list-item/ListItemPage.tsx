@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/Button'
 import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ListingCard } from '@/components/listings/ListingCard'
-import { CheckIcon, ChevronLeftIcon, XIcon, CameraIcon } from '@/components/icons'
+import { CheckIcon, ChevronLeftIcon } from '@/components/icons'
+import { PhotoUploader } from './PhotoUploader'
 import {
   LIST_ITEM_STEPS,
   PHOTO_LIMITS,
@@ -33,8 +34,8 @@ import {
  * autosave. Publishing goes through listingsApi.createListing — the
  * shared service validator runs in buildCreateInput first, so a draft
  * that reaches the service is already valid on both backends.
- * Photo uploads to cloud storage arrive with the storage phase; here
- * photos are device picks (session previews) or pasted image links.
+ * Photos (Phase 4) are real Cloudinary uploads via PhotoUploader; only
+ * finished upload URLs ever enter draft.photos.
  */
 export function ListItemPage() {
   const navigate = useNavigate()
@@ -43,20 +44,12 @@ export function ListItemPage() {
   const [publishing, setPublishing] = useState(false)
   const [publishError, setPublishError] = useState<string | null>(null)
   const [published, setPublished] = useState<Listing | null>(null)
+  /** In-flight photo uploads — navigation/publish wait for these. */
+  const [pendingUploads, setPendingUploads] = useState(0)
 
   const step = LIST_ITEM_STEPS[form.stepIndex]
   const draft = form.draft
   const owner = state.currentUser
-
-  function onPhotoFiles(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? [])
-    const urls = files
-      .filter((file) => file.type.startsWith('image/'))
-      .slice(0, PHOTO_LIMITS[draft.section] - draft.photos.length)
-      .map((file) => URL.createObjectURL(file))
-    if (urls.length > 0) dispatchForm({ type: 'photos_add', urls })
-    event.target.value = ''
-  }
 
   function setField(field: DraftField, value: ListItemDraft[DraftField]) {
     dispatchForm({ type: 'field', field, value })
@@ -64,6 +57,10 @@ export function ListItemPage() {
 
   async function handlePublish() {
     if (!owner) return
+    if (pendingUploads > 0) {
+      setPublishError('Wait for your photos to finish uploading, then publish.')
+      return
+    }
     const built = buildCreateInput(draft, owner.id)
     if ('errors' in built) {
       setPublishError(Object.values(built.errors)[0] ?? 'Check the form and try again.')
@@ -215,10 +212,8 @@ export function ListItemPage() {
             draft={draft}
             errors={form.errors}
             showErrors={form.showErrors}
-            onPhotoFiles={onPhotoFiles}
-            onAddUrl={(url) => dispatchForm({ type: 'photos_add', urls: [url] })}
-            onRemovePhoto={(index) => dispatchForm({ type: 'photo_remove', index })}
-            onCoverPhoto={(index) => dispatchForm({ type: 'photo_cover', index })}
+            onPhotosChange={(urls) => dispatchForm({ type: 'photos_set', urls })}
+            onPendingChange={setPendingUploads}
           />
         )}
         {form.stepIndex === 3 && (
@@ -243,9 +238,16 @@ export function ListItemPage() {
         </p>
       )}
 
+      {form.stepIndex === 2 && pendingUploads > 0 && (
+        <p role="status" className="text-center text-sm font-medium text-bark-light">
+          Uploading {pendingUploads} photo{pendingUploads === 1 ? '' : 's'} — you can continue as
+          soon as they finish.
+        </p>
+      )}
       <div className="flex items-center justify-between gap-3">
         <Button
           variant="ghost"
+          disabled={form.stepIndex === 2 && pendingUploads > 0}
           onClick={() =>
             form.stepIndex === 0 ? navigate('/browse') : dispatchForm({ type: 'back' })
           }
@@ -254,7 +256,10 @@ export function ListItemPage() {
           {form.stepIndex === 0 ? 'Cancel' : 'Back'}
         </Button>
         {form.stepIndex < LIST_ITEM_STEPS.length - 1 ? (
-          <Button onClick={() => dispatchForm({ type: 'next' })}>
+          <Button
+            onClick={() => dispatchForm({ type: 'next' })}
+            disabled={form.stepIndex === 2 && pendingUploads > 0}
+          >
             Next: {LIST_ITEM_STEPS[form.stepIndex + 1]}
           </Button>
         ) : (
@@ -721,20 +726,15 @@ function PhotosStep({
   draft,
   errors,
   showErrors,
-  onPhotoFiles,
-  onAddUrl,
-  onRemovePhoto,
-  onCoverPhoto,
+  onPhotosChange,
+  onPendingChange,
 }: {
   draft: ListItemDraft
   errors: FormErrors
   showErrors: boolean
-  onPhotoFiles: (event: ChangeEvent<HTMLInputElement>) => void
-  onAddUrl: (url: string) => void
-  onRemovePhoto: (index: number) => void
-  onCoverPhoto: (index: number) => void
+  onPhotosChange: (urls: string[]) => void
+  onPendingChange: (pending: number) => void
 }) {
-  const [url, setUrl] = useState('')
   const limit = PHOTO_LIMITS[draft.section]
   const minimum = PHOTO_MINIMUM[draft.section] ?? 0
   return (
@@ -742,84 +742,18 @@ function PhotosStep({
       <h2 className="font-display text-lg font-bold text-bark">Photos</h2>
       <p className="text-sm text-bark-light">
         {minimum > 0
-          ? `This section needs at least ${minimum} photos to publish (up to ${limit}). `
+          ? `This section needs at least ${minimum} uploaded photos to publish (up to ${limit}). `
           : `Photos are optional but listings with them get far more interest (up to ${limit}). `}
-        The first photo is the cover — tap “Make cover” on any other to promote it. Cloud uploads
-        arrive with the storage update; for now, pick from your device or paste image links.
+        The first photo is the cover — drag tiles or use “Make cover” to change it. Photos upload as
+        you add them; only finished uploads count.
       </p>
 
-      <div className="flex flex-wrap gap-3">
-        {draft.photos.map((photo, index) => (
-          <div key={`${photo}-${index}`} className="relative w-24">
-            <img
-              src={photo}
-              alt={`Listing photo ${index + 1}`}
-              className="h-24 w-24 rounded-2xl border border-bark/10 object-cover"
-            />
-            <button
-              type="button"
-              onClick={() => onRemovePhoto(index)}
-              aria-label={`Remove photo ${index + 1}`}
-              className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-bark text-cream shadow-md transition-transform hover:scale-110"
-            >
-              <XIcon className="h-3.5 w-3.5" />
-            </button>
-            {index === 0 ? (
-              <span className="absolute bottom-1 left-1 rounded-full bg-bark/80 px-2 py-0.5 text-[10px] font-bold text-cream">
-                Cover
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onCoverPhoto(index)}
-                className="absolute bottom-1 left-1 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-bark shadow"
-              >
-                Make cover
-              </button>
-            )}
-          </div>
-        ))}
-        {draft.photos.length < limit && (
-          <label
-            className={cn(
-              'flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-bark/20 bg-cream/50 text-bark-light',
-              'transition-colors hover:border-terracotta-400 hover:text-terracotta-600',
-            )}
-          >
-            <CameraIcon className="h-6 w-6" aria-hidden />
-            <span className="text-[11px] font-semibold">Add photo</span>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="sr-only"
-              onChange={onPhotoFiles}
-            />
-          </label>
-        )}
-      </div>
-
-      <div className="flex gap-2">
-        <TextField
-          label="…or paste an image link"
-          value={url}
-          placeholder="https://…"
-          onChange={(e) => setUrl(e.target.value)}
-          className="flex-1"
-        />
-        <Button
-          type="button"
-          variant="secondary"
-          className="self-end"
-          disabled={!url.trim() || draft.photos.length >= limit}
-          onClick={() => {
-            onAddUrl(url.trim())
-            setUrl('')
-          }}
-        >
-          Add link
-        </Button>
-      </div>
+      <PhotoUploader
+        section={draft.section}
+        photos={draft.photos}
+        onPhotosChange={onPhotosChange}
+        onPendingChange={onPendingChange}
+      />
 
       {fieldError(errors, showErrors, 'photos') && (
         <p role="alert" className="text-sm font-medium text-red-700">

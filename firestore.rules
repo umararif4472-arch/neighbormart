@@ -50,6 +50,55 @@ service cloud.firestore {
         || (from == 'completed' && to in ['reviewed']);
     }
 
+    // Listing photos (Phase 4) — every photo must be an uploaded
+    // Cloudinary URL from OUR cloud (the cloud name is public by
+    // design), within the per-section cap. Updates may keep existing
+    // photos untouched (the seed catalog predates Cloudinary — its
+    // picsum URLs stay valid while unchanged), but any NEW or EDITED
+    // photo set must be all-Cloudinary.
+    function photoCap(section) {
+      return section == 'vehicles' ? 15 : section == 'properties' ? 20 : 10;
+    }
+
+    // Rules has no working list comprehension for this (`.all()` errors
+    // at runtime, and rule functions cannot recurse), so the per-photo
+    // check is unrolled to the maximum cap (20 = properties).
+    function photoAtIsCloudinary(data, i) {
+      return data.get('photos', []).size() <= i
+        || (data.get('photos', [])[i] is string
+          && data.get('photos', [])[i].matches('https://res\\.cloudinary\\.com/sgwcguwo/image/upload/.*'));
+    }
+
+    function photosValid(data) {
+      return data.get('photos', []) is list
+        && data.get('photos', []).size() <= photoCap(data.section)
+        && photoAtIsCloudinary(data, 0) &&
+        photoAtIsCloudinary(data, 1) &&
+        photoAtIsCloudinary(data, 2) &&
+        photoAtIsCloudinary(data, 3) &&
+        photoAtIsCloudinary(data, 4) &&
+        photoAtIsCloudinary(data, 5) &&
+        photoAtIsCloudinary(data, 6) &&
+        photoAtIsCloudinary(data, 7) &&
+        photoAtIsCloudinary(data, 8) &&
+        photoAtIsCloudinary(data, 9) &&
+        photoAtIsCloudinary(data, 10) &&
+        photoAtIsCloudinary(data, 11) &&
+        photoAtIsCloudinary(data, 12) &&
+        photoAtIsCloudinary(data, 13) &&
+        photoAtIsCloudinary(data, 14) &&
+        photoAtIsCloudinary(data, 15) &&
+        photoAtIsCloudinary(data, 16) &&
+        photoAtIsCloudinary(data, 17) &&
+        photoAtIsCloudinary(data, 18) &&
+        photoAtIsCloudinary(data, 19);
+    }
+
+    function photosUnchangedOrValid(newData, oldData) {
+      return newData.get('photos', []) == oldData.get('photos', [])
+        || photosValid(newData);
+    }
+
     // --- User profiles -----------------------------------------------------
     match /users/{uid} {
       allow read: if true;
@@ -63,12 +112,14 @@ service cloud.firestore {
       allow read: if true;
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.status == 'active';
+        && request.resource.data.status == 'active'
+        && photosValid(request.resource.data);
       allow update: if signedIn()
         && request.resource.data.ownerId == resource.data.ownerId
         && (
           // The owner can edit anything, with status following the machine.
           (resource.data.ownerId == request.auth.uid
+            && photosUnchangedOrValid(request.resource.data, resource.data)
             && (request.resource.data.status == resource.data.status
               || listingTransitionOk(resource.data.status, request.resource.data.status)))
           // A deal participant (the borrower) may flip ONLY the status for

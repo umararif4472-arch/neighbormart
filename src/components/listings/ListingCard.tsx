@@ -70,6 +70,7 @@ export function ListingCard({
           alt={listing.title}
           emoji={listingEmoji(listing)}
           className="aspect-[4/3] w-full"
+          variant="card"
         />
         <Badge
           tone={listingStatusTone(listing.status)}

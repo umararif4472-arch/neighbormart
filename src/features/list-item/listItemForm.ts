@@ -15,6 +15,7 @@ import { ITEM_CATEGORIES, LISTING_SECTIONS, PROPERTY_TYPES } from '@/types'
 import type { CreateListingInput } from '@/services/listingValidation'
 import { validateCreateListingInput } from '@/services/listingValidation'
 import { dateInputToIso } from '@/utils/dates'
+import { PHOTO_LIMITS_BY_SECTION } from '@/utils/cloudinary'
 
 /**
  * The 5-step listing wizard (Phase 5): one reducer owns ALL form state
@@ -34,13 +35,8 @@ export const LIST_ITEM_STEPS = [
 ] as const
 export const LIST_ITEM_STEP_COUNT = LIST_ITEM_STEPS.length
 
-/** Per-section photo caps (Phase 4 spec, enforced already in the wizard). */
-export const PHOTO_LIMITS: Record<ListingSection, number> = {
-  items: 10,
-  vehicles: 15,
-  properties: 20,
-  arenas: 10,
-}
+/** Per-section photo caps — single source lives in utils/cloudinary. */
+export const PHOTO_LIMITS: Record<ListingSection, number> = PHOTO_LIMITS_BY_SECTION
 
 /** Vehicles & properties must show at least this many photos to publish. */
 export const PHOTO_MINIMUM: Partial<Record<ListingSection, number>> = {
@@ -303,12 +299,17 @@ export function validateDetailsStep(draft: ListItemDraft): FormErrors {
   return errors
 }
 
-/** Step 2: photos — required minimum for vehicles/properties only. */
+/**
+ * Step 2: photos — required minimum for vehicles/properties only.
+ * Since Phase 4, draft.photos holds ONLY finished Cloudinary upload
+ * URLs (the uploader syncs nothing else in), so this count is a count
+ * of real uploaded photos — temporary previews can never satisfy it.
+ */
 export function validatePhotosStep(draft: ListItemDraft): FormErrors {
   const errors: FormErrors = {}
   const minimum = PHOTO_MINIMUM[draft.section] ?? 0
   if (draft.photos.length < minimum) {
-    errors.photos = `Add at least ${minimum} photo links to publish a ${draft.section === 'vehicles' ? 'vehicle' : 'property'} — buyers need to see it.`
+    errors.photos = `Add at least ${minimum} uploaded photos to publish a ${draft.section === 'vehicles' ? 'vehicle' : 'property'} — buyers need to see it.`
   }
   if (draft.photos.length > PHOTO_LIMITS[draft.section]) {
     errors.photos = `At most ${PHOTO_LIMITS[draft.section]} photos for this section.`
@@ -485,6 +486,7 @@ export function buildPreviewListing(draft: ListItemDraft, owner: User): Listing 
 export type ListItemFormAction =
   | { type: 'field'; field: DraftField; value: ListItemDraft[DraftField] }
   | { type: 'photos_add'; urls: string[] }
+  | { type: 'photos_set'; urls: string[] }
   | { type: 'photo_remove'; index: number }
   | { type: 'photo_cover'; index: number }
   | { type: 'next' }
@@ -525,6 +527,14 @@ export function listItemFormReducer(
         0,
         PHOTO_LIMITS[state.draft.section],
       )
+      const draft = { ...state.draft, photos }
+      const errors = state.showErrors ? validateStep(state.stepIndex, draft) : state.errors
+      return { ...state, draft, errors, dirty: true }
+    }
+    case 'photos_set': {
+      // The Phase 4 uploader owns ordering/state and syncs the finished
+      // upload URLs (in display order) through here.
+      const photos = action.urls.slice(0, PHOTO_LIMITS[state.draft.section])
       const draft = { ...state.draft, photos }
       const errors = state.showErrors ? validateStep(state.stepIndex, draft) : state.errors
       return { ...state, draft, errors, dirty: true }
@@ -634,7 +644,9 @@ export function readDraftFromStorage(): { draft: ListItemDraft; stepIndex: numbe
 
     const section = asOneOf(rec.section, LISTING_SECTIONS, 'items')
     const photos = Array.isArray(rec.photos)
-      ? rec.photos.filter((p): p is string => typeof p === 'string').slice(0, PHOTO_LIMITS[section])
+      ? rec.photos
+          .filter((p): p is string => typeof p === 'string' && !p.startsWith('blob:'))
+          .slice(0, PHOTO_LIMITS[section])
       : []
 
     const draft: ListItemDraft = {

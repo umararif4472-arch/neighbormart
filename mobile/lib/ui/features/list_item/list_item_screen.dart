@@ -2,16 +2,17 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
 import '../../../data/models/listing.dart';
+import '../../../data/services/photo_upload_service.dart';
 import '../../../state/app_state.dart';
 import '../explore/listing_section_view.dart';
 import 'list_listing_screen.dart';
+import 'photo_upload_field.dart';
 
 /// Persists an in-progress listing form to SharedPreferences, like the
 /// web app's useListItemDraft. Degrades to no-op when prefs are missing
@@ -72,11 +73,12 @@ class _ListItemScreenState extends State<ListItemScreen> {
   int _step = 0;
   bool _draftLoaded = false;
 
-  /// Photo sources for this listing — a mix of seeded network URLs (when
-  /// editing) and local file paths picked on this device. Max 5.
-  final List<String> _photos = [];
-  static const int _maxPhotos = 5;
-  final ImagePicker _picker = ImagePicker();
+  /// Photos for this listing (Phase 4): each entry tracks its upload to
+  /// Cloudinary. Only finished uploads (remote URLs) are published or
+  /// saved into the draft — local pick paths never persist.
+  final List<ListingPhoto> _photoEntries = [];
+
+  List<String> get _uploadedPhotoUrls => uploadedUrlsOf(_photoEntries);
 
   bool get _isEdit => widget.existingItem != null;
 
@@ -91,7 +93,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
       _desc.text = item.description;
       _condition.text = item.condition;
       _category = item.category;
-      _photos.addAll(item.photos);
+      _photoEntries.addAll(item.photos.map(ListingPhoto.done));
       _maxDays.text = '${item.borrowTerms.maxDurationDays}';
       _deposit.text = item.borrowTerms.depositAmount?.toString() ?? '';
       _fee.text = item.borrowTerms.dailyFee?.toString() ?? '';
@@ -161,12 +163,13 @@ class _ListItemScreenState extends State<ListItemScreen> {
     _fee.text = '${d['fee'] ?? ''}';
     _pickupPref = '${d['pickupPref'] ?? 'either'}';
     _pickupNotes.text = '${d['pickupNotes'] ?? ''}';
-    _photos
+    _photoEntries
       ..clear()
       ..addAll(
         (d['photos'] as List? ?? const [])
             .map((e) => '$e')
-            .where((s) => s.isNotEmpty),
+            .where((s) => s.isNotEmpty)
+            .map(ListingPhoto.done),
       );
     final s = d['step'];
     if (s is int && s >= 0 && s <= 2) _step = s;
@@ -181,7 +184,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
       _deposit.clear();
       _fee.clear();
       _pickupNotes.clear();
-      _photos.clear();
+      _photoEntries.clear();
       _category = 'Tools';
       _pickupPref = 'either';
       _step = 0;
@@ -198,7 +201,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
         'description': _desc.text,
         'condition': _condition.text,
         'category': _category,
-        'photos': List.of(_photos),
+        'photos': _uploadedPhotoUrls,
         'maxDays': _maxDays.text,
         'deposit': _deposit.text,
         'fee': _fee.text,
@@ -225,57 +228,12 @@ class _ListItemScreenState extends State<ListItemScreen> {
   int? _parseOptional(String v) =>
       v.trim().isEmpty ? null : int.tryParse(v.trim());
 
-  void _addPhotoPaths(Iterable<String> paths) {
-    final room = _maxPhotos - _photos.length;
-    if (room <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Up to 5 photos per listing.')),
-      );
-      return;
-    }
-    final added = paths.take(room).toList();
-    if (added.isEmpty) return;
-    setState(() => _photos.addAll(added));
-    _saveDraft();
-    if (added.length < paths.length) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Up to 5 photos per listing.')),
-      );
-    }
-  }
-
-  Future<void> _pickFromGallery() async {
-    try {
-      final picked = await _picker.pickMultiImage();
-      _addPhotoPaths(picked.map((f) => f.path));
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open the gallery on this device.'),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _takePhoto() async {
-    try {
-      final picked = await _picker.pickImage(source: ImageSource.camera);
-      if (picked != null) _addPhotoPaths([picked.path]);
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open the camera on this device.'),
-          ),
-        );
-      }
-    }
-  }
-
-  void _removePhoto(int index) {
-    setState(() => _photos.removeAt(index));
+  void _onPhotosChanged(List<ListingPhoto> next) {
+    setState(() {
+      _photoEntries
+        ..clear()
+        ..addAll(next);
+    });
     _saveDraft();
   }
 
@@ -286,6 +244,26 @@ class _ListItemScreenState extends State<ListItemScreen> {
   }
 
   Future<void> _publish() async {
+    // Only finished Cloudinary uploads may be published — block while
+    // any photo is still on its way up or sitting in a failed state.
+    if (_photoEntries.any((p) => p.isUploading)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Wait for your photos to finish uploading.'),
+        ),
+      );
+      return;
+    }
+    if (_photoEntries.any((p) => p.isFailed)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Some photos failed to upload — retry or remove them first.',
+          ),
+        ),
+      );
+      return;
+    }
     final state = context.read<AppState>();
     if (_isEdit) {
       state.updateItem(
@@ -299,7 +277,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
         dailyFee: _parseOptional(_fee.text),
         pickupPreference: _pickupPref,
         pickupInstructions: _pickupNotes.text,
-        photos: List.of(_photos),
+        photos: _uploadedPhotoUrls,
       );
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Listing updated.')));
@@ -314,7 +292,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
         dailyFee: _parseOptional(_fee.text),
         pickupPreference: _pickupPref,
         pickupInstructions: _pickupNotes.text,
-        photos: List.of(_photos),
+        photos: _uploadedPhotoUrls,
       );
       ListItemDraft.clear();
       await showSuccessDialog(
@@ -518,90 +496,11 @@ class _ListItemScreenState extends State<ListItemScreen> {
             : null,
       ),
       const SizedBox(height: 20),
-      Row(
-        children: [
-          const Text(
-            'Photos',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '${_photos.length}/$_maxPhotos',
-            style: const TextStyle(color: Colors.black54, fontSize: 13),
-          ),
-        ],
-      ),
-      const SizedBox(height: 4),
-      const Text(
-        'Photos help neighbors trust your listing.',
-        style: TextStyle(color: Colors.black54, fontSize: 13),
-      ),
-      const SizedBox(height: 10),
-      if (_photos.isNotEmpty)
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: List.generate(_photos.length, (i) {
-            return Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    width: 76,
-                    height: 76,
-                    child: itemPhotoImage(
-                      _photos[i],
-                      category: _category,
-                      fit: BoxFit.cover,
-                      fallbackSize: 76,
-                      width: 76,
-                      height: 76,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 2,
-                  right: 2,
-                  child: GestureDetector(
-                    onTap: () => _removePhoto(i),
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: const BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }),
-        ),
-      if (_photos.isNotEmpty) const SizedBox(height: 10),
-      Row(
-        children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _photos.length >= _maxPhotos ? null : _pickFromGallery,
-              icon: const Icon(Icons.photo_library_outlined, size: 18),
-              label: const Text('Add from gallery'),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: _photos.length >= _maxPhotos ? null : _takePhoto,
-              icon: const Icon(Icons.camera_alt_outlined, size: 18),
-              label: const Text('Take a photo'),
-            ),
-          ),
-        ],
+      PhotoUploadField(
+        section: ListingSection.items,
+        photos: _photoEntries,
+        onChanged: _onPhotosChanged,
+        fallbackCategory: _category,
       ),
     ];
   }
@@ -703,9 +602,11 @@ class _ListItemScreenState extends State<ListItemScreen> {
               row('Category', _category),
               row(
                 'Photos',
-                _photos.isEmpty
+                _photoEntries.isEmpty
                     ? 'None — the category picture will be shown'
-                    : '${_photos.length} photo${_photos.length == 1 ? '' : 's'}',
+                    : '${_uploadedPhotoUrls.length} uploaded'
+                          '${_photoEntries.any((p) => p.isUploading) ? ' · still uploading' : ''}'
+                          '${_photoEntries.any((p) => p.isFailed) ? ' · some failed' : ''}',
               ),
               row('Description', _desc.text.trim()),
               row('Condition', _condition.text.trim()),

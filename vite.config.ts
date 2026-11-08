@@ -15,5 +15,14 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // Hermetic tests: a developer's .env.local (live Firebase/Cloudinary
+    // values) must never leak into import.meta.env during tests — the
+    // Cloudinary-only photo check in the shared validator keys off it.
+    env: {
+      VITE_CLOUDINARY_CLOUD_NAME: '',
+      VITE_FIREBASE_API_KEY: '',
+      VITE_FIREBASE_PROJECT_ID: '',
+      VITE_FIREBASE_APP_ID: '',
+    },
   },
 })

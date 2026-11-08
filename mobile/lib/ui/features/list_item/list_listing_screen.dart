@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/cloudinary_config.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/listing.dart';
+import '../../../data/services/photo_upload_service.dart';
 import '../../../state/app_state.dart';
 import '../explore/listing_section_view.dart';
+import 'photo_upload_field.dart';
 
 /// Phase 5: post a listing in the vehicles / properties / arenas
 /// sections. One scrolling form (the items flow keeps its 3-step
@@ -22,12 +24,15 @@ class _ListListingScreenState extends State<ListListingScreen> {
   final _title = TextEditingController();
   final _desc = TextEditingController();
   final _price = TextEditingController();
-  final _photoUrl = TextEditingController();
   ListingType _type = ListingType.rent;
   PriceUnit _unit = PriceUnit.day;
   bool _negotiable = false;
-  final List<String> _photos = [];
-  final ImagePicker _picker = ImagePicker();
+
+  /// Phase 4: photos upload to Cloudinary as they are picked; only
+  /// finished uploads (remote URLs) are published.
+  final List<ListingPhoto> _photoEntries = [];
+
+  List<String> get _uploadedPhotoUrls => uploadedUrlsOf(_photoEntries);
 
   // vehicles
   final _make = TextEditingController();
@@ -77,7 +82,6 @@ class _ListListingScreenState extends State<ListListingScreen> {
       _title,
       _desc,
       _price,
-      _photoUrl,
       _make,
       _model,
       _year,
@@ -104,10 +108,12 @@ class _ListListingScreenState extends State<ListListingScreen> {
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _pickPhotos() async {
-    final picked = await _picker.pickMultiImage();
-    if (picked.isEmpty) return;
-    setState(() => _photos.addAll(picked.map((x) => x.path)));
+  void _onPhotosChanged(List<ListingPhoto> next) {
+    setState(() {
+      _photoEntries
+        ..clear()
+        ..addAll(next);
+    });
   }
 
   Future<void> _publish() async {
@@ -121,15 +127,19 @@ class _ListListingScreenState extends State<ListListingScreen> {
     }
     final price = int.tryParse(_price.text.replaceAll(',', '').trim()) ?? 0;
     if (price <= 0) return _fail('Set a price above Rs 0.');
-    final minPhotos = switch (widget.section) {
-      ListingSection.vehicles || ListingSection.properties => 3,
-      _ => 0,
-    };
-    if (_photos.length < minPhotos) {
+    // Photos: only finished Cloudinary uploads count — a photo still
+    // uploading, failed, or never uploaded cannot satisfy the minimum.
+    if (_photoEntries.any((p) => p.isUploading)) {
+      return _fail('Wait for your photos to finish uploading.');
+    }
+    if (_photoEntries.any((p) => p.isFailed)) {
       return _fail(
-        'Add at least $minPhotos photos to publish in this section.',
+        'Some photos failed to upload — retry or remove them first.',
       );
     }
+    final uploadedUrls = _uploadedPhotoUrls;
+    final photoError = photoPublishError(widget.section, uploadedUrls);
+    if (photoError != null) return _fail(photoError);
 
     final now = DateTime.now();
     final id = 'l-new-${now.millisecondsSinceEpoch}';
@@ -159,7 +169,7 @@ class _ListListingScreenState extends State<ListListingScreen> {
           price: price,
           priceUnit: isSell ? PriceUnit.fixed : _unit,
           negotiable: isSell && _negotiable,
-          photos: List.of(_photos),
+          photos: uploadedUrls,
           location: location,
           createdAt: now,
           updatedAt: now,
@@ -187,7 +197,7 @@ class _ListListingScreenState extends State<ListListingScreen> {
           price: price,
           priceUnit: isSell ? PriceUnit.fixed : _unit,
           negotiable: isSell && _negotiable,
-          photos: List.of(_photos),
+          photos: uploadedUrls,
           location: location,
           createdAt: now,
           updatedAt: now,
@@ -224,7 +234,7 @@ class _ListListingScreenState extends State<ListListingScreen> {
           description: _desc.text.trim(),
           price: price,
           priceUnit: PriceUnit.hour,
-          photos: List.of(_photos),
+          photos: uploadedUrls,
           location: location,
           createdAt: now,
           updatedAt: now,
@@ -360,97 +370,10 @@ class _ListListingScreenState extends State<ListListingScreen> {
           const SizedBox(height: 8),
           ..._sectionFields(),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              const Text(
-                'Photos',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '${_photos.length}',
-                style: const TextStyle(color: Colors.black54, fontSize: 13),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (_photos.isNotEmpty)
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: List.generate(
-                _photos.length,
-                (i) => Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: SizedBox(
-                        width: 76,
-                        height: 76,
-                        child: itemPhotoImage(
-                          _photos[i],
-                          category: 'Other',
-                          fit: BoxFit.cover,
-                          fallbackSize: 76,
-                          width: 76,
-                          height: 76,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 2,
-                      right: 2,
-                      child: GestureDetector(
-                        onTap: () => setState(() => _photos.removeAt(i)),
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: const BoxDecoration(
-                            color: Colors.black54,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.close,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _pickPhotos,
-                  icon: const Icon(Icons.photo_library_outlined, size: 18),
-                  label: const Text('Add from gallery'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _field(_photoUrl, 'Image link', 'https://…'),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: () {
-                        final url = _photoUrl.text.trim();
-                        if (url.isEmpty) return;
-                        setState(() => _photos.add(url));
-                        _photoUrl.clear();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          PhotoUploadField(
+            section: widget.section,
+            photos: _photoEntries,
+            onChanged: _onPhotosChanged,
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/cloudinary_config.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/listing.dart';
@@ -83,10 +84,12 @@ class ListingCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 child: listing.photos.isNotEmpty
                     ? Image.network(
-                        listing.photos.first,
+                        cardImageUrl(listing.photos.first),
                         width: 72,
                         height: 72,
                         fit: BoxFit.cover,
+                        loadingBuilder: (context, child, progress) =>
+                            progress == null ? child : _emojiTile(),
                         errorBuilder: (_, _, _) => _emojiTile(),
                       )
                     : _emojiTile(),

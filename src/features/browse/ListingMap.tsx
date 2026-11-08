@@ -270,6 +270,7 @@ function MapPreviewCard({
           alt={listing.title}
           emoji={listingEmoji(listing)}
           className="h-20 w-20"
+          variant="thumb"
         />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col gap-1">

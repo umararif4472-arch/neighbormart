@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../cloudinary_config.dart';
 import '../theme/app_theme.dart';
 import '../utils/trust_score.dart';
 import '../../data/models/item.dart';
@@ -81,7 +82,9 @@ Widget itemPhotoImage(
 }) {
   if (isNetworkPhotoSource(source) || kIsWeb) {
     return Image.network(
-      source,
+      // Phase 4: Cloudinary photos are served with the card transform
+      // (smaller, auto-format); foreign URLs pass through unchanged.
+      cardImageUrl(source),
       fit: fit,
       width: width,
       height: height,
