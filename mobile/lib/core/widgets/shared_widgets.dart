@@ -390,6 +390,9 @@ class _SuccessDialogState extends State<_SuccessDialog>
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      // Scrollable: at very large text scales the title +
+      // content must scroll instead of overflowing the dialog.
+      scrollable: true,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       content: Column(
         mainAxisSize: MainAxisSize.min,

@@ -414,6 +414,9 @@ Future<void> _confirmBlock(BuildContext context, AppUser user) async {
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (_) => AlertDialog(
+      // Scrollable: at very large text scales the title +
+      // content must scroll instead of overflowing the dialog.
+      scrollable: true,
       title: Text('Block $firstName?'),
       content: Text(
         'Their listings will be hidden from your Explore and section '

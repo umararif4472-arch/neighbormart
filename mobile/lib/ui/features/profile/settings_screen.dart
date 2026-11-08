@@ -94,6 +94,9 @@ class SettingsScreen extends StatelessWidget {
               final confirm = await showDialog<bool>(
                 context: context,
                 builder: (_) => AlertDialog(
+                  // Scrollable: at very large text scales the title +
+                  // content must scroll instead of overflowing the dialog.
+                  scrollable: true,
                   title: const Text('Reset demo data?'),
                   content: const Text(
                     'Everything goes back to the original seed: users, items, requests, reviews, and messages.',
@@ -203,6 +206,9 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      // Scrollable: at very large text scales the title +
+      // content must scroll instead of overflowing the dialog.
+      scrollable: true,
       title: const Text('Delete my account?'),
       content: Column(
         mainAxisSize: MainAxisSize.min,

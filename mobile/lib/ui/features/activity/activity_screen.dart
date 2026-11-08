@@ -87,6 +87,9 @@ void _runWithTierWatch(
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        // Scrollable: at very large text scales the title +
+        // content must scroll instead of overflowing the dialog.
+        scrollable: true,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

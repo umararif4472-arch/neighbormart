@@ -3,6 +3,7 @@
 @Timeout(Duration(minutes: 20))
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -88,7 +89,17 @@ class _Case {
   final AppState Function() makeState;
   final Widget Function(AppState state) build;
   final Future<void> Function(WidgetTester tester)? interact;
-  const _Case(this.name, this.makeState, this.build, {this.interact});
+
+  /// Runs after the per-config prefs reset, before the pump —
+  /// e.g. to seed a saved draft so a restore dialog renders.
+  final Future<void> Function()? setUp;
+  const _Case(
+    this.name,
+    this.makeState,
+    this.build, {
+    this.interact,
+    this.setUp,
+  });
 }
 
 void main() {
@@ -247,6 +258,34 @@ void main() {
       (_) => const ListItemScreen(),
     ),
     _Case(
+      'ListItemScreen (resume draft dialog)',
+      signedIn,
+      (_) => const ListItemScreen(),
+      setUp: () async {
+        // A half-finished draft in prefs makes the screen open
+        // with its "Resume your draft?" AlertDialog — which itself
+        // overflowed at 320x568 @ 2.0x before dialogs were made
+        // scrollable.
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'listItemDraftV1',
+          jsonEncode({
+            'title': 'Cordless Drill',
+            'description': 'Sturdy drill, bits included',
+            'condition': 'Good, works well',
+            'category': 'Tools',
+            'maxDays': '7',
+            'deposit': '',
+            'fee': '',
+            'pickupPref': 'either',
+            'pickupNotes': '',
+            'photos': <String>[],
+            'step': 1,
+          }),
+        );
+      },
+    ),
+    _Case(
       'ListItemScreen (wizard all steps)',
       signedIn,
       (_) => const ListItemScreen(),
@@ -349,6 +388,11 @@ void main() {
     final noise = <String>[];
     final state = c.makeState();
     for (final cfg in _configs) {
+      // Deterministic storage for every config: without this, a
+      // draft auto-saved by one config's interactions leaks into
+      // the next config's first mount (changing what renders).
+      SharedPreferences.setMockInitialValues({});
+      await c.setUp?.call();
       tester.view.physicalSize = cfg.size;
       tester.view.devicePixelRatio = 1.0;
       final previousOnError = FlutterError.onError;

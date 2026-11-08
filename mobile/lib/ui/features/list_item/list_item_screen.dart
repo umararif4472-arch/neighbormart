@@ -128,6 +128,9 @@ class _ListItemScreenState extends State<ListItemScreen> {
     final resume = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
+        // Scrollable: at very large text scales the title +
+        // content must scroll instead of overflowing the dialog.
+        scrollable: true,
         title: const Text('Resume your draft?'),
         content: const Text(
           'You left a listing half-finished. Pick it up where you left off, or start over.',
@@ -349,63 +352,59 @@ class _ListItemScreenState extends State<ListItemScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Form(
               key: _formKey,
-              child: Column(
+              // One scrolling region for header + step fields: the
+              // step chips wrap taller at large text scales, and as
+              // a fixed header above the list they could exceed a
+              // short viewport (e.g. keyboard open) and overflow.
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: List.generate(3, (i) {
-                            final active = i == _step;
-                            final done = i < _step;
-                            return Expanded(
-                              child: Padding(
-                                padding: EdgeInsets.only(right: i < 2 ? 6 : 0),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 7,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: active || done
-                                        ? Theme.of(context).colorScheme.primary
-                                              .withValues(alpha: 0.14)
-                                        : Theme.of(context)
-                                              .colorScheme
-                                              .surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    '${i + 1}. ${_stepNames[i]}',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: active
-                                          ? FontWeight.w800
-                                          : FontWeight.w600,
-                                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: List.generate(3, (i) {
+                          final active = i == _step;
+                          final done = i < _step;
+                          return Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(right: i < 2 ? 6 : 0),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: active || done
+                                      ? Theme.of(context).colorScheme.primary
+                                            .withValues(alpha: 0.14)
+                                      : Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  '${i + 1}. ${_stepNames[i]}',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: active
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
                                   ),
                                 ),
                               ),
-                            );
-                          }),
-                        ),
-                        const SizedBox(height: 10),
-                        LinearProgressIndicator(value: (_step + 1) / 3),
-                      ],
-                    ),
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 10),
+                      LinearProgressIndicator(value: (_step + 1) / 3),
+                    ],
                   ),
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                      children: [
-                        if (_step == 0) ..._detailsStep(),
-                        if (_step == 1) ..._termsStep(),
-                        if (_step == 2) ..._reviewStep(),
-                      ],
-                    ),
-                  ),
+                  const SizedBox(height: 16),
+                  if (_step == 0) ..._detailsStep(),
+                  if (_step == 1) ..._termsStep(),
+                  if (_step == 2) ..._reviewStep(),
                 ],
               ),
             ),

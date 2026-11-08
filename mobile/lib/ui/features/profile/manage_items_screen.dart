@@ -268,6 +268,9 @@ class ManageItemsScreen extends StatelessWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        // Scrollable: at very large text scales the title +
+        // content must scroll instead of overflowing the dialog.
+        scrollable: true,
         title: const Text('Delete this listing?'),
         content: Text(
           '"$title" will be removed from Explore. Pending requests for it are declined.',

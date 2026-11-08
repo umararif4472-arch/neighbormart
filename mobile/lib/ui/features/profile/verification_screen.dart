@@ -125,6 +125,9 @@ class _CodeDialogState extends State<_CodeDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      // Scrollable: at very large text scales the title +
+      // content must scroll instead of overflowing the dialog.
+      scrollable: true,
       title: Text('Verify your ${widget.isPhone ? 'phone' : 'email'}'),
       content: Column(
         mainAxisSize: MainAxisSize.min,

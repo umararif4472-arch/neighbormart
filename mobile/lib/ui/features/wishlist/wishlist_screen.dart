@@ -177,6 +177,9 @@ class _WishlistCard extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
+          // Scrollable: at very large text scales the title +
+          // content must scroll instead of overflowing the dialog.
+          scrollable: true,
           title: const Text('Pledge points'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
