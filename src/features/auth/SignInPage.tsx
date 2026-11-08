@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { authApi, isFirebaseConfigured, toErrorMessage } from '@/services'
@@ -7,12 +7,19 @@ import { needsOnboarding, onboardingSkippedThisSession } from '@/utils/onboardin
 import { Button } from '@/components/ui/Button'
 import { TextField } from '@/components/ui/Field'
 import { Spinner } from '@/components/ui/Spinner'
+import { APP_NAME } from '@/config'
+import { cn } from '@/utils/cn'
+import logoSymbol from '@/assets/brand/logo-symbol.svg'
 
 /**
- * Sign-in (Phase 6) — the animated login experience: a warm drifting
- * mesh hero with floating section icons, a popping logo and a staggered
- * tagline reveal on the left; the sign-in card on the right. All motion
- * is CSS (index.css, nm-*) and honors prefers-reduced-motion.
+ * Sign-in (Phase 6, Open Door brand pass) — the animated login
+ * experience: a warm drifting mesh hero (charcoal in dark mode) with
+ * floating section icons tinted in the kit's section accents, the
+ * door logo popping in, and the brand tagline revealing line by line
+ * over a calm veil; the sign-in card slides up on the right, shakes
+ * on a failed attempt, and the page fades out on success. All motion
+ * is CSS (index.css, nm-*), pauses when the tab is hidden, and honors
+ * prefers-reduced-motion.
  *
  * Google is the primary path — a big, official-style button with
  * default / hover / loading / disabled states. Email/password is the
@@ -28,6 +35,10 @@ const FLOATING_ICONS: Array<{
   className: string
   delay: string
   tilt: string
+  /** Brand accent tint (exact kit hexes, graphical use). */
+  tint: string
+  /** Drift duration — varied per icon for a parallax feel. */
+  duration: string
 }> = [
   {
     emoji: '🧰',
@@ -35,6 +46,8 @@ const FLOATING_ICONS: Array<{
     className: 'left-[8%] top-[16%]',
     delay: '0s',
     tilt: '-6deg',
+    tint: 'bg-brand-items/25',
+    duration: '6.5s',
   },
   {
     emoji: '🚗',
@@ -42,6 +55,8 @@ const FLOATING_ICONS: Array<{
     className: 'right-[10%] top-[22%]',
     delay: '0.8s',
     tilt: '5deg',
+    tint: 'bg-brand-vehicles/25',
+    duration: '5.2s',
   },
   {
     emoji: '🏠',
@@ -49,6 +64,8 @@ const FLOATING_ICONS: Array<{
     className: 'left-[14%] bottom-[20%]',
     delay: '1.6s',
     tilt: '4deg',
+    tint: 'bg-brand-properties/25',
+    duration: '7.4s',
   },
   {
     emoji: '🏟️',
@@ -56,6 +73,8 @@ const FLOATING_ICONS: Array<{
     className: 'right-[14%] bottom-[26%]',
     delay: '0.4s',
     tilt: '-5deg',
+    tint: 'bg-brand-arenas/25',
+    duration: '5.9s',
   },
   {
     emoji: '💬',
@@ -63,6 +82,8 @@ const FLOATING_ICONS: Array<{
     className: 'left-[42%] top-[10%]',
     delay: '2.1s',
     tilt: '3deg',
+    tint: 'bg-brand-amber/25',
+    duration: '6.8s',
   },
 ]
 
@@ -102,6 +123,18 @@ export function SignInPage() {
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState<'google' | 'email' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /** Card shake on a failed attempt (re-triggered per failure). */
+  const [shaking, setShaking] = useState(false)
+  /** Success exit: the page fades/slides out before navigating. */
+  const [leaving, setLeaving] = useState(false)
+  /** Background motion pauses while the tab is hidden. */
+  const [paused, setPaused] = useState(false)
+
+  useEffect(() => {
+    const onVisibility = () => setPaused(document.hidden)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
 
   /** Where a freshly signed-in user goes: onboarding first, if needed. */
   const destinationFor = (user: User) =>
@@ -115,9 +148,20 @@ export function SignInPage() {
   }
 
   const finish = (user: User) => {
-    // Kick hydration so the account view replaces the guest view, then go.
-    retryHydration()
-    navigate(destinationFor(user), { replace: true })
+    // Smooth exit: fade/slide the page out, then swap to the account
+    // view (hydration re-run) and navigate to the destination.
+    setLeaving(true)
+    window.setTimeout(() => {
+      retryHydration()
+      navigate(destinationFor(user), { replace: true })
+    }, 280)
+  }
+
+  const fail = (err: unknown) => {
+    // Errors arrive pre-friendly from the auth service — never raw codes.
+    setError(toErrorMessage(err))
+    setBusy(null)
+    setShaking(true)
   }
 
   const handleGoogle = async () => {
@@ -127,8 +171,7 @@ export function SignInPage() {
       const user = await authApi.signInWithGoogle()
       finish(user)
     } catch (err) {
-      setError(toErrorMessage(err))
-      setBusy(null)
+      fail(err)
     }
   }
 
@@ -143,44 +186,60 @@ export function SignInPage() {
           : await authApi.signInWithEmail(email, password)
       finish(user)
     } catch (err) {
-      setError(toErrorMessage(err))
-      setBusy(null)
+      fail(err)
     }
   }
 
   return (
-    <div className="grid gap-6 py-4 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
+    <div
+      className={cn(
+        'grid gap-6 py-4 transition-all duration-300 lg:grid-cols-[1.05fr_1fr] lg:gap-10',
+        leaving && 'translate-y-2 opacity-0',
+      )}
+    >
       {/* Animated hero — decorative on small screens it becomes a banner. */}
       <section
         aria-hidden
-        className="nm-mesh relative overflow-hidden rounded-[2rem] px-6 py-10 text-cream shadow-sm sm:px-10 lg:min-h-[560px] lg:py-14"
+        className={cn(
+          'nm-mesh relative overflow-hidden rounded-[2rem] px-6 py-10 text-brand-cream shadow-sm sm:px-10 lg:min-h-[560px] lg:py-14',
+          paused && 'nm-paused',
+        )}
       >
+        {/* Calm veil: keeps hero text at WCAG AA over the brightest
+            part of the drifting mesh, in both themes. */}
+        <div className="absolute inset-0 bg-terracotta-950/20 dark:bg-black/30" />
         {FLOATING_ICONS.map((icon) => (
           <span
             key={icon.label}
             title={icon.label}
-            className={`nm-float absolute hidden h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-2xl shadow-lg backdrop-blur-sm sm:flex ${icon.className}`}
-            style={{ animationDelay: icon.delay, ['--nm-tilt' as string]: icon.tilt }}
+            className={`nm-float absolute hidden h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-lg backdrop-blur-sm sm:flex ${icon.tint} ${icon.className}`}
+            style={{
+              animationDelay: icon.delay,
+              animationDuration: icon.duration,
+              ['--nm-tilt' as string]: icon.tilt,
+            }}
           >
             {icon.emoji}
           </span>
         ))}
         <div className="relative flex h-full flex-col items-start justify-center gap-5">
-          <span className="nm-logo-pop flex h-16 w-16 items-center justify-center rounded-3xl bg-cream shadow-lg">
-            <svg viewBox="0 0 24 24" className="h-9 w-9" fill="#A44B2D" aria-hidden>
-              <path d="M12 4 3 11h2.5v8H10v-5h4v5h4.5v-8H21z" />
-            </svg>
-          </span>
-          <p className="font-display text-3xl font-extrabold leading-tight sm:text-4xl">
+          <img
+            src={logoSymbol}
+            alt=""
+            className="nm-logo-pop h-16 w-16 shadow-lg"
+            width={64}
+            height={64}
+          />
+          <p className="font-display text-3xl font-bold leading-tight sm:text-4xl">
             <span className="nm-fade-up block" style={{ animationDelay: '0.15s' }}>
-              Borrow, rent, buy —
+              Everything
             </span>
             <span className="nm-fade-up block" style={{ animationDelay: '0.3s' }}>
-              right on your street.
+              behind the door
             </span>
           </p>
           <p
-            className="nm-fade-up max-w-sm text-sm leading-relaxed text-cream/85"
+            className="nm-fade-up max-w-sm text-sm leading-relaxed text-brand-cream/85"
             style={{ animationDelay: '0.45s' }}
           >
             Tools, cars, homes and sports arenas from neighbors you can trust — with real reviews,
@@ -201,12 +260,16 @@ export function SignInPage() {
 
       {/* Sign-in card */}
       <section
-        className="nm-fade-up flex flex-col justify-center gap-5 rounded-[2rem] border border-bark/10 bg-surface p-6 shadow-sm sm:p-8"
+        className={cn(
+          'nm-fade-up flex flex-col justify-center gap-5 rounded-[2rem] border border-bark/10 bg-surface p-6 shadow-sm sm:p-8',
+          shaking && 'nm-shake',
+        )}
         style={{ animationDelay: '0.2s' }}
+        onAnimationEnd={() => setShaking(false)}
       >
         <div className="flex flex-col gap-1.5">
-          <h1 className="font-display text-2xl font-extrabold text-bark">
-            {mode === 'signin' ? 'Welcome back' : 'Join NeighborMart'}
+          <h1 className="font-display text-2xl font-bold text-bark">
+            {mode === 'signin' ? 'Welcome back' : `Join ${APP_NAME}`}
           </h1>
           <p className="text-sm leading-relaxed text-bark-light">
             Sign in to list things, message neighbors, and book deals. Browsing stays open to
@@ -222,12 +285,12 @@ export function SignInPage() {
           className="flex h-[52px] w-full cursor-pointer items-center justify-center gap-3 rounded-full border border-bark/20 bg-white px-6 text-base font-semibold text-[#3c4043] shadow-sm transition hover:border-bark/35 hover:shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta-600 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
         >
           {busy === 'google' ? <Spinner size="sm" /> : <GoogleGlyph />}
-          {busy === 'google' ? 'Signing in with Google…' : 'Continue with Google'}
+          {busy === 'google' ? 'Signing in with Google...' : 'Continue with Google'}
         </button>
 
         <div className="flex items-center gap-3 text-xs font-semibold text-bark-light">
           <span className="h-px flex-1 bg-bark/10" />
-          or with email
+          or
           <span className="h-px flex-1 bg-bark/10" />
         </div>
 
@@ -284,7 +347,7 @@ export function SignInPage() {
         <p className="text-center text-sm text-bark-light">
           {mode === 'signin' ? (
             <>
-              New to NeighborMart?{' '}
+              New to {APP_NAME}?{' '}
               <button
                 type="button"
                 className="font-semibold text-terracotta-700 dark:text-terracotta-300 underline-offset-2 hover:underline"

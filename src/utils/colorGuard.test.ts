@@ -149,9 +149,32 @@ const PAIRS: Array<[string, string, string, number]> = [
   ['amber-900 on amber-50', '#78350f', '#fffbeb', AA],
   ['moss-900 on moss-50', '#1f311c', '#f2f6ef', AA],
   ['terracotta-900 on terracotta-50', '#4c2518', '#faf1eb', AA],
+  // Open Door brand pairs (kit hexes — static across themes; the door
+  // intro and mesh hero set cream text on these exact fields).
+  ['brand cream on terracotta (intro / hero)', '#f6ebdd', '#a44b2d', AA],
+  ['brand cream on door dark', '#f6ebdd', '#5e2815', AA],
+  ['brand ink on kit cream', '#3a2218', '#f6ebdd', AA],
+  ['brand amber on dark canvas', '#d99a2b', dark['--nm-canvas']!, AA],
+  ['brand cream on dark canvas (dark wordmark)', '#f6ebdd', dark['--nm-canvas']!, AA],
+  ['kit "Mart" #d9805f on dark canvas', '#d9805f', dark['--nm-canvas']!, AA],
+  ['terracotta-700 button text on brand cream', '#863d24', '#f6ebdd', AA],
 ]
 
 describe('button terracotta rule', () => {
+  it('never sets amber text on a terracotta background (2.38:1 — use cream instead)', () => {
+    const bad: string[] = []
+    for (const file of sourceFiles(SRC)) {
+      const text = readFileSync(file, 'utf8')
+      for (const m of text.matchAll(/className=(?:"([^"]*)"|'([^']*)'|`([^`]*)`)/g)) {
+        const cls = m[1] ?? m[2] ?? m[3] ?? ''
+        if (/bg-terracotta-\d+/.test(cls) && /text-(amber|brand-amber|brand-items)(?!\w)/.test(cls)) {
+          bad.push(file + ' :: ' + cls.slice(0, 60))
+        }
+      }
+    }
+    expect(bad).toEqual([])
+  })
+
   it('never pairs bg-terracotta-500 with white text (buttons use terracotta-600, ~5.8:1)', () => {
     const bad: string[] = []
     for (const file of sourceFiles(SRC)) {

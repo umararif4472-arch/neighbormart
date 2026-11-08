@@ -14,6 +14,7 @@ import { TrustTierLadder } from '@/components/ui/Trust'
 import { cn } from '@/utils/cn'
 import { sectionAccent } from '@/utils/sectionAccent'
 import { usePageMeta } from '@/hooks/usePageMeta'
+import { APP_NAME, APP_TAGLINE } from '@/config'
 import { excludeBlockedOwners } from '@/utils/blocking'
 
 const HOW_IT_WORKS = [
@@ -65,9 +66,9 @@ const FAQS = [
 export function LandingPage() {
   const { state } = useApp()
   usePageMeta({
-    title: 'NeighborMart — borrow, rent, buy & sell near you',
+    title: `${APP_NAME} — ${APP_TAGLINE}`,
     description:
-      'Tools, vehicles, homes and sports arenas from people nearby — borrow them free, rent them, or buy them outright.',
+      'Everything behind the door: tools, vehicles, homes and sports arenas from people nearby — borrow them free, rent them, or buy them outright.',
   })
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
@@ -130,6 +131,9 @@ export function LandingPage() {
             NeighborMart is your neighborhood marketplace: tools, gear, vehicles, homes, and sports
             grounds from people nearby — borrow them free, rent them, or buy them outright. No
             strangers, just neighbors building trust.
+          </p>
+          <p className="font-display text-lg font-semibold text-terracotta-700 dark:text-terracotta-300">
+            {APP_TAGLINE}
           </p>
           <form
             role="search"
