@@ -1,5 +1,5 @@
 import {
-  addDoc,
+  setDoc,
   collection,
   doc,
   getDoc,
@@ -8,6 +8,8 @@ import {
   query,
   where,
 } from 'firebase/firestore/lite'
+import { bumpMessageQuota } from './rateLimit'
+import { sanitizeMultiline } from '@/utils/sanitize'
 import type { AppNotification, BorrowRequest, Listing, Message } from '@/types'
 import { ApiError } from '../errors'
 import { getDb } from '../firebase'
@@ -57,10 +59,14 @@ export async function sendMessage(
   const message: Omit<Message, 'id'> = {
     requestId,
     senderId,
-    body: trimmed,
+    body: sanitizeMultiline(trimmed, 1000),
     createdAt: new Date().toISOString(),
   }
-  const ref = await addDoc(collection(getDb(), COLLECTIONS.messages), stripUndefined(message))
+  // Phase 8: mint the id client-side; the rate-limit counter names it
+  // and the rules check the message quota against that counter.
+  const ref = doc(collection(getDb(), COLLECTIONS.messages))
+  await bumpMessageQuota(senderId, ref.id)
+  await setDoc(ref, stripUndefined(message))
 
   // Notify the other party.
   const recipientId = isBorrower ? listing.ownerId : request.borrowerId

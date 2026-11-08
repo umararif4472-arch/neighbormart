@@ -8,10 +8,12 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/borrow_request.dart';
 import '../../../data/models/listing.dart';
+import '../../../data/models/report.dart';
 import '../../../state/app_state.dart';
 import '../explore/listing_section_view.dart';
 import '../item_detail/item_detail_screen.dart';
 import '../profile/user_profile_screen.dart';
+import '../safety/report_sheet.dart';
 
 /// Phase 5 generic listing detail for every section. Items forward to
 /// the original borrow flow; vehicles/properties get rent-period and
@@ -35,7 +37,31 @@ class ListingDetailScreen extends StatelessWidget {
     final trust = owner != null ? state.trustFor(owner) : null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(kSectionLabel[listing.section] ?? 'Listing')),
+      appBar: AppBar(
+        title: Text(kSectionLabel[listing.section] ?? 'Listing'),
+        actions: [
+          if (!isMine)
+            PopupMenuButton<String>(
+              tooltip: 'More actions',
+              onSelected: (value) {
+                if (value != 'report') return;
+                ReportSheet.show(
+                  context,
+                  targetType: ReportTargetType.listing,
+                  targetId: listing.id,
+                  targetOwnerId: listing.ownerId,
+                  targetLabel: 'this listing',
+                );
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'report',
+                  child: Text('Report this listing'),
+                ),
+              ],
+            ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [

@@ -1,6 +1,7 @@
 import {
   createContext,
   useCallback,
+  useEffect,
   useContext,
   useMemo,
   useRef,
@@ -52,6 +53,8 @@ const TONE_STYLES: Record<ToastTone, string> = {
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  // Global error handler hookup (Phase 8): uncaught errors anywhere
+  // surface as a danger toast instead of failing silently.
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const nextId = useRef(1)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -72,6 +75,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }, options.durationMs ?? 6000)
     timers.current.push(timer)
   }, [])
+
+  useEffect(() => {
+    const onGlobalError = (event: Event) =>
+      push({
+        title: (event as CustomEvent<string>).detail ?? 'Something went wrong',
+        tone: 'danger',
+        emoji: '🚨',
+      })
+    window.addEventListener('neighbormart:global-error', onGlobalError)
+    return () => window.removeEventListener('neighbormart:global-error', onGlobalError)
+  }, [push])
 
   const value = useMemo(() => ({ push }), [push])
 

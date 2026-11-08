@@ -1,5 +1,13 @@
 /** Typed service errors — the only error shape components should handle. */
-export type ApiErrorCode = 'not-found' | 'invalid' | 'forbidden' | 'conflict' | 'unknown'
+export type ApiErrorCode =
+  | 'not-found'
+  | 'invalid'
+  | 'forbidden'
+  | 'conflict'
+  | 'unknown'
+  | 'unauthenticated'
+  | 'rate-limited'
+  | 'auth/requires-recent-login'
 
 export class ApiError extends Error {
   readonly code: ApiErrorCode

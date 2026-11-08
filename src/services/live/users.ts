@@ -67,3 +67,26 @@ export async function completeOnboarding(
   if (!user) throw new ApiError('not-found', 'User not found.')
   return user
 }
+
+/** Blocking (Phase 8) — owner-only, mirrored by Firestore rules. */
+export async function setBlocked(
+  userId: string,
+  actorId: string,
+  targetId: string,
+  blocked: boolean,
+): Promise<User> {
+  if (userId !== actorId) {
+    throw new ApiError('forbidden', 'Only the account owner can manage their block list.')
+  }
+  if (targetId === userId) throw new ApiError('invalid', 'You cannot block yourself.')
+  const db = getDb()
+  const ref = doc(db, COLLECTIONS.users, userId)
+  const snap = await getDoc(ref)
+  const user = fromDoc<User>(snap)
+  if (!user) throw new ApiError('not-found', 'User not found.')
+  const current = new Set(user.blockedUserIds ?? [])
+  if (blocked) current.add(targetId)
+  else current.delete(targetId)
+  await updateDoc(ref, { blockedUserIds: [...current] })
+  return { ...user, blockedUserIds: [...current] }
+}

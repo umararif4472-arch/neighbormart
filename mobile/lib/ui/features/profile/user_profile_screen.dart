@@ -5,12 +5,14 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/trust_score.dart';
 import '../../../core/widgets/reviews_list.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../../../data/models/report.dart';
 import '../../../data/models/user.dart';
 import '../../../state/app_state.dart';
 import '../item_detail/item_detail_screen.dart';
 import '../messages/chat_screen.dart';
 import '../not_found/not_found_screen.dart';
 import '../onboarding/profile_setup_screen.dart';
+import '../safety/report_sheet.dart';
 import '../trust/trust_explainer_screen.dart';
 import 'edit_profile_screen.dart';
 import 'manage_items_screen.dart';
@@ -85,18 +87,90 @@ class UserProfileScreen extends StatelessWidget {
           ],
           if (!isOwn) ...[
             const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ChatScreen.forUser(otherUserId: user.id),
-                  ),
+            if (state.isBlocked(user.id)) ...[
+              // Phase 8 blocked state: banner + the way back.
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                icon: const Icon(Icons.chat_bubble_outline),
-                label: Text('Message ${user.name.split(' ').first}'),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.block,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'You blocked this neighbor — their listings are '
+                        'hidden from your Explore.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    context.read<AppState>().unblockUser(user.id);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '${user.name.split(' ').first} unblocked.',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.lock_open_outlined),
+                  label: const Text('Unblock'),
+                ),
+              ),
+            ] else ...[
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen.forUser(otherUserId: user.id),
+                    ),
+                  ),
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  label: Text('Message ${user.name.split(' ').first}'),
+                ),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => ReportSheet.show(
+                        context,
+                        targetType: ReportTargetType.user,
+                        targetId: user.id,
+                        targetOwnerId: user.id,
+                        targetLabel: user.name.split(' ').first,
+                      ),
+                      icon: const Icon(Icons.flag_outlined, size: 18),
+                      label: const Text('Report user'),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => _confirmBlock(context, user),
+                      icon: const Icon(Icons.block, size: 18),
+                      label: const Text('Block user'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
           const SizedBox(height: 16),
           Card(
@@ -328,6 +402,36 @@ class UserProfileScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Block confirmation: explains the effect before it happens, then
+/// confirms with a snackbar once done.
+Future<void> _confirmBlock(BuildContext context, AppUser user) async {
+  final firstName = user.name.split(' ').first;
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: Text('Block $firstName?'),
+      content: Text(
+        'Their listings will be hidden from your Explore and section '
+        'lists. You can unblock them anytime from Settings.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Block'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+  context.read<AppState>().blockUser(user.id);
+  ScaffoldMessenger.of(context)
+      .showSnackBar(SnackBar(content: Text('$firstName blocked.')));
 }
 
 class _VerifiedRow extends StatelessWidget {

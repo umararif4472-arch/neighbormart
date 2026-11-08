@@ -17,6 +17,7 @@ import { ListingCard } from '@/components/listings/ListingCard'
 import { ListIcon, MapPinIcon } from '@/components/icons'
 import { cn } from '@/utils/cn'
 import { sectionAccent } from '@/utils/sectionAccent'
+import { excludeBlockedOwners } from '@/utils/blocking'
 import {
   DEFAULT_BROWSE_FILTERS,
   FilterBar,
@@ -88,7 +89,12 @@ export function BrowsePage({ routeSection }: { routeSection?: ListingSection } =
     [debouncedQuery, filters, section],
   )
 
-  const visible = useFilteredListings(listings, listingFilters, origin, sort)
+  const filteredVisible = useFilteredListings(listings, listingFilters, origin, sort)
+  // Phase 8: blocked neighbors' listings never render.
+  const visible = useMemo(
+    () => excludeBlockedOwners(filteredVisible, currentUser?.blockedUserIds),
+    [filteredVisible, currentUser?.blockedUserIds],
+  )
   const sectionCount = useMemo(
     () => listings.filter((l) => l.section === section).length,
     [listings, section],

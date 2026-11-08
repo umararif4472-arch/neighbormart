@@ -19,6 +19,7 @@ import * as mockRequests from './requests'
 import * as mockReviews from './reviews'
 import * as mockNotifications from './notifications'
 import * as mockMessages from './messages'
+import * as mockSafety from './safety'
 import * as liveAuth from './live/auth'
 import * as liveUsers from './live/users'
 import * as liveListings from './live/listings'
@@ -26,6 +27,7 @@ import * as liveRequests from './live/requests'
 import * as liveReviews from './live/reviews'
 import * as liveNotifications from './live/notifications'
 import * as liveMessages from './live/messages'
+import * as liveSafety from './live/safety'
 import { isFirebaseConfigured } from './firebase'
 
 export { isFirebaseConfigured } from './firebase'
@@ -51,8 +53,12 @@ export const notificationsApi: typeof mockNotifications = isFirebaseConfigured
 export const messagesApi: typeof mockMessages = isFirebaseConfigured
   ? (liveMessages as unknown as typeof mockMessages)
   : mockMessages
+export const safetyApi: typeof mockSafety = isFirebaseConfigured
+  ? (liveSafety as unknown as typeof mockSafety)
+  : mockSafety
 
 export { ApiError, isApiError, toErrorMessage } from './errors'
 export type { CreateRequestInput, ReportIssueInput, RequestMutationResult } from './requests'
 export type { CreateReviewInput, ReviewMutationResult } from './reviews'
 export type { SendMessageResult } from './messages'
+export type { CreateReportInput } from './safety'

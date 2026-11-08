@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>You're offline — NeighborMart</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fbf7f0;
+        color: #44392f;
+        font-family: 'Segoe UI', 'Trebuchet MS', system-ui, sans-serif;
+        text-align: center;
+        padding: 24px;
+      }
+      .card {
+        max-width: 420px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+      .mark {
+        width: 72px;
+        height: 72px;
+        border-radius: 20px;
+        background: #a44b2d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      h1 {
+        font-family: Georgia, 'Trebuchet MS', serif;
+        font-size: 28px;
+        margin: 8px 0 0;
+      }
+      p {
+        color: #7a6a5b;
+        line-height: 1.55;
+        margin: 0;
+      }
+      button {
+        margin-top: 10px;
+        border: 0;
+        border-radius: 999px;
+        background: #a44b2d;
+        color: #fff;
+        font-weight: 600;
+        font-size: 15px;
+        padding: 12px 26px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="40" height="40" fill="#FBF7F0">
+          <path d="M12 4 3 11h2.5v8H10v-5h4v5h4.5v-8H21z" />
+        </svg>
+      </div>
+      <h1>You're offline</h1>
+      <p>
+        NeighborMart needs a connection to show live listings near you. Check your internet and try
+        again — your neighbors aren't going anywhere.
+      </p>
+      <button onclick="location.reload()">Try again</button>
+    </div>
+  </body>
+</html>

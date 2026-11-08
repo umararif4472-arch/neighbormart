@@ -14,7 +14,11 @@ import '../models/user.dart';
 /// Throws [AuthException] with a friendly message on any failure.
 class AuthException implements Exception {
   final String message;
-  const AuthException(this.message);
+
+  /// The Firebase Auth error code when there is one (e.g.
+  /// 'requires-recent-login' during account deletion), else null.
+  final String? code;
+  const AuthException(this.message, {this.code});
   @override
   String toString() => message;
 }
@@ -142,6 +146,22 @@ class FirebaseAuthService {
     return _userFromMap(fbUser.uid, data);
   }
 
+  /// Permanently remove the signed-in user's Firebase Auth credential
+  /// (Phase 8 account deletion). Callers delete the user's DATA first
+  /// and this LAST: Firebase refuses with 'requires-recent-login' when
+  /// the session is old, and the caller surfaces that honestly rather
+  /// than half-deleting in silence.
+  Future<void> deleteCurrentAuthUser() async {
+    _requireReady();
+    final user = _auth.currentUser;
+    if (user == null) return;
+    try {
+      await user.delete();
+    } on fb.FirebaseAuthException catch (e) {
+      throw AuthException(_friendlyError(e), code: e.code);
+    }
+  }
+
   /// Best-effort write-back of the Phase 6 profile setup to the
   /// user's Firestore doc. Local state is the source of truth for the
   /// UI; this keeps the shared dataset in step when Firebase is live.
@@ -172,6 +192,10 @@ class FirebaseAuthService {
       // set up yet so those users get the one-time setup prompt.
       onboardingCompleted: data['onboardingCompleted'] as bool? ?? false,
       interests: ((data['interests'] as List<dynamic>?) ?? const [])
+          .map((e) => e.toString())
+          .toList(),
+      // Phase 8: docs written before blocking existed have no field.
+      blockedUserIds: ((data['blockedUserIds'] as List<dynamic>?) ?? const [])
           .map((e) => e.toString())
           .toList(),
       neighborhood: data['neighborhood'] as String? ?? '',
@@ -214,6 +238,8 @@ class FirebaseAuthService {
           return 'That email address doesn’t look right.';
         case 'too-many-requests':
           return 'Too many attempts — wait a moment and try again.';
+        case 'requires-recent-login':
+          return 'For security, sign in again before deleting your account.';
       }
     }
     if (error is GoogleSignInException) {

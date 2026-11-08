@@ -99,6 +99,17 @@ export interface User {
   onboardingCompleted?: boolean
   /** Marketplace interests picked during onboarding (chip labels). */
   interests?: string[]
+  /**
+   * Phase 8 safety: users this account has blocked. Their listings are
+   * hidden from browse/landing and they cannot be dealt with.
+   */
+  blockedUserIds?: string[]
+  /**
+   * Phase 8 moderation: only 'admin' accounts can read the reports
+   * queue and resolve reports. Set manually in Firestore — never by
+   * the client (rules prevent self-promotion).
+   */
+  role?: 'admin' | 'member'
   /** 0–1 */
   responseRate: number
   /** Average response time in minutes ("typically replies in ~45 min"). */

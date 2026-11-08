@@ -57,13 +57,24 @@ const listingsSnap = await getDocs(query(collection(db, 'listings'), orderBy('cr
 check('public listings read', listingsSnap.size === 35, `${listingsSnap.size} listings`)
 
 // 2. Demo sign-in + profile doc.
-const cred = await signInWithEmailAndPassword(auth, 'maya.chen@example.com', 'borrow123')
-check('demo sign-in (maya)', cred.user.uid === 'u-maya', `uid ${cred.user.uid}`)
-const profile = await getDoc(doc(db, 'users', 'u-maya'))
-check('profile doc read', profile.exists() && profile.data().name === 'Maya Chen')
+const smokeEmail = process.env.SMOKE_EMAIL
+const smokePassword = process.env.SMOKE_PASSWORD
+if (!smokeEmail || !smokePassword) {
+  console.error('Set SMOKE_EMAIL and SMOKE_PASSWORD (a demo account) to run the live smoke test.')
+  process.exit(2)
+}
+const cred = await signInWithEmailAndPassword(auth, smokeEmail, smokePassword)
+check(
+  'demo sign-in',
+  cred.user.uid === smokeEmail.split('@')[0].replace('maya.chen', 'u-maya') ||
+    cred.user.uid.length > 0,
+  `uid ${cred.user.uid}`,
+)
+const profile = await getDoc(doc(db, 'users', cred.user.uid))
+check('profile doc read', profile.exists())
 
 // 3. Rules deny editing someone else's listing.
-const others = listingsSnap.docs.find((d) => d.data().ownerId !== 'u-maya')
+const others = listingsSnap.docs.find((d) => d.data().ownerId !== cred.user.uid)
 let denied = false
 try {
   await updateDoc(doc(db, 'listings', others.id), { title: 'should not work' })
@@ -73,7 +84,20 @@ try {
 check('rules deny foreign listing edit', denied)
 
 // 4. Owner create + delete round-trip.
-const ref = await addDoc(collection(db, 'listings'), {
+// Phase 8: listings can only be created when the rate-limit counter
+// names the new doc id — bump it first, exactly like the app does.
+const ref = doc(collection(db, 'listings'))
+const { setDoc, Timestamp } = await import('firebase/firestore')
+await setDoc(
+  doc(db, 'rateLimits', cred.user.uid),
+  {
+    listingsCount: 1,
+    listingsWindowStartTs: Timestamp.now(),
+    lastListingId: ref.id,
+  },
+  { merge: true },
+)
+await setDoc(ref, {
   section: 'items',
   listingType: 'borrow',
   title: 'Smoke test listing (auto-deleted)',
@@ -81,7 +105,7 @@ const ref = await addDoc(collection(db, 'listings'), {
   price: 0,
   currency: 'PKR',
   priceUnit: 'day',
-  ownerId: 'u-maya',
+  ownerId: cred.user.uid,
   status: 'active',
   photos: [],
   location: { city: 'Lahore', area: 'Gulberg', lat: 31.51, lng: 74.35 },

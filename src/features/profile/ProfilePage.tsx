@@ -16,6 +16,7 @@ import { TrustBadge, TrustMeter } from '@/components/ui/Trust'
 import { ListingCard } from '@/components/listings/ListingCard'
 import { ReviewsList } from '@/components/reviews/ReviewsList'
 import { MapPinIcon } from '@/components/icons'
+import { AccountSafetyCard, ProfileSafetyActions } from './ProfileSafety'
 
 /**
  * /profile/:id — public neighbor profile: bio, trust score with a real
@@ -212,6 +213,13 @@ export function ProfilePage() {
 
       {/* Contact preferences — only on your own profile (Phase 5) */}
       {state.currentUser?.id === user.id && <ContactPrefsCard user={user} />}
+
+      {/* Safety: report/block on others, block list + delete on your own (Phase 8) */}
+      {state.currentUser?.id === user.id ? (
+        <AccountSafetyCard user={user} />
+      ) : (
+        <ProfileSafetyActions user={user} />
+      )}
 
       {/* Badges */}
       <section aria-labelledby="badges" className="flex flex-col gap-3">

@@ -71,3 +71,29 @@ export async function completeOnboarding(
   user.onboardingCompleted = true
   return clone(user)
 }
+
+/**
+ * Blocking (Phase 8): hide a neighbor everywhere — their listings leave
+ * browse/landing, and their profile shows as blocked. Owner-only.
+ */
+export async function setBlocked(
+  userId: string,
+  actorId: string,
+  targetId: string,
+  blocked: boolean,
+): Promise<User> {
+  await simulateLatency(120, 250)
+  if (userId !== actorId) {
+    throw new ApiError('forbidden', 'Only the account owner can manage their block list.')
+  }
+  if (targetId === userId) throw new ApiError('invalid', 'You cannot block yourself.')
+  const user = getStore().users.find((u) => u.id === userId)
+  if (!user) throw new ApiError('not-found', 'User not found.')
+  const target = getStore().users.find((u) => u.id === targetId)
+  if (!target) throw new ApiError('not-found', 'User to block not found.')
+  const current = new Set(user.blockedUserIds ?? [])
+  if (blocked) current.add(targetId)
+  else current.delete(targetId)
+  user.blockedUserIds = [...current]
+  return clone(user)
+}

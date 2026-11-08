@@ -48,6 +48,18 @@ const NotFoundPage = lazy(() =>
 const SignInPage = lazy(() =>
   import('@/features/auth/SignInPage').then((m) => ({ default: m.SignInPage })),
 )
+const TermsPage = lazy(() =>
+  import('@/features/legal/LegalPages').then((m) => ({ default: m.TermsPage })),
+)
+const PrivacyPage = lazy(() =>
+  import('@/features/legal/LegalPages').then((m) => ({ default: m.PrivacyPage })),
+)
+const SafetyPage = lazy(() =>
+  import('@/features/legal/LegalPages').then((m) => ({ default: m.SafetyPage })),
+)
+const ModerationPage = lazy(() =>
+  import('@/features/moderation/ModerationPage').then((m) => ({ default: m.ModerationPage })),
+)
 const OnboardingPage = lazy(() =>
   import('@/features/auth/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
 )
@@ -224,6 +236,40 @@ export default function App() {
               <ErrorBoundary>
                 <TrustExplainerPage />
               </ErrorBoundary>
+            }
+          />
+          <Route
+            path="terms"
+            element={
+              <ErrorBoundary>
+                <TermsPage />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="privacy"
+            element={
+              <ErrorBoundary>
+                <PrivacyPage />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="safety"
+            element={
+              <ErrorBoundary>
+                <SafetyPage />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="moderation"
+            element={
+              <RequireAuth>
+                <ErrorBoundary>
+                  <ModerationPage />
+                </ErrorBoundary>
+              </RequireAuth>
             }
           />
           <Route path="*" element={<NotFoundPage />} />

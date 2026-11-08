@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
+import { usePageMeta } from '@/hooks/usePageMeta'
+import { ReportModal } from '@/components/safety/ReportModal'
 import { useAsync } from '@/hooks/useAsync'
 import { listingsApi, requestsApi } from '@/services'
 import type { Listing } from '@/types'
@@ -44,12 +46,19 @@ export function ListingDetailPage() {
   const currentUser = state.currentUser
   const origin = currentUser?.homeLocation ?? null
 
+  const [reportOpen, setReportOpen] = useState(false)
   const [requestOpen, setRequestOpen] = useState(false)
   const [dealOpen, setDealOpen] = useState(false)
 
   // Listing loads through the service (real async path, missing id → null).
   const listingQuery = useAsync(() => listingsApi.getListingById(id ?? ''), [id])
   const listing = listingQuery.data
+  // Per-listing SEO (Phase 8): shared links preview the photo + title.
+  usePageMeta({
+    title: listing?.title ?? 'Listing',
+    description: listing?.description.slice(0, 160),
+    image: listing?.photos[0],
+  })
   const isItem = listing?.section === 'items'
 
   // Active borrow info for "expected back" (items flow; service = source of truth).
@@ -214,6 +223,15 @@ export function ListingDetailPage() {
             <SectionFactsCard listing={listing} />
           )}
           {owner && <OwnerCard owner={owner} contactable={Boolean(currentUser) && !isOwnListing} />}
+          {currentUser && !isOwnListing && (
+            <button
+              type="button"
+              onClick={() => setReportOpen(true)}
+              className="self-start text-xs font-semibold text-bark-light underline-offset-2 transition-colors hover:text-bark hover:underline"
+            >
+              🚩 Report this listing
+            </button>
+          )}
 
           {/* Arena booking panel (desktop sidebar / stacks on mobile) */}
           {listing.section === 'arenas' && owner && currentUser && cta.kind === 'arena' && (
@@ -274,6 +292,16 @@ export function ListingDetailPage() {
         </div>
       </div>
 
+      {currentUser && (
+        <ReportModal
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          actorId={currentUser.id}
+          targetType="listing"
+          targetId={listing.id}
+          targetLabel={listing.title}
+        />
+      )}
       {owner && currentUser && !isOwnListing && isItem && (
         <RequestBorrowModal
           listing={listing}

@@ -13,6 +13,8 @@ import { ListingCard } from '@/components/listings/ListingCard'
 import { TrustTierLadder } from '@/components/ui/Trust'
 import { cn } from '@/utils/cn'
 import { sectionAccent } from '@/utils/sectionAccent'
+import { usePageMeta } from '@/hooks/usePageMeta'
+import { excludeBlockedOwners } from '@/utils/blocking'
 
 const HOW_IT_WORKS = [
   {
@@ -62,6 +64,11 @@ const FAQS = [
  */
 export function LandingPage() {
   const { state } = useApp()
+  usePageMeta({
+    title: 'NeighborMart — borrow, rent, buy & sell near you',
+    description:
+      'Tools, vehicles, homes and sports arenas from people nearby — borrow them free, rent them, or buy them outright.',
+  })
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [openFaq, setOpenFaq] = useState<number | null>(0)
@@ -74,8 +81,11 @@ export function LandingPage() {
   // nearest-first ordering is Browse's job, here we just show what's new.
   const freshListings = useMemo(
     () =>
-      [...listings].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 3),
-    [listings],
+      excludeBlockedOwners(
+        [...listings].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+        currentUser?.blockedUserIds,
+      ).slice(0, 3),
+    [listings, currentUser?.blockedUserIds],
   )
   const sectionCounts = useMemo(() => {
     const counts = new Map<string, number>()
@@ -87,11 +97,11 @@ export function LandingPage() {
   // up top, straight from the real view counters.
   const featuredListings = useMemo(
     () =>
-      listings
-        .filter((l) => l.status === 'active')
-        .sort((a, b) => b.views - a.views)
-        .slice(0, 3),
-    [listings],
+      excludeBlockedOwners(
+        listings.filter((l) => l.status === 'active').sort((a, b) => b.views - a.views),
+        currentUser?.blockedUserIds,
+      ).slice(0, 3),
+    [listings, currentUser?.blockedUserIds],
   )
 
   return (

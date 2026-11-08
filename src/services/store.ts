@@ -1,4 +1,12 @@
-import type { AppNotification, BorrowRequest, Listing, Message, Review, User } from '@/types'
+import type {
+  Report,
+  AppNotification,
+  BorrowRequest,
+  Listing,
+  Message,
+  Review,
+  User,
+} from '@/types'
 import { ApiError } from './errors'
 import {
   seedListings,
@@ -24,6 +32,8 @@ interface Database {
   reviews: Review[]
   notifications: AppNotification[]
   messages: Message[]
+  /** Phase 8 moderation queue (general listing/user reports). */
+  reports: Report[]
 }
 
 function createDatabase(): Database {
@@ -35,6 +45,7 @@ function createDatabase(): Database {
     reviews: seedReviews(),
     notifications: seedNotifications(),
     messages: seedMessages(),
+    reports: [],
   }
 }
 

@@ -1,5 +1,5 @@
 import {
-  addDoc,
+  setDoc,
   collection,
   doc,
   getDoc,
@@ -15,6 +15,8 @@ import { DEFAULT_CURRENCY } from '@/config'
 import { filterListings } from '@/utils/filters'
 import { canTransitionListingStatus } from '@/utils/listingStatus'
 import { ApiError } from '../errors'
+import { bumpListingQuota } from './rateLimit'
+import { sanitizeMultiline, sanitizeText } from '@/utils/sanitize'
 import { getDb } from '../firebase'
 import {
   validateCreateItemListingInput,
@@ -91,8 +93,8 @@ export async function createItemListing(input: CreateItemListingInput): Promise<
     ownerId: input.ownerId,
     section: 'items',
     listingType: isRent ? 'rent' : 'borrow',
-    title: input.title.trim(),
-    description: input.description.trim(),
+    title: sanitizeText(input.title, 120),
+    description: sanitizeMultiline(input.description, 2000),
     price: isRent ? (input.dailyFee as number) : 0,
     currency: DEFAULT_CURRENCY,
     priceUnit: isRent ? 'day' : 'fixed',
@@ -113,7 +115,11 @@ export async function createItemListing(input: CreateItemListingInput): Promise<
     },
   }
 
-  const ref = await addDoc(collection(getDb(), COLLECTIONS.listings), stripUndefined(listing))
+  // Phase 8: mint the id client-side so the rate-limit counter can
+  // name it (rules only allow the create when the counter does).
+  const ref = doc(collection(getDb(), COLLECTIONS.listings))
+  await bumpListingQuota(input.ownerId, ref.id)
+  await setDoc(ref, stripUndefined(listing))
   return { id: ref.id, ...listing }
 }
 
@@ -134,8 +140,8 @@ export async function createListing(input: CreateListingInput): Promise<Listing>
   const base = {
     ownerId: input.ownerId,
     listingType: input.listingType,
-    title: input.title.trim(),
-    description: input.description.trim(),
+    title: sanitizeText(input.title, 120),
+    description: sanitizeMultiline(input.description, 2000),
     price: input.listingType === 'borrow' ? 0 : input.price,
     currency: DEFAULT_CURRENCY,
     priceUnit: input.listingType === 'borrow' ? ('fixed' as const) : input.priceUnit,
@@ -149,7 +155,11 @@ export async function createListing(input: CreateListingInput): Promise<Listing>
   }
   const listing = { ...base, section: input.section, details: input.details } as Omit<Listing, 'id'>
 
-  const ref = await addDoc(collection(getDb(), COLLECTIONS.listings), stripUndefined(listing))
+  // Phase 8: mint the id client-side so the rate-limit counter can
+  // name it (rules only allow the create when the counter does).
+  const ref = doc(collection(getDb(), COLLECTIONS.listings))
+  await bumpListingQuota(input.ownerId, ref.id)
+  await setDoc(ref, stripUndefined(listing))
   return { id: ref.id, ...listing } as Listing
 }
 

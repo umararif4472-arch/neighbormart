@@ -134,7 +134,7 @@ create each one the first time a query needs it).
     ```
     This writes the 9 demo neighbors, 35 listings, requests, reviews,
     messages, and notifications, and creates demo Auth accounts:
-    `maya.chen@example.com` etc., password **`borrow123`** (demo only —
+    `maya.chen@example.com` etc., password = the `DEMO_SEED_PASSWORD` you set when seeding (demo only —
     delete these accounts before any real launch).
 12. **Run it:** `npm run dev` → open the app → **Sign in** (top right)
     → Continue with Google or a demo account. Your profile document is

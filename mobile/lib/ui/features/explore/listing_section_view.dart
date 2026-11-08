@@ -209,8 +209,13 @@ class SectionListingList extends StatelessWidget {
   Widget build(BuildContext context) {
     final me = state.currentUser.homeLocation;
     final q = query.trim().toLowerCase();
+    // Phase 8: listings from blocked neighbors never appear here.
+    final visible = listingsExcludingBlocked(
+      state.listings,
+      state.blockedUserIdSet,
+    );
     final results =
-        state.listings.where((l) {
+        visible.where((l) {
           if (l.section != section || !l.isVisible) return false;
           if (q.isNotEmpty &&
               !'${l.title} ${l.description}'.toLowerCase().contains(q)) {

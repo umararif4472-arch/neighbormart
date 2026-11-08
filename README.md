@@ -166,9 +166,10 @@ mobile/           # Flutter app (same product, same seed data)
 
 ## Deployment
 
-- **Web:** the production build is a static bundle (`npm run build` →
-  `dist/`). Deploy to Firebase Hosting or Vercel; preview deployments and
-  a one-command deploy are set up in Phase 8. The Flutter web build is
+- **Web:** LIVE at **https://neighbormart-7eff0.web.app** (Firebase
+  Hosting, Spark plan). Redeploy with `npm run build && node
+scripts/deploy-hosting.mjs` (REST deploy — firebase-tools cannot use
+  the service-account key here). The Flutter web build is
   currently published for testing at
   https://umararif4472-arch.github.io/borrowdontbuy-web/
 - **Android:** `cd mobile && flutter build apk --release` (or
@@ -189,14 +190,14 @@ mobile/           # Flutter app (same product, same seed data)
       security rules, composite indexes, demo seed script; Flutter
       mirror (auth + Firestore reads). Live hookup needs the Firebase
       console steps in docs/firebase-setup.md
-- [ ] **Phase 4 — Photo upload:** multi-photo, compression, reorder,
+- [x] **Phase 4 — Photo upload:** multi-photo, compression, reorder,
       cover photo, full-screen gallery
-- [ ] **Phase 5 — Section experiences:** section pages/filters/cards,
+- [x] **Phase 5 — Section experiences:** section pages/filters/cards,
       5-step listing wizard, arena slot booking, owner dashboard
-- [ ] **Phase 6 — Animated login & onboarding**
-- [ ] **Phase 7 — Professional UI/UX:** design system, dark mode,
+- [x] **Phase 6 — Animated login & onboarding**
+- [x] **Phase 7 — Professional UI/UX:** design system, dark mode,
       accessibility (WCAG AA), performance budgets
-- [ ] **Phase 8 — Launch readiness:** PWA, SEO, legal pages, moderation,
+- [x] **Phase 8 — Launch readiness:** PWA, SEO, legal pages, moderation,
       CI, launch checklist (`docs/LAUNCH_CHECKLIST.md`)
 - [ ] **Later:** payments (JazzCash / Easypaisa / Stripe) behind the
       existing service interface

@@ -3,6 +3,8 @@ import { EMPTY_LISTING_FILTERS } from '@/types'
 import { DEFAULT_CURRENCY } from '@/config'
 import { filterListings } from '@/utils/filters'
 import { ApiError } from './errors'
+import { sanitizeMultiline, sanitizeText } from '@/utils/sanitize'
+import { checkWindow, LISTING_RATE_LIMIT, type WindowState } from '@/utils/rateLimit'
 import { clone, findUser, getStore, nextId, simulateLatency } from './store'
 
 /**
@@ -67,8 +69,8 @@ export async function createItemListing(input: CreateItemListingInput): Promise<
     ownerId: input.ownerId,
     section: 'items',
     listingType: isRent ? 'rent' : 'borrow',
-    title: input.title.trim(),
-    description: input.description.trim(),
+    title: sanitizeText(input.title, 120),
+    description: sanitizeMultiline(input.description, 2000),
     price: isRent ? (input.dailyFee as number) : 0,
     currency: DEFAULT_CURRENCY,
     priceUnit: isRent ? 'day' : 'fixed',
@@ -99,6 +101,25 @@ export async function createItemListing(input: CreateItemListingInput): Promise<
  * contract as createItemListing: validate here, store, return the stored
  * listing. New listings live at the owner's home (mock geolocation).
  */
+const listingWindows = new Map<string, WindowState>()
+
+/** Phase 8 rate limit (mock parity with the live counter + rules). */
+function enforceListingQuota(ownerId: string) {
+  const decision = checkWindow(
+    listingWindows.get(ownerId) ?? { windowStart: null, count: 0 },
+    new Date().toISOString(),
+    LISTING_RATE_LIMIT.limit,
+    LISTING_RATE_LIMIT.windowMs,
+  )
+  if (!decision.allowed) {
+    throw new ApiError(
+      'rate-limited',
+      'You can publish at most 10 listings in 24 hours — try again later.',
+    )
+  }
+  listingWindows.set(ownerId, { windowStart: decision.windowStart, count: decision.count })
+}
+
 export async function createListing(input: CreateListingInput): Promise<Listing> {
   await simulateLatency(300, 600)
 
@@ -106,6 +127,7 @@ export async function createListing(input: CreateListingInput): Promise<Listing>
   if (Object.keys(errors).length > 0) {
     throw new ApiError('invalid', Object.values(errors)[0])
   }
+  enforceListingQuota(input.ownerId)
 
   const owner: User = findUser(input.ownerId)
   const now = new Date().toISOString()
@@ -114,8 +136,8 @@ export async function createListing(input: CreateListingInput): Promise<Listing>
     id: nextId('listing'),
     ownerId: input.ownerId,
     listingType: input.listingType,
-    title: input.title.trim(),
-    description: input.description.trim(),
+    title: sanitizeText(input.title, 120),
+    description: sanitizeMultiline(input.description, 2000),
     price: input.listingType === 'borrow' ? 0 : input.price,
     currency: DEFAULT_CURRENCY,
     priceUnit: input.listingType === 'borrow' ? ('fixed' as const) : input.priceUnit,

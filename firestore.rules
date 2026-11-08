@@ -32,6 +32,39 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    // Phase 8 moderation: an account is an admin when its profile doc
+    // carries role == 'admin'. Granted manually in Firestore — the
+    // users rules below stop anyone promoting themselves.
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'member') == 'admin';
+    }
+
+    // Phase 8 rate limits. The client bumps a counter doc
+    // (rateLimits/{uid}) BEFORE creating, binding it to the new doc's
+    // id. A create is allowed only when the counter names THIS doc and
+    // the window count is in range — skipping the bump skips the create.
+    function listingQuotaOk(listingId) {
+      let rl = get(/databases/$(database)/documents/rateLimits/$(request.auth.uid)).data;
+      return rl.get('lastListingId', '') == listingId
+        && rl.get('listingsCount', 0) is int
+        && rl.get('listingsCount', 0) >= 1
+        && rl.get('listingsCount', 0) <= 10
+        && rl.get('listingsWindowStartTs', timestamp.date(1970, 1, 1)) is timestamp
+        && rl.listingsWindowStartTs > request.time - duration.value(24, 'h');
+    }
+
+    function messageQuotaOk(messageId) {
+      let rl = get(/databases/$(database)/documents/rateLimits/$(request.auth.uid)).data;
+      return rl.get('lastMessageId', '') == messageId
+        && rl.get('messagesCount', 0) is int
+        && rl.get('messagesCount', 0) >= 1
+        && rl.get('messagesCount', 0) <= 30
+        && rl.get('messagesWindowStartTs', timestamp.date(1970, 1, 1)) is timestamp
+        && rl.messagesWindowStartTs > request.time - duration.value(60, 's');
+    }
+
     // Listing status machine — mirrors LISTING_STATUS_TRANSITIONS.
     function listingTransitionOk(from, to) {
       return (from == 'active' && to in ['reserved', 'rented', 'sold', 'paused', 'removed'])
@@ -103,8 +136,12 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if true;
       allow create: if isUser(uid);
-      allow update: if isUser(uid);
-      allow delete: if false;
+      // Owners manage their own profile but can never change their own
+      // role (no self-promotion to admin).
+      allow update: if isUser(uid)
+        && request.resource.data.get('role', 'member') == resource.data.get('role', 'member');
+      // Account deletion (Phase 8): owners may delete their own profile.
+      allow delete: if isUser(uid);
     }
 
     // --- Listings ----------------------------------------------------------
@@ -113,7 +150,8 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.status == 'active'
-        && photosValid(request.resource.data);
+        && photosValid(request.resource.data)
+        && listingQuotaOk(listingId);
       allow update: if signedIn()
         && request.resource.data.ownerId == resource.data.ownerId
         && (
@@ -133,6 +171,12 @@ service cloud.firestore {
                 .hasOnly(['status', 'updatedAt'])
             && ((resource.data.status == 'active' && request.resource.data.status == 'rented')
               || (resource.data.status == 'rented' && request.resource.data.status == 'active')))
+          // A moderator resolving a report may take a listing down —
+          // status flips to 'removed' and nothing else changes.
+          || (isAdmin()
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'updatedAt'])
+            && request.resource.data.status == 'removed')
         );
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
@@ -194,7 +238,8 @@ service cloud.firestore {
         && request.resource.data.senderId == request.auth.uid
         && isParticipant(
           get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data
-        );
+        )
+        && messageQuotaOk(messageId);
       allow update, delete: if false;
     }
 
@@ -211,8 +256,37 @@ service cloud.firestore {
 
     // --- Reports (moderation queue) -------------------------------------------
     match /reports/{reportId} {
-      allow create: if signedIn() && request.resource.data.reportedBy == request.auth.uid;
-      allow read, update, delete: if false;
+      allow create: if signedIn()
+        && request.resource.data.reportedBy == request.auth.uid
+        && request.resource.data.status == 'open';
+      // Phase 8 moderation: admins work the queue in-app. Resolution
+      // may only move status to dismissed/actioned.
+      allow read: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['dismissed', 'actioned'];
+      allow delete: if false;
+    }
+
+    // --- Rate-limit counters (Phase 8) ---------------------------------------
+    match /rateLimits/{uid} {
+      allow read: if isUser(uid);
+      // Owner-only; counts may rise by at most 1 per write or reset to
+      // 1 when a window rolls over. Only the six counter fields exist.
+      allow create, update: if isUser(uid)
+        && request.resource.data.keys().hasOnly([
+          'listingsCount', 'listingsWindowStartTs', 'lastListingId',
+          'messagesCount', 'messagesWindowStartTs', 'lastMessageId'])
+        && request.resource.data.get('listingsCount', 0) is int
+        && request.resource.data.get('messagesCount', 0) is int
+        && (resource == null
+          || ((request.resource.data.get('listingsCount', 0) == resource.data.get('listingsCount', 0)
+              || request.resource.data.get('listingsCount', 0) == resource.data.get('listingsCount', 0) + 1
+              || request.resource.data.get('listingsCount', 0) == 1)
+            && (request.resource.data.get('messagesCount', 0) == resource.data.get('messagesCount', 0)
+              || request.resource.data.get('messagesCount', 0) == resource.data.get('messagesCount', 0) + 1
+              || request.resource.data.get('messagesCount', 0) == 1)));
+      allow delete: if false;
     }
   }
 }

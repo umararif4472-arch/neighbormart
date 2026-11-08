@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/firebase/firebase_init.dart';
 import '../core/theme/theme_preference.dart';
 import '../core/utils/trust_score.dart';
 import '../core/utils/formatters.dart';
@@ -14,9 +15,11 @@ import '../data/models/borrow_request.dart';
 import '../data/models/wishlist_item.dart';
 import '../data/models/message.dart';
 import '../data/models/app_notification.dart';
+import '../data/models/report.dart';
 import '../data/mock/seed_data.dart';
 import '../data/mock/seed_listings.dart';
 import '../data/services/auth_service.dart';
+import '../data/services/safety_service.dart';
 
 /// Groups [items] by category for the sectioned Explore list. Sections
 /// follow the canonical [kItemCategories] order (any unknown category
@@ -35,6 +38,20 @@ Map<String, List<Item>> groupItemsByCategory(List<Item> items) {
   }
   return grouped;
 }
+
+/// Phase 8 block filtering, kept pure so both the Explore/section
+/// lists and the tests share one rule: a listing is hidden when its
+/// owner is in [blockedOwnerIds].
+List<Listing> listingsExcludingBlocked(
+  List<Listing> listings,
+  Set<String> blockedOwnerIds,
+) => listings.where((l) => !blockedOwnerIds.contains(l.ownerId)).toList();
+
+/// The legacy-items twin of [listingsExcludingBlocked].
+List<Item> itemsExcludingBlocked(
+  List<Item> items,
+  Set<String> blockedOwnerIds,
+) => items.where((i) => !blockedOwnerIds.contains(i.ownerId)).toList();
 
 class AppState extends ChangeNotifier {
   static const _kSessionUserId = 'sessionUserId';
@@ -56,6 +73,11 @@ class AppState extends ChangeNotifier {
   late List<WishlistItem> _wishlist;
   late List<Review> _reviews;
   late List<Message> _messages;
+
+  /// Content reports filed from this device (Phase 8). Locally these
+  /// are the record; in Firebase mode each is also mirrored to the
+  /// shared `reports` collection for moderation.
+  late List<Report> _reports;
   int _idCounter = 100;
 
   String _currentUserId = 'u-maya';
@@ -84,6 +106,7 @@ class AppState extends ChangeNotifier {
     _reviews = List.of(seedReviews());
     _wishlist = List.of(seedWishlist());
     _messages = List.of(seedMessages());
+    _reports = [];
   }
 
   // For tests / custom seeding
@@ -104,6 +127,7 @@ class AppState extends ChangeNotifier {
     _wishlist = wishlist;
     _reviews = reviews;
     _messages = List.of(messages ?? seedMessages());
+    _reports = [];
     _currentUserId = currentUserId;
   }
 
@@ -114,6 +138,7 @@ class AppState extends ChangeNotifier {
   List<WishlistItem> get wishlist => List.unmodifiable(_wishlist);
   List<Review> get reviews => List.unmodifiable(_reviews);
   List<Message> get messages => List.unmodifiable(_messages);
+  List<Report> get reports => List.unmodifiable(_reports);
 
   AppUser get currentUser => userById(_currentUserId);
   AppUser userById(String id) =>
@@ -172,7 +197,10 @@ class AppState extends ChangeNotifier {
   }) {
     final me = currentUser.homeLocation;
     final q = query.trim().toLowerCase();
+    // Phase 8: neighbors the current user blocked never appear.
+    final blocked = blockedUserIdSet;
     var result = _items.where((item) {
+      if (blocked.contains(item.ownerId)) return false;
       if (onlyAvailable && !item.isAvailable) return false;
       if (category != null &&
           category.isNotEmpty &&
@@ -699,6 +727,10 @@ class AppState extends ChangeNotifier {
               .map((e) => e.toString())
               .toList(),
           onboardingCompleted: data['onboardingCompleted'] as bool? ?? true,
+          blockedUserIds:
+              ((data['blockedUserIds'] as List<dynamic>?) ?? const [])
+                  .map((e) => e.toString())
+                  .toList(),
         );
       } catch (_) {
         // Corrupt payload — ignore it; the in-memory profile stands.
@@ -716,8 +748,38 @@ class AppState extends ChangeNotifier {
         'neighborhood': user.neighborhood,
         'interests': user.interests,
         'onboardingCompleted': user.onboardingCompleted,
+        'blockedUserIds': user.blockedUserIds,
       }),
     );
+  }
+
+  /// Persist ONLY the block list, riding the same per-user profile
+  /// payload as the profile setup: merge into the stored map when one
+  /// exists (so setup fields survive), otherwise seed the map from the
+  /// current profile exactly like [_persistProfileSetup] would.
+  Future<void> _persistBlockedUserIds() async {
+    final prefs = _prefs;
+    if (prefs == null) return;
+    final me = currentUser;
+    final key = '$_kProfileSetupPrefix${me.id}';
+    Map<String, dynamic> data = {
+      'name': me.name,
+      'phone': me.phone,
+      'city': me.city,
+      'neighborhood': me.neighborhood,
+      'interests': me.interests,
+      'onboardingCompleted': me.onboardingCompleted,
+    };
+    final raw = prefs.getString(key);
+    if (raw != null) {
+      try {
+        data = jsonDecode(raw) as Map<String, dynamic>;
+      } catch (_) {
+        // Corrupt payload — fall back to the freshly built map above.
+      }
+    }
+    data['blockedUserIds'] = me.blockedUserIds;
+    await prefs.setString(key, jsonEncode(data));
   }
 
   /// Finish (or re-edit) the Phase 6 profile setup for the current
@@ -1001,6 +1063,148 @@ class AppState extends ChangeNotifier {
         reportedAt: DateTime.now(),
       ),
     );
+    notifyListeners();
+  }
+
+  // ---------------- Phase 8: reports, blocking, account deletion ----
+
+  /// File a report about a listing or a user. The report is recorded
+  /// locally and mirrored to the shared `reports` collection when
+  /// Firebase is live (fire and forget, like the other mirrors — a
+  /// report must never fail because the network did).
+  Report submitReport({
+    required ReportTargetType targetType,
+    required String targetId,
+    required String targetOwnerId,
+    required String reason,
+    String details = '',
+  }) {
+    _idCounter++;
+    final report = Report(
+      id: 'rep-new-$_idCounter',
+      reporterId: _currentUserId,
+      targetType: targetType,
+      targetId: targetId,
+      targetOwnerId: targetOwnerId,
+      reason: reason,
+      details: details.trim(),
+      status: 'open',
+      createdAt: DateTime.now(),
+    );
+    _reports.insert(0, report);
+    notifyListeners();
+    SafetyService.instance.submitReport(report).catchError((_) {});
+    return report;
+  }
+
+  /// The current user's block list as a set, for the pure filters.
+  Set<String> get blockedUserIdSet => Set.of(currentUser.blockedUserIds);
+
+  bool isBlocked(String userId) => currentUser.blockedUserIds.contains(userId);
+
+  /// Blocked neighbors that still exist, in block order — the
+  /// Settings "Blocked users" list renders this.
+  List<AppUser> get blockedUsers => currentUser.blockedUserIds
+      .map(userByIdOrNull)
+      .whereType<AppUser>()
+      .toList();
+
+  /// Block [userId]: their listings disappear from Explore and the
+  /// section lists. Persisted with the profile payload and mirrored
+  /// to the Firestore profile doc when live.
+  void blockUser(String userId) {
+    if (userId == _currentUserId || isBlocked(userId)) return;
+    final idx = _users.indexWhere((u) => u.id == _currentUserId);
+    if (idx < 0) return;
+    _users[idx] = _users[idx].copyWith(
+      blockedUserIds: [..._users[idx].blockedUserIds, userId],
+    );
+    _persistBlockedUserIds();
+    notifyListeners();
+    SafetyService.instance
+        .saveBlockedUserIds(_currentUserId, _users[idx].blockedUserIds)
+        .catchError((_) {});
+  }
+
+  void unblockUser(String userId) {
+    if (!isBlocked(userId)) return;
+    final idx = _users.indexWhere((u) => u.id == _currentUserId);
+    if (idx < 0) return;
+    _users[idx] = _users[idx].copyWith(
+      blockedUserIds: _users[idx].blockedUserIds
+          .where((id) => id != userId)
+          .toList(),
+    );
+    _persistBlockedUserIds();
+    notifyListeners();
+    SafetyService.instance
+        .saveBlockedUserIds(_currentUserId, _users[idx].blockedUserIds)
+        .catchError((_) {});
+  }
+
+  /// Permanently delete the signed-in user's account.
+  ///
+  /// Locally: their listings (both catalogs) and their profile are
+  /// removed and the session ends. In Firebase mode the remote data
+  /// goes first (listing docs + profile doc), then the Auth credential
+  /// LAST — if Firebase refuses that with 'requires-recent-login', the
+  /// returned message says exactly what was deleted and what remains,
+  /// so nothing half-deletes in silence. A server failure while
+  /// deleting DATA aborts the whole thing with `deleted: false` —
+  /// nothing is removed anywhere in that case.
+  Future<DeleteAccountResult> deleteMyAccount() async {
+    final me = currentUser;
+    String? notice;
+    if (firebaseReady) {
+      try {
+        await SafetyService.instance.deleteAccountData(
+          me.id,
+          myListings.map((l) => l.id).toList(),
+        );
+      } catch (_) {
+        return const DeleteAccountResult(
+          deleted: false,
+          message:
+              'Couldn’t reach the server to delete your data — check '
+              'your connection and try again. Nothing was deleted.',
+        );
+      }
+      try {
+        await FirebaseAuthService.instance.deleteCurrentAuthUser();
+      } on AuthException catch (e) {
+        notice = e.code == 'requires-recent-login'
+            ? 'Your listings and profile data are deleted. Removing '
+                  'your sign-in needs a fresh login for security: sign '
+                  'in once more and choose “Delete my account” again to '
+                  'finish.'
+            : 'Your listings and profile data are deleted, but removing '
+                  'your sign-in didn’t finish (${e.message}). Sign in '
+                  'again and delete once more to finish.';
+      } catch (_) {
+        notice =
+            'Your listings and profile data are deleted, but removing '
+            'your sign-in didn’t finish. Sign in again and delete once '
+            'more to finish.';
+      }
+      await FirebaseAuthService.instance.signOut().catchError((_) {});
+    }
+    _purgeLocalAccount(me.id);
+    return DeleteAccountResult(deleted: true, message: notice);
+  }
+
+  /// The local half of account deletion: drop the user's listings from
+  /// both catalogs, their profile, their saved profile payload and the
+  /// session. Requests other neighbors made stay in their history —
+  /// they reference listing ids that simply no longer resolve, which
+  /// every reader already guards against.
+  void _purgeLocalAccount(String userId) {
+    _listings.removeWhere((l) => l.ownerId == userId);
+    _items.removeWhere((i) => i.ownerId == userId);
+    _users.removeWhere((u) => u.id == userId);
+    _favoriteItemIds.clear();
+    _prefs?.remove('$_kProfileSetupPrefix$userId');
+    isLoggedIn = false;
+    _persistSession();
     notifyListeners();
   }
 
@@ -1356,6 +1560,15 @@ class AppState extends ChangeNotifier {
 
   int get notificationBadgeCount =>
       derivedNotifications.where((n) => n.kind == 'action').length;
+}
+
+/// Outcome of [AppState.deleteMyAccount]: [deleted] says whether the
+/// account is gone; [message] carries the honest explanation when a
+/// step needs the user's attention (or why nothing was deleted).
+class DeleteAccountResult {
+  final bool deleted;
+  final String? message;
+  const DeleteAccountResult({required this.deleted, this.message});
 }
 
 /// One row in the Messages list: a borrow-request thread, an item

@@ -37,7 +37,7 @@ lib/
 ```
 
 Demo accounts: every seeded neighbor signs in with
-`<firstname>.<lastname>@example.com` / `borrow123` (shown on the login
+`<firstname>.<lastname>@example.com` / the demo password set via `DEMO_SEED_PASSWORD` when seeding (shown on the login
 screen, with one-tap neighbor login). Verification codes are demo-only:
 use `123456`. Session, onboarding, and listing drafts persist on-device
 via shared_preferences.

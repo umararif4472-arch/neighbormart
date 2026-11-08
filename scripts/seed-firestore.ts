@@ -7,7 +7,7 @@
  * Auth accounts so the demo people can actually sign in:
  *
  *   email:    firstname.lastname@example.com   (e.g. maya.chen@example.com)
- *   password: borrow123                        (DEMO ONLY — see below)
+ *   password: $DEMO_SEED_PASSWORD             (DEMO ONLY — see below)
  *
  * Auth uids are pinned to the seed ids (u-maya, u-joan, …) so every
  * cross-reference in the dataset lines up with the profile docs.
@@ -35,7 +35,22 @@ import {
   seedUsers,
 } from '../src/data/seed'
 
-const DEMO_PASSWORD = 'borrow123'
+// Phase 8: no hard-coded demo password. Set DEMO_SEED_PASSWORD in your
+// shell (any throwaway value) — the accounts it creates are DEMO ONLY
+// and must be removed before a real launch (scripts/remove-demo-data.mjs).
+const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD
+if (!DEMO_PASSWORD) {
+  console.error(
+    'DEMO_SEED_PASSWORD is not set. Refusing to seed demo accounts without an explicit password.',
+  )
+  process.exit(2)
+}
+if (process.env.ALLOW_DEMO_SEED !== '1') {
+  console.error(
+    'Refusing to seed demo data. Re-run with ALLOW_DEMO_SEED=1 if this is a dev/demo project.',
+  )
+  process.exit(2)
+}
 
 function demoEmail(name: string): string {
   const slug = name
@@ -153,7 +168,7 @@ async function main(): Promise<void> {
   }
   console.log(`  data  ${messages.length} messages, ${notifications.length} notifications`)
 
-  console.log('\nDone. Demo sign-ins (password borrow123 for all):')
+  console.log('\nDone. Demo sign-ins (password = DEMO_SEED_PASSWORD for all):')
   for (const user of users) console.log(`  ${demoEmail(user.name)}  — ${user.name}`)
   console.log('\nThese are demo accounts for a demo project — remove them before a real launch.')
 }

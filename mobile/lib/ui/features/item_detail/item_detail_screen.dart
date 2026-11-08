@@ -9,10 +9,12 @@ import '../../../core/utils/trust_score.dart';
 import '../../../core/widgets/reviews_list.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
+import '../../../data/models/report.dart';
 import '../../../state/app_state.dart';
 import '../messages/chat_screen.dart';
 import '../not_found/not_found_screen.dart';
 import '../profile/user_profile_screen.dart';
+import '../safety/report_sheet.dart';
 import 'photo_gallery_screen.dart';
 
 class ItemDetailScreen extends StatelessWidget {
@@ -72,6 +74,26 @@ class ItemDetailScreen extends StatelessWidget {
             icon: const Icon(Icons.share_outlined),
             onPressed: () => _share(context, item),
           ),
+          if (!isOwn)
+            PopupMenuButton<String>(
+              tooltip: 'More actions',
+              onSelected: (value) {
+                if (value != 'report') return;
+                ReportSheet.show(
+                  context,
+                  targetType: ReportTargetType.listing,
+                  targetId: item.id,
+                  targetOwnerId: item.ownerId,
+                  targetLabel: 'this listing',
+                );
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'report',
+                  child: Text('Report this listing'),
+                ),
+              ],
+            ),
         ],
       ),
       bottomNavigationBar: SafeArea(

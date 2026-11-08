@@ -9,6 +9,7 @@ import type {
 } from '@/types'
 import { ITEM_CATEGORIES, PROPERTY_TYPES } from '@/types'
 import { CLOUDINARY_CLOUD_NAME, PHOTO_LIMITS_BY_SECTION, isCloudinaryUrl } from '@/utils/cloudinary'
+import { sanitizeMultiline, sanitizeText } from '@/utils/sanitize'
 
 /**
  * Photo rules (Phase 4), shared by every create path: count within the
@@ -66,10 +67,13 @@ export function validateCreateItemListingInput(
   input: CreateItemListingInput,
 ): Record<string, string> {
   const errors: Record<string, string> = {}
-  if (input.title.trim().length < 3 || input.title.trim().length > 80) {
+  if (sanitizeText(input.title, 120).length < 3 || sanitizeText(input.title, 120).length > 80) {
     errors.title = 'Title must be 3–80 characters.'
   }
-  if (input.description.trim().length < 10 || input.description.trim().length > 1000) {
+  if (
+    sanitizeMultiline(input.description, 2000).length < 10 ||
+    sanitizeMultiline(input.description, 2000).length > 1000
+  ) {
     errors.description = 'Description must be 10–1000 characters.'
   }
   if (!ITEM_CATEGORIES.includes(input.category)) {
@@ -129,10 +133,13 @@ export interface UpdateListingBasicsInput {
 
 export function validateCreateListingInput(input: CreateListingInput): Record<string, string> {
   const errors: Record<string, string> = {}
-  if (input.title.trim().length < 3 || input.title.trim().length > 80) {
+  if (sanitizeText(input.title, 120).length < 3 || sanitizeText(input.title, 120).length > 80) {
     errors.title = 'Title must be 3–80 characters.'
   }
-  if (input.description.trim().length < 10 || input.description.trim().length > 1000) {
+  if (
+    sanitizeMultiline(input.description, 2000).length < 10 ||
+    sanitizeMultiline(input.description, 2000).length > 1000
+  ) {
     errors.description = 'Description must be 10–1000 characters.'
   }
   if (input.section === 'arenas' && input.listingType !== 'rent') {

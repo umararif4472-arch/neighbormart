@@ -2,6 +2,10 @@ import type { AppNotification, Message } from '@/types'
 import { ApiError } from './errors'
 import { createNotification } from './notifications'
 import { clone, findRequest, getStore, nextId, simulateLatency } from './store'
+import { sanitizeMultiline } from '@/utils/sanitize'
+import { checkWindow, MESSAGE_RATE_LIMIT, type WindowState } from '@/utils/rateLimit'
+
+const messageWindows = new Map<string, WindowState>()
 
 /** Chat service — one thread per borrow request, participants only. */
 
@@ -26,8 +30,18 @@ export async function sendMessage(
   await simulateLatency(150, 400)
 
   const request = findRequest(requestId)
-  const trimmed = body.trim()
+  const trimmed = sanitizeMultiline(body, 1000)
   if (trimmed.length === 0) throw new ApiError('invalid', 'Write something first.')
+  const decision = checkWindow(
+    messageWindows.get(senderId) ?? { windowStart: null, count: 0 },
+    new Date().toISOString(),
+    MESSAGE_RATE_LIMIT.limit,
+    MESSAGE_RATE_LIMIT.windowMs,
+  )
+  if (!decision.allowed) {
+    throw new ApiError('rate-limited', 'You are sending messages too fast — wait a minute.')
+  }
+  messageWindows.set(senderId, { windowStart: decision.windowStart, count: decision.count })
   if (trimmed.length > 1000) throw new ApiError('invalid', 'Messages max out at 1000 characters.')
 
   const store = getStore()

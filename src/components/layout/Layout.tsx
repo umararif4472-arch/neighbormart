@@ -3,6 +3,7 @@ import { useApp } from '@/context/AppContext'
 import { useDerivedNotifications } from '@/hooks/useDerivedNotifications'
 import { Avatar } from '@/components/ui/Avatar'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { InstallPrompt } from './InstallPrompt'
 import { authApi, isFirebaseConfigured } from '@/services'
 import { BellIcon, HomeIcon, ChatIcon, PlusIcon, ListIcon, UserIcon } from '@/components/icons'
 import { cn } from '@/utils/cn'
@@ -79,6 +80,11 @@ function Navbar() {
           <NavLink to="/messages" className={navLinkClass}>
             Messages
           </NavLink>
+          {currentUser?.role === 'admin' && (
+            <NavLink to="/moderation" className={navLinkClass}>
+              Moderation
+            </NavLink>
+          )}
           <Link
             to="/list-item"
             className="ml-2 inline-flex h-10 items-center gap-1.5 rounded-full bg-terracotta-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-terracotta-700 focus-visible:outline-2 focus-visible:outline-terracotta-600"
@@ -192,6 +198,29 @@ function Footer() {
           Your local marketplace for borrowing, renting, buying and selling — items, vehicles,
           properties and arenas, right on your street.
         </p>
+        <nav
+          aria-label="Legal and safety"
+          className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs font-semibold"
+        >
+          <Link
+            to="/terms"
+            className="text-terracotta-700 underline-offset-2 hover:underline dark:text-terracotta-300"
+          >
+            Terms of Service
+          </Link>
+          <Link
+            to="/privacy"
+            className="text-terracotta-700 underline-offset-2 hover:underline dark:text-terracotta-300"
+          >
+            Privacy Policy
+          </Link>
+          <Link
+            to="/safety"
+            className="text-terracotta-700 underline-offset-2 hover:underline dark:text-terracotta-300"
+          >
+            Stay safe &amp; avoid scams
+          </Link>
+        </nav>
         <p className="text-xs text-bark-light">
           Trust is earned: on-time returns, honest reviews, and showing up for your street.{' '}
           <Link
@@ -227,6 +256,7 @@ export function Layout() {
       </main>
       <Footer />
       <MobileTabBar />
+      <InstallPrompt />
     </div>
   )
 }

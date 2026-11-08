@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /messages
+Disallow: /welcome
+Disallow: /list-item
+Disallow: /moderation
+
+Sitemap: https://neighbormart-7eff0.web.app/sitemap.xml

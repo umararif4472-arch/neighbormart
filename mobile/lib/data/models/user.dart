@@ -81,6 +81,10 @@ class AppUser {
 
   /// Marketplace interests picked in profile setup (Step 3).
   final List<String> interests;
+
+  /// Neighbors this user has blocked (Phase 8). Their listings are
+  /// hidden from this user's Explore and section lists.
+  final List<String> blockedUserIds;
   final LatLng homeLocation;
   final DateTime joinedAt;
   final bool phoneVerified;
@@ -102,6 +106,7 @@ class AppUser {
     this.city = '',
     this.onboardingCompleted = true,
     this.interests = const [],
+    this.blockedUserIds = const [],
     required this.neighborhood,
     required this.homeLocation,
     required this.joinedAt,
@@ -125,6 +130,7 @@ class AppUser {
     bool? idVerified,
     bool? onboardingCompleted,
     List<String>? interests,
+    List<String>? blockedUserIds,
   }) {
     return AppUser(
       id: id,
@@ -136,6 +142,7 @@ class AppUser {
       city: city ?? this.city,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       interests: interests ?? this.interests,
+      blockedUserIds: blockedUserIds ?? this.blockedUserIds,
       neighborhood: neighborhood ?? this.neighborhood,
       homeLocation: homeLocation,
       joinedAt: joinedAt,
