@@ -10,6 +10,8 @@ import {
 import type { AppNotification, BorrowRequest, Listing, Message, Review, User } from '@/types'
 import { upsertById } from '@/utils/collections'
 import {
+  isApiError,
+  isFirebaseConfigured,
   toErrorMessage,
   authApi,
   listingsApi,
@@ -31,7 +33,8 @@ import {
 // ---------------------------------------------------------------------------
 
 interface HydrationPayload {
-  currentUser: User
+  /** Null in live mode when browsing as a guest (no session). */
+  currentUser: User | null
   users: User[]
   listings: Listing[]
   requests: BorrowRequest[]
@@ -175,6 +178,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
           })
         }
       } catch (error) {
+        // Live backend + no session = guest browsing: public data only,
+        // no account-bound requests/notifications. Posting, messaging,
+        // and the dashboard sit behind RequireAuth in this mode.
+        if (isFirebaseConfigured && isApiError(error) && error.code === 'forbidden') {
+          try {
+            const [users, listings, reviews] = await Promise.all([
+              usersApi.getUsers(),
+              listingsApi.getListings(),
+              reviewsApi.getReviews(),
+            ])
+            if (alive) {
+              dispatch({
+                type: 'HYDRATE_SUCCESS',
+                payload: {
+                  currentUser: null,
+                  users,
+                  listings,
+                  requests: [],
+                  reviews,
+                  notifications: [],
+                },
+              })
+            }
+            return
+          } catch {
+            // Fall through to the error screen below.
+          }
+        }
         if (alive) {
           dispatch({ type: 'HYDRATE_ERROR', message: toErrorMessage(error) })
         }
@@ -185,6 +216,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       alive = false
     }
   }, [attempt])
+
+  // Live mode: a sign-in or sign-out anywhere re-runs hydration so the
+  // whole app swaps between the guest view and the account view.
+  useEffect(() => {
+    if (!isFirebaseConfigured) return
+    let lastUid: string | null | undefined
+    const unsubscribe = authApi.onSessionChange((user) => {
+      const uid = user?.id ?? null
+      if (lastUid === undefined) {
+        lastUid = uid
+        return
+      }
+      if (uid !== lastUid) {
+        lastUid = uid
+        setAttempt((n) => n + 1)
+      }
+    })
+    return unsubscribe
+  }, [])
 
   const value = useMemo(() => ({ state, dispatch, retryHydration }), [state, retryHydration])
 

@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'core/firebase/firebase_init.dart';
 import 'core/theme/app_theme.dart';
+import 'data/services/auth_service.dart';
 import 'state/app_state.dart';
 import 'ui/app_root.dart';
 
@@ -15,6 +19,24 @@ Future<void> main() async {
   } catch (_) {
     // Prefs unavailable (should not happen on-device): fall back to the
     // in-memory defaults so the app still opens.
+  }
+  // Phase 3: bring up Firebase when this build carries its config
+  // (google-services.json). Without it the app runs on local data.
+  // Firebase Auth persists its own session, so a returning user is
+  // re-adopted here with a fresh copy of their profile doc.
+  if (await initFirebase()) {
+    final fbUser = FirebaseAuth.instance.currentUser;
+    if (fbUser != null) {
+      try {
+        final profile = await FirebaseAuthService.instance.ensureProfile(
+          fbUser,
+        );
+        state.adoptExternalUser(profile);
+      } catch (_) {
+        // Profile fetch failed (e.g. offline) — the local session state
+        // from prefs still applies; Firebase re-syncs on next sign-in.
+      }
+    }
   }
   runApp(NeighborMartApp(state: state));
 }

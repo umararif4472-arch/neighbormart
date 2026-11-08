@@ -20,11 +20,14 @@ processing in this release**; a clean service interface leaves room to add
 JazzCash / Easypaisa / Stripe later.
 
 > **Status:** working prototype being rebuilt into the marketplace above,
-> in phases (see [Roadmap](#roadmap)). Phases 1–2 are done: the web app
-> runs end-to-end on the unified multi-section `Listing` model against
-> the in-memory mock service layer, and Flutter mirrors the model and
-> trust formula (its screens migrate in Phase 5). The Firebase backend
-> and section experiences land in Phases 3–5. Originally prototyped as
+> in phases (see [Roadmap](#roadmap)). Phases 1–3 are done: the web app
+> runs on the unified multi-section `Listing` model, and the full
+> Firebase backend (Auth, Firestore, rules, indexes, seed script) is
+> implemented behind the service layer — set `VITE_FIREBASE_*` in
+> `.env.local` (see `docs/firebase-setup.md`) and the same screens run
+> live; without it they run on the in-memory mock layer, which is also
+> what tests and CI use. Flutter mirrors the model, trust formula, and
+> auth. Section experiences land in Phase 5. Originally prototyped as
 > "Borrow Don't Buy"; renamed to **NeighborMart** on 2026-11-08 because
 > the old name only described lending.
 
@@ -48,9 +51,8 @@ This repo has two apps for the same product:
 - In-app messages per request, notifications, reviews, report-an-issue
 - Dashboard for incoming/outgoing requests; profiles with trust breakdown
 
-**Coming with the marketplace rebuild (Phases 3–7)**
+**Coming with the marketplace rebuild (Phases 4–7)**
 
-- Firebase Auth (Google Sign-In + email fallback), Firestore, Storage
 - Multi-photo upload with compression, reorder, and cover photo
 - Section-specific browse pages, filters, cards, and listing wizards
 - Arena slot booking with a no-double-booking guarantee
@@ -181,8 +183,12 @@ mobile/           # Flutter app (same product, same seed data)
 - [x] **Phase 2 — Data model:** unified `Listing` (items / vehicles /
       properties / arenas), extended trust score, realistic seed data
       (Lahore, PKR); Flutter model + trust mirror
-- [ ] **Phase 3 — Real backend:** Firebase Auth (Google Sign-In),
-      Firestore, Storage, security rules, indexes; mirrored in Flutter
+- [x] **Phase 3 — Real backend:** Firebase Auth (Google Sign-In +
+      email fallback), Firestore service layer behind the existing
+      service boundary (mock layer remains as the offline/dev fallback),
+      security rules, composite indexes, demo seed script; Flutter
+      mirror (auth + Firestore reads). Live hookup needs the Firebase
+      console steps in docs/firebase-setup.md
 - [ ] **Phase 4 — Photo upload:** multi-photo, compression, reorder,
       cover photo, full-screen gallery
 - [ ] **Phase 5 — Section experiences:** section pages/filters/cards,

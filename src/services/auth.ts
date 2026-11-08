@@ -19,5 +19,40 @@ export async function getSessionUser(): Promise<User> {
   return clone(user)
 }
 
+// --- Auth surface parity with the live (Firebase) implementation --------
+// In mock mode there is exactly one demo session (Maya), so every sign-in
+// resolves to her and sign-out is a no-op. The live implementations in
+// services/live/auth.ts perform real Firebase Auth.
+
+export async function signInWithGoogle(): Promise<User> {
+  return getSessionUser()
+}
+
+export async function signInWithEmail(_email: string, _password: string): Promise<User> {
+  void _email
+  void _password
+  return getSessionUser()
+}
+
+export async function signUpWithEmail(
+  _name: string,
+  _email: string,
+  _password: string,
+): Promise<User> {
+  void _name
+  void _email
+  void _password
+  return getSessionUser()
+}
+
+export async function signOut(): Promise<void> {
+  // Demo session is permanent in mock mode.
+}
+
+export function onSessionChange(_callback: (user: User | null) => void): () => void {
+  void _callback
+  return () => {}
+}
+
 // Re-exported for convenience so callers can do `authApi.CURRENT_USER_ID`.
 export { findUser }

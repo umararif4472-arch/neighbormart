@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { useDerivedNotifications } from '@/hooks/useDerivedNotifications'
 import { Avatar } from '@/components/ui/Avatar'
+import { authApi, isFirebaseConfigured } from '@/services'
 import { BellIcon, HomeIcon, ChatIcon, PlusIcon, ListIcon, UserIcon } from '@/components/icons'
 import { cn } from '@/utils/cn'
 
@@ -100,6 +101,23 @@ function Navbar() {
               <Avatar name={currentUser.name} src={currentUser.avatarUrl} size="sm" />
             </Link>
           )}
+          {isFirebaseConfigured && currentUser && (
+            <button
+              type="button"
+              onClick={() => void authApi.signOut()}
+              className="rounded-full px-3 py-2 text-sm font-semibold text-bark-light transition-colors hover:bg-bark/5 hover:text-bark focus-visible:outline-2 focus-visible:outline-terracotta-600"
+            >
+              Sign out
+            </button>
+          )}
+          {isFirebaseConfigured && !currentUser && (
+            <Link
+              to="/signin"
+              className="inline-flex h-10 items-center rounded-full bg-terracotta-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-terracotta-700 focus-visible:outline-2 focus-visible:outline-terracotta-600"
+            >
+              Sign in
+            </Link>
+          )}
         </div>
       </div>
     </header>
@@ -108,7 +126,8 @@ function Navbar() {
 
 function MobileTabBar() {
   const { state } = useApp()
-  const profileId = state.currentUser?.id ?? 'u-maya'
+  const profileId = state.currentUser?.id ?? (isFirebaseConfigured ? null : 'u-maya')
+  const profileTarget = profileId ? `/profile/${profileId}` : '/signin'
 
   const tab = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -144,7 +163,7 @@ function MobileTabBar() {
           <ChatIcon className="h-5 w-5" />
           Messages
         </NavLink>
-        <NavLink to={`/profile/${profileId}`} className={tab}>
+        <NavLink to={profileTarget} className={tab}>
           <UserIcon className="h-5 w-5" />
           Profile
         </NavLink>

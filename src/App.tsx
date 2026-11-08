@@ -12,6 +12,8 @@ import { MessagesPage } from '@/features/messages/MessagesPage'
 import { ProfilePage } from '@/features/profile/ProfilePage'
 import { TrustExplainerPage } from '@/features/trust/TrustExplainerPage'
 import { NotFoundPage } from '@/features/not-found/NotFoundPage'
+import { SignInPage } from '@/features/auth/SignInPage'
+import { RequireAuth } from '@/components/layout/RequireAuth'
 import { useTierWatcher } from '@/hooks/useTierWatcher'
 
 /**
@@ -65,10 +67,20 @@ export default function App() {
           }
         />
         <Route
+          path="signin"
+          element={
+            <ErrorBoundary>
+              <SignInPage />
+            </ErrorBoundary>
+          }
+        />
+        <Route
           path="list-item"
           element={
             <ErrorBoundary>
-              <ListItemPage />
+              <RequireAuth>
+                <ListItemPage />
+              </RequireAuth>
             </ErrorBoundary>
           }
         />
@@ -76,7 +88,9 @@ export default function App() {
           path="dashboard"
           element={
             <ErrorBoundary>
-              <DashboardPage />
+              <RequireAuth>
+                <DashboardPage />
+              </RequireAuth>
             </ErrorBoundary>
           }
         />
@@ -84,7 +98,9 @@ export default function App() {
           path="messages"
           element={
             <ErrorBoundary>
-              <MessagesPage />
+              <RequireAuth>
+                <MessagesPage />
+              </RequireAuth>
             </ErrorBoundary>
           }
         />
@@ -92,7 +108,9 @@ export default function App() {
           path="messages/:requestId"
           element={
             <ErrorBoundary>
-              <MessagesPage />
+              <RequireAuth>
+                <MessagesPage />
+              </RequireAuth>
             </ErrorBoundary>
           }
         />

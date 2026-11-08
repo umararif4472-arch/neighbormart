@@ -51,5 +51,12 @@ export default tseslint.config(
     files: ['*.config.{ts,js}', 'eslint.config.js'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // Ops scripts (e.g. the Firestore seed) are CLIs — console output is
+    // their user interface, and they run in Node.
+    files: ['scripts/**/*.ts'],
+    languageOptions: { globals: globals.node },
+    rules: { 'no-console': 'off' },
+  },
   prettier,
 )

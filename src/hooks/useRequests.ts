@@ -2,7 +2,15 @@ import { useCallback, useMemo } from 'react'
 import type { BorrowRequest, EffectiveRequestStatus, Listing, User } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { useNow } from './useNow'
-import { requestsApi, reviewsApi, toErrorMessage } from '@/services'
+import {
+  requestsApi,
+  reviewsApi,
+  toErrorMessage,
+  type CreateRequestInput,
+  type CreateReviewInput,
+  type ReportIssueInput,
+  type RequestMutationResult,
+} from '@/services'
 import { findById } from '@/utils/collections'
 import {
   effectiveStatus,
@@ -117,7 +125,7 @@ export function useMyRequests() {
 
   /** Apply a service mutation result to context in one dispatch sequence. */
   const applyResult = useCallback(
-    (result: requestsApi.RequestMutationResult) => {
+    (result: RequestMutationResult) => {
       dispatch({ type: 'REQUESTS_UPSERTED', requests: [result.request] })
       if (result.listing) dispatch({ type: 'LISTINGS_UPSERTED', listings: [result.listing] })
       if (result.users.length > 0) dispatch({ type: 'USERS_UPSERTED', users: result.users })
@@ -129,7 +137,7 @@ export function useMyRequests() {
   )
 
   const sendRequest = useCallback(
-    async (input: requestsApi.CreateRequestInput) => {
+    async (input: CreateRequestInput) => {
       const result = await requestsApi.createRequest(input)
       applyResult(result)
       return result.request
@@ -183,7 +191,7 @@ export function useMyRequests() {
    * returned → reviewed transition.
    */
   const sendReview = useCallback(
-    async (input: reviewsApi.CreateReviewInput) => {
+    async (input: CreateReviewInput) => {
       const result = await reviewsApi.createReview(input)
       dispatch({ type: 'REVIEWS_APPENDED', reviews: [result.review] })
       if (result.request) {
@@ -198,7 +206,7 @@ export function useMyRequests() {
   )
 
   const reportIssue = useCallback(
-    async (input: requestsApi.ReportIssueInput) => {
+    async (input: ReportIssueInput) => {
       const result = await requestsApi.reportIssue(input)
       applyResult(result)
       return result.request

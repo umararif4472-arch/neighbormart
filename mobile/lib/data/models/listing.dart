@@ -385,3 +385,182 @@ class ArenaListing extends Listing {
   @override
   ListingSection get section => ListingSection.arenas;
 }
+
+// ---------------------------------------------------------------------------
+// Firestore mapping (Phase 3)
+// ---------------------------------------------------------------------------
+
+/// Parse a listing from its Firestore document shape — the exact JSON
+/// the web client writes (ISO date strings, enum names as strings,
+/// arena opening hours nested under `openingHours`). Used by the
+/// Flutter Firestore service; the seed builders construct listings
+/// directly and don't need this.
+extension ListingFirestoreMap on Listing {
+  static Listing fromMap(String id, Map<String, dynamic> map) {
+    final locationData = map['location'] as Map<String, dynamic>? ?? const {};
+    final location = ListingLocation(
+      lat: (locationData['lat'] as num?)?.toDouble() ?? 0,
+      lng: (locationData['lng'] as num?)?.toDouble() ?? 0,
+      city: locationData['city'] as String? ?? '',
+      area: locationData['area'] as String? ?? '',
+    );
+    final details = map['details'] as Map<String, dynamic>? ?? const {};
+
+    ListingType type() =>
+        ListingType.values.byName(map['listingType'] as String? ?? 'borrow');
+    PriceUnit unit() =>
+        PriceUnit.values.byName(map['priceUnit'] as String? ?? 'fixed');
+    ListingStatus status() =>
+        ListingStatus.values.byName(map['status'] as String? ?? 'active');
+    List<String> photos() =>
+        (map['photos'] as List<dynamic>? ?? const []).cast<String>();
+    DateTime created() =>
+        DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now();
+    DateTime updated() =>
+        DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? created();
+
+    switch (map['section'] as String? ?? 'items') {
+      case 'vehicles':
+        return VehicleListing(
+          id: id,
+          ownerId: map['ownerId'] as String? ?? '',
+          listingType: type(),
+          title: map['title'] as String? ?? '',
+          description: map['description'] as String? ?? '',
+          price: (map['price'] as num?)?.toInt() ?? 0,
+          currency: map['currency'] as String? ?? 'PKR',
+          priceUnit: unit(),
+          negotiable: map['negotiable'] as bool? ?? false,
+          photos: photos(),
+          location: location,
+          status: status(),
+          createdAt: created(),
+          updatedAt: updated(),
+          views: (map['views'] as num?)?.toInt() ?? 0,
+          details: VehicleDetails(
+            make: details['make'] as String? ?? '',
+            model: details['model'] as String? ?? '',
+            year: (details['year'] as num?)?.toInt() ?? 0,
+            mileageKm: (details['mileageKm'] as num?)?.toInt() ?? 0,
+            fuelType: VehicleFuelType.values.byName(
+              details['fuelType'] as String? ?? 'petrol',
+            ),
+            transmission: VehicleTransmission.values.byName(
+              details['transmission'] as String? ?? 'manual',
+            ),
+            condition: details['condition'] as String? ?? '',
+            withDriver: details['withDriver'] as bool? ?? false,
+            registrationCity: details['registrationCity'] as String? ?? '',
+          ),
+        );
+      case 'properties':
+        return PropertyListing(
+          id: id,
+          ownerId: map['ownerId'] as String? ?? '',
+          listingType: type(),
+          title: map['title'] as String? ?? '',
+          description: map['description'] as String? ?? '',
+          price: (map['price'] as num?)?.toInt() ?? 0,
+          currency: map['currency'] as String? ?? 'PKR',
+          priceUnit: unit(),
+          negotiable: map['negotiable'] as bool? ?? false,
+          photos: photos(),
+          location: location,
+          status: status(),
+          createdAt: created(),
+          updatedAt: updated(),
+          views: (map['views'] as num?)?.toInt() ?? 0,
+          details: PropertyDetails(
+            propertyType: PropertyType.values.byName(
+              details['propertyType'] as String? ?? 'house',
+            ),
+            bedrooms: (details['bedrooms'] as num?)?.toInt(),
+            bathrooms: (details['bathrooms'] as num?)?.toInt(),
+            areaSize: (details['areaSize'] as num?) ?? 0,
+            areaUnit: PropertyAreaUnit.values.byName(
+              details['areaUnit'] as String? ?? 'marla',
+            ),
+            furnished: details['furnished'] as bool? ?? false,
+            floor: (details['floor'] as num?)?.toInt(),
+            amenities: (details['amenities'] as List<dynamic>? ?? const [])
+                .cast<String>(),
+            availableFrom:
+                DateTime.tryParse(details['availableFrom'] as String? ?? '') ??
+                DateTime.now(),
+          ),
+        );
+      case 'arenas':
+        final hours =
+            details['openingHours'] as Map<String, dynamic>? ?? const {};
+        final facilities =
+            details['facilities'] as Map<String, dynamic>? ?? const {};
+        final advance =
+            details['advanceBooking'] as Map<String, dynamic>? ?? const {};
+        return ArenaListing(
+          id: id,
+          ownerId: map['ownerId'] as String? ?? '',
+          listingType: type(),
+          title: map['title'] as String? ?? '',
+          description: map['description'] as String? ?? '',
+          price: (map['price'] as num?)?.toInt() ?? 0,
+          currency: map['currency'] as String? ?? 'PKR',
+          priceUnit: unit(),
+          negotiable: map['negotiable'] as bool? ?? false,
+          photos: photos(),
+          location: location,
+          status: status(),
+          createdAt: created(),
+          updatedAt: updated(),
+          views: (map['views'] as num?)?.toInt() ?? 0,
+          details: ArenaDetails(
+            sportTypes: (details['sportTypes'] as List<dynamic>? ?? const [])
+                .cast<String>(),
+            surface: details['surface'] as String? ?? '',
+            capacity: (details['capacity'] as num?)?.toInt() ?? 0,
+            opensAt: hours['opens'] as String? ?? '09:00',
+            closesAt: hours['closes'] as String? ?? '22:00',
+            slotMinutes: (details['slotMinutes'] as num?)?.toInt() ?? 60,
+            facilities: ArenaFacilities(
+              floodlights: facilities['floodlights'] as bool? ?? false,
+              parking: facilities['parking'] as bool? ?? false,
+              washrooms: facilities['washrooms'] as bool? ?? false,
+              changingRooms: facilities['changingRooms'] as bool? ?? false,
+            ),
+            advanceBooking: ArenaAdvanceBooking(
+              maxAdvanceDays:
+                  (advance['maxAdvanceDays'] as num?)?.toInt() ?? 30,
+              minAdvanceHours:
+                  (advance['minAdvanceHours'] as num?)?.toInt() ?? 2,
+            ),
+          ),
+        );
+      case 'items':
+      default:
+        return ItemListing(
+          id: id,
+          ownerId: map['ownerId'] as String? ?? '',
+          listingType: type(),
+          title: map['title'] as String? ?? '',
+          description: map['description'] as String? ?? '',
+          price: (map['price'] as num?)?.toInt() ?? 0,
+          currency: map['currency'] as String? ?? 'PKR',
+          priceUnit: unit(),
+          negotiable: map['negotiable'] as bool? ?? false,
+          photos: photos(),
+          location: location,
+          status: status(),
+          createdAt: created(),
+          updatedAt: updated(),
+          views: (map['views'] as num?)?.toInt() ?? 0,
+          details: ItemListingDetails(
+            category: details['category'] as String? ?? 'Other',
+            condition: details['condition'] as String? ?? '',
+            depositAmount: (details['depositAmount'] as num?)?.toInt(),
+            maxDurationDays: (details['maxDurationDays'] as num?)?.toInt() ?? 7,
+            pickupPreference: details['pickupPreference'] as String? ?? 'meet',
+            pickupInstructions: details['pickupInstructions'] as String? ?? '',
+          ),
+        );
+    }
+  }
+}

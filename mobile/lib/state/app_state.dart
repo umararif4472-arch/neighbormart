@@ -10,6 +10,7 @@ import '../data/models/wishlist_item.dart';
 import '../data/models/message.dart';
 import '../data/models/app_notification.dart';
 import '../data/mock/seed_data.dart';
+import '../data/services/auth_service.dart';
 
 /// Groups [items] by category for the sectioned Explore list. Sections
 /// follow the canonical [kItemCategories] order (any unknown category
@@ -494,10 +495,30 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
+  /// Adopt a user authenticated outside the demo system (Firebase
+  /// Auth, Phase 3): upsert them into the local user list so every
+  /// screen that resolves users by id keeps working, and make them the
+  /// current session.
+  void adoptExternalUser(AppUser user) {
+    final idx = _users.indexWhere((u) => u.id == user.id);
+    if (idx >= 0) {
+      _users[idx] = user;
+    } else {
+      _users.add(user);
+    }
+    _currentUserId = user.id;
+    isLoggedIn = true;
+    _persistSession();
+    notifyListeners();
+  }
+
   void signOut() {
     isLoggedIn = false;
     _persistSession();
     notifyListeners();
+    // Mirror the sign-out to Firebase when it's configured (fire and
+    // forget — local sign-out must never block on the network).
+    FirebaseAuthService.instance.signOut().catchError((_) {});
   }
 
   /// Returns null when a (demo) reset was "sent", or an error message.

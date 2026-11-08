@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/firebase/firebase_init.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../state/app_state.dart';
 import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
@@ -24,6 +26,33 @@ class _LoginScreenState extends State<LoginScreen> {
     _email.dispose();
     _password.dispose();
     super.dispose();
+  }
+
+  bool _googleBusy = false;
+
+  Future<void> _googleSignIn() async {
+    if (!firebaseReady) {
+      setState(
+        () => _error =
+            'Google sign-in needs this build to carry its Firebase config '
+            '(google-services.json) — see the Phase 3 setup steps.',
+      );
+      return;
+    }
+    setState(() {
+      _googleBusy = true;
+      _error = null;
+    });
+    try {
+      final user = await FirebaseAuthService.instance.signInWithGoogle();
+      if (!mounted) return;
+      context.read<AppState>().adoptExternalUser(user);
+      Navigator.of(context).popUntil((r) => r.isFirst);
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _googleBusy = false);
+    }
   }
 
   void _submit() {
@@ -111,6 +140,23 @@ class _LoginScreenState extends State<LoginScreen> {
               child: ElevatedButton(
                 onPressed: _submit,
                 child: const Text('Log in'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _googleBusy ? null : _googleSignIn,
+                icon: const Text(
+                  'G',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.terracotta,
+                  ),
+                ),
+                label: Text(
+                  _googleBusy ? 'Signing in…' : 'Continue with Google',
+                ),
               ),
             ),
             const SizedBox(height: 14),

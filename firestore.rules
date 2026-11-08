@@ -1,0 +1,165 @@
+rules_version = '2';
+
+// NeighborMart — Firestore Security Rules (Phase 3)
+//
+// These rules are the server-side enforcement of the same business rules
+// the service layer checks in code:
+//   - profiles are public; only the owner writes their own profile
+//   - only a listing's owner can edit it, and status must follow the
+//     listing state machine (utils/listingStatus.ts)
+//   - requests: no self-booking, participants only, status must follow
+//     the request lifecycle (utils/requestLifecycle.ts)
+//   - one review per party per deal — review doc ids are deterministic
+//     (`${requestId}_${reviewerId}`) and create-only-if-absent
+//   - messages only between a request's two participants
+//   - notifications are private to their recipient
+//   - reports are write-only for users (moderation reads them in the
+//     Firebase console / Admin SDK)
+//
+// Known limit, by design for this release: field-level stat deltas on
+// user profiles (e.g. "successfulBorrows may only increase by 1") are
+// not verified here — the service layer computes them, and a future
+// Cloud Functions pass (Phase 8 hardening) can lock them down.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Listing status machine — mirrors LISTING_STATUS_TRANSITIONS.
+    function listingTransitionOk(from, to) {
+      return (from == 'active' && to in ['reserved', 'rented', 'sold', 'paused', 'removed'])
+        || (from == 'reserved' && to in ['active', 'rented', 'sold', 'removed'])
+        || (from == 'rented' && to in ['active', 'removed'])
+        || (from == 'sold' && to in ['removed'])
+        || (from == 'paused' && to in ['active', 'removed']);
+    }
+
+    // Request lifecycle — mirrors REQUEST_TRANSITIONS.
+    function requestTransitionOk(from, to) {
+      return (from == 'pending' && to in ['approved', 'declined', 'cancelled'])
+        || (from == 'approved' && to in ['active', 'cancelled'])
+        || (from == 'active' && to in ['returned'])
+        || (from == 'returned' && to in ['reviewed']);
+    }
+
+    // --- User profiles -----------------------------------------------------
+    match /users/{uid} {
+      allow read: if true;
+      allow create: if isUser(uid);
+      allow update: if isUser(uid);
+      allow delete: if false;
+    }
+
+    // --- Listings ----------------------------------------------------------
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.status == 'active';
+      allow update: if signedIn()
+        && request.resource.data.ownerId == resource.data.ownerId
+        && (
+          // The owner can edit anything, with status following the machine.
+          (resource.data.ownerId == request.auth.uid
+            && (request.resource.data.status == resource.data.status
+              || listingTransitionOk(resource.data.status, request.resource.data.status)))
+          // A deal participant (the borrower) may flip ONLY the status for
+          // pickup (active -> rented) and return (rented -> active), which
+          // the request lifecycle performs in a batch with the request
+          // update. Content fields are untouchable. Residual risk: a
+          // signed-in user could flip a status without a real deal — the
+          // flip is reversible by the owner and content is never at risk;
+          // Phase 8 moves these two transitions into a Cloud Function.
+          || (request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'updatedAt'])
+            && ((resource.data.status == 'active' && request.resource.data.status == 'rented')
+              || (resource.data.status == 'rented' && request.resource.data.status == 'active')))
+        );
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // --- Borrow / booking requests -----------------------------------------
+    // Docs carry a denormalized ownerId (the listing owner) alongside the
+    // model fields so participant checks need no extra reads.
+    match /requests/{requestId} {
+      allow read: if signedIn()
+        && (resource.data.borrowerId == request.auth.uid
+          || resource.data.ownerId == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.borrowerId == request.auth.uid
+        && request.resource.data.ownerId != request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update: if signedIn()
+        && (resource.data.borrowerId == request.auth.uid
+          || resource.data.ownerId == request.auth.uid)
+        && request.resource.data.borrowerId == resource.data.borrowerId
+        && request.resource.data.ownerId == resource.data.ownerId
+        && (request.resource.data.status == resource.data.status
+          || (requestTransitionOk(resource.data.status, request.resource.data.status)
+            // Role split inside the lifecycle: only the owner approves or
+            // declines; only the borrower cancels. Pickup / return /
+            // review-completion may be recorded by either participant.
+            && (request.resource.data.status in ['approved', 'declined']
+              ? resource.data.ownerId == request.auth.uid
+              : request.resource.data.status == 'cancelled'
+                ? resource.data.borrowerId == request.auth.uid
+                : true)));
+      allow delete: if false;
+    }
+
+    // --- Reviews -------------------------------------------------------------
+    match /reviews/{reviewId} {
+      allow read: if true;
+      // One review per party per deal: the deterministic id makes a
+      // second create land on an existing doc, which `create` forbids.
+      allow create: if signedIn()
+        && request.resource.data.reviewerId == request.auth.uid
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5;
+      allow update, delete: if false;
+    }
+
+    // --- Chat messages -------------------------------------------------------
+    match /messages/{messageId} {
+      function isParticipant(reqData) {
+        return reqData.borrowerId == request.auth.uid
+          || reqData.ownerId == request.auth.uid;
+      }
+      allow read: if signedIn()
+        && isParticipant(
+          get(/databases/$(database)/documents/requests/$(resource.data.requestId)).data
+        );
+      allow create: if signedIn()
+        && request.resource.data.senderId == request.auth.uid
+        && isParticipant(
+          get(/databases/$(database)/documents/requests/$(request.resource.data.requestId)).data
+        );
+      allow update, delete: if false;
+    }
+
+    // --- Notifications --------------------------------------------------------
+    match /notifications/{notificationId} {
+      allow read, update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+      // Any signed-in user can notify another (deal fan-out); the content
+      // shape is validated so this can't become a spam firehose of junk.
+      allow create: if signedIn()
+        && request.resource.data.userId is string
+        && request.resource.data.title is string
+        && request.resource.data.read == false;
+    }
+
+    // --- Reports (moderation queue) -------------------------------------------
+    match /reports/{reportId} {
+      allow create: if signedIn() && request.resource.data.reportedBy == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+  }
+}
