@@ -42,6 +42,15 @@ class WishlistScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
+          if (state.liveMode && state.wishlist.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 4),
+              child: Text(
+                'The community wishlist was part of the old prototype '
+                'and is not part of the live marketplace yet. Your saved '
+                'items above sync with your account.',
+              ),
+            ),
           ...state.wishlist.map(
             (w) => Padding(
               padding: const EdgeInsets.only(bottom: 12),

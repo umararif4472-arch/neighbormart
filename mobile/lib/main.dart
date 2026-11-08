@@ -25,6 +25,10 @@ Future<void> main() async {
   // Firebase Auth persists its own session, so a returning user is
   // re-adopted here with a fresh copy of their profile doc.
   if (await initFirebase()) {
+    // Phase 10: a build carrying google-services.json runs on the
+    // live backend — swap the seed catalog for Firestore data before
+    // the first frame (an empty database just means empty screens).
+    state.enableLiveMode();
     final fbUser = FirebaseAuth.instance.currentUser;
     if (fbUser != null) {
       try {

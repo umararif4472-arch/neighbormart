@@ -18,7 +18,9 @@ import '../data/models/app_notification.dart';
 import '../data/models/report.dart';
 import '../data/mock/seed_data.dart';
 import '../data/mock/seed_listings.dart';
+import '../data/models/firestore_maps.dart';
 import '../data/services/auth_service.dart';
+import '../data/services/live_sync.dart';
 import '../data/services/safety_service.dart';
 
 /// Groups [items] by category for the sectioned Explore list. Sections
@@ -79,6 +81,166 @@ class AppState extends ChangeNotifier {
   /// shared `reports` collection for moderation.
   late List<Report> _reports;
   int _idCounter = 100;
+
+  // ---------------- Live backend (Phase 10) ----------------
+  //
+  // In live mode the seed catalog is replaced by Firestore data:
+  // [enableLiveMode] (called from main when Firebase initialized)
+  // clears every collection and starts the public listeners; signing
+  // in starts the per-user listeners. Mutations keep working on the
+  // local lists (instant UI) and mirror to Firestore through
+  // LiveSync — the snapshot echo then reconciles. Local/demo mode
+  // (tests, no google-services.json) never sets this flag and behaves
+  // exactly as before.
+  bool liveMode = false;
+  LiveSession? _publicLive;
+  LiveSession? _userLive;
+  AppUser? _adoptedUser;
+  List<NotificationDoc> _remoteNotifications = [];
+
+  void _mirror(Future<void> future) {
+    future.catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    _publicLive?.cancel();
+    _userLive?.cancel();
+    super.dispose();
+  }
+
+  /// Switch this state to the live backend: drop all seed/demo data
+  /// and hydrate from Firestore. An empty database simply leaves the
+  /// collections empty — every screen already has an empty state.
+  void enableLiveMode() {
+    if (liveMode) return;
+    liveMode = true;
+    _users = [];
+    _items = [];
+    _listings = [];
+    _requests = [];
+    _reviews = [];
+    _messages = [];
+    _wishlist = [];
+    _reports = [];
+    _remoteNotifications = [];
+    _favoriteItemIds.clear();
+    isLoggedIn = false;
+    if (firebaseReady) {
+      final session = LiveSession();
+      _publicLive = session;
+      session.listenListings(_applyRemoteListings);
+      session.listenUsers(_applyRemoteUsers);
+      session.listenReviews(_applyRemoteReviews);
+    }
+    notifyListeners();
+  }
+
+  void _rebuildItemsFromListings() {
+    _items = _listings.whereType<ItemListing>().map(itemFromListing).toList();
+  }
+
+  /// Remote listings replace the catalog; a listing I created seconds
+  /// ago whose echo hasn't landed yet is kept so it never flickers.
+  void _applyRemoteListings(List<Listing> remote) {
+    if (!liveMode) return;
+    final remoteIds = remote.map((l) => l.id).toSet();
+    final pending = _listings
+        .where(
+          (l) =>
+              !remoteIds.contains(l.id) &&
+              l.ownerId == _currentUserId &&
+              DateTime.now().difference(l.createdAt) <
+                  const Duration(seconds: 30),
+        )
+        .toList();
+    _listings = [...pending, ...remote];
+    _rebuildItemsFromListings();
+    notifyListeners();
+  }
+
+  void _applyRemoteUsers(List<AppUser> remote) {
+    if (!liveMode) return;
+    _users = List.of(remote);
+    final adopted = _adoptedUser;
+    if (adopted != null &&
+        isLoggedIn &&
+        _users.every((u) => u.id != adopted.id)) {
+      _users.add(adopted);
+    }
+    notifyListeners();
+  }
+
+  void _applyRemoteReviews(List<Review> remote) {
+    if (!liveMode) return;
+    _reviews = List.of(remote);
+    notifyListeners();
+  }
+
+  void _applyRemoteRequests(List<BorrowRequest> remote) {
+    if (!liveMode) return;
+    final remoteIds = remote.map((r) => r.id).toSet();
+    final pending = _requests
+        .where(
+          (r) =>
+              !remoteIds.contains(r.id) &&
+              r.borrowerId == _currentUserId &&
+              DateTime.now().difference(r.createdAt) <
+                  const Duration(seconds: 30),
+        )
+        .toList();
+    _requests = [...pending, ...remote];
+    notifyListeners();
+  }
+
+  void _applyRemoteMessages(List<Message> remote) {
+    if (!liveMode) return;
+    _messages = List.of(remote);
+    notifyListeners();
+  }
+
+  void _applyRemoteNotifications(List<NotificationDoc> remote) {
+    if (!liveMode) return;
+    _remoteNotifications = List.of(remote);
+    notifyListeners();
+  }
+
+  void _applyOwnProfile(Map<String, dynamic> data) {
+    if (!liveMode) return;
+    final favs = (data['favoriteItemIds'] as List<dynamic>? ?? const [])
+        .map((e) => e.toString())
+        .toSet();
+    if (favs.length != _favoriteItemIds.length ||
+        !favs.containsAll(_favoriteItemIds)) {
+      _favoriteItemIds
+        ..clear()
+        ..addAll(favs);
+      notifyListeners();
+    }
+  }
+
+  void _startUserLive(String uid) {
+    if (!firebaseReady) return;
+    _userLive?.cancel();
+    final session = LiveSession();
+    _userLive = session;
+    session.listenUserActivity(
+      uid,
+      onRequests: _applyRemoteRequests,
+      onMessages: _applyRemoteMessages,
+      onNotifications: _applyRemoteNotifications,
+      onOwnProfile: _applyOwnProfile,
+    );
+  }
+
+  void _stopUserLive() {
+    _userLive?.cancel();
+    _userLive = null;
+    _requests = [];
+    _messages = [];
+    _remoteNotifications = [];
+    _favoriteItemIds.clear();
+  }
 
   String _currentUserId = 'u-maya';
 
@@ -141,8 +303,34 @@ class AppState extends ChangeNotifier {
   List<Report> get reports => List.unmodifiable(_reports);
 
   AppUser get currentUser => userById(_currentUserId);
-  AppUser userById(String id) =>
-      _users.firstWhere((u) => u.id == id, orElse: () => _users.first);
+
+  /// Fallback identity for lookups that race the live user listener
+  /// (or an empty live database): screens must render a neighbor, not
+  /// crash, while profiles are still loading.
+  static final AppUser _placeholderUser = AppUser(
+    id: '',
+    name: 'Neighbor',
+    bio: '',
+    neighborhood: '',
+    homeLocation: const LatLng(31.5204, 74.3587),
+    joinedAt: DateTime(2024, 1, 1),
+    phoneVerified: false,
+    emailVerified: false,
+    responseRate: 1,
+    avgResponseMinutes: 60,
+    stats: const UserStats(
+      successfulLends: 0,
+      successfulBorrows: 0,
+      onTimeReturns: 0,
+      lateReturns: 0,
+    ),
+    badges: const [],
+  );
+
+  AppUser userById(String id) => _users.firstWhere(
+    (u) => u.id == id,
+    orElse: () => _users.isNotEmpty ? _users.first : _placeholderUser,
+  );
   AppUser? userByIdOrNull(String id) {
     for (final u in _users) {
       if (u.id == id) return u;
@@ -238,6 +426,13 @@ class AppState extends ChangeNotifier {
       _favoriteItemIds.add(itemId);
     }
     notifyListeners();
+    if (liveMode) {
+      _mirror(
+        LiveSync.instance.updateUserFields(_currentUserId, {
+          'favoriteItemIds': _favoriteItemIds.toList(),
+        }),
+      );
+    }
   }
 
   /// Favorited items that still exist, in catalog order.
@@ -265,7 +460,9 @@ class AppState extends ChangeNotifier {
       incomingRequests.where((r) => r.status == 'pending').length;
 
   String ownerIdFor(BorrowRequest r) =>
-      listingByIdOrNull(r.itemId)?.ownerId ?? itemById(r.itemId).ownerId;
+      listingByIdOrNull(r.itemId)?.ownerId ??
+      itemByIdOrNull(r.itemId)?.ownerId ??
+      '';
 
   void _replaceRequest(BorrowRequest updated) {
     final idx = _requests.indexWhere((r) => r.id == updated.id);
@@ -284,6 +481,10 @@ class AppState extends ChangeNotifier {
     );
     _onRequestApproved(r);
     notifyListeners();
+    if (liveMode) {
+      final updated = _requests.firstWhere((x) => x.id == requestId);
+      _mirror(LiveSync.instance.updateRequest(updated, ownerIdFor(updated)));
+    }
   }
 
   void declineRequest(String requestId) {
@@ -293,6 +494,10 @@ class AppState extends ChangeNotifier {
       r.copyWith(status: 'declined', respondedAt: DateTime.now()),
     );
     notifyListeners();
+    if (liveMode) {
+      final updated = _requests.firstWhere((x) => x.id == requestId);
+      _mirror(LiveSync.instance.updateRequest(updated, ownerIdFor(updated)));
+    }
   }
 
   void markPickedUp(String requestId) {
@@ -310,6 +515,16 @@ class AppState extends ChangeNotifier {
       setListingStatus(listing.id, ListingStatus.rented);
     }
     notifyListeners();
+    if (liveMode) {
+      final updated = _requests.firstWhere((x) => x.id == requestId);
+      _mirror(
+        LiveSync.instance.transitionRequest(
+          request: updated,
+          ownerId: ownerIdFor(updated),
+          listingStatus: 'rented',
+        ),
+      );
+    }
   }
 
   void markReturned(String requestId, {required bool onTime}) {
@@ -345,6 +560,19 @@ class AppState extends ChangeNotifier {
       );
     }
     notifyListeners();
+    if (liveMode) {
+      final updated = _requests.firstWhere((x) => x.id == requestId);
+      final borrower = userById(r.borrowerId);
+      final owner = userById(ownerId);
+      _mirror(
+        LiveSync.instance.transitionRequest(
+          request: updated,
+          ownerId: ownerId,
+          listingStatus: 'active',
+          statsByUserId: {borrower.id: borrower.stats, owner.id: owner.stats},
+        ),
+      );
+    }
   }
 
   /// Returns null on success, or an error message.
@@ -395,19 +623,22 @@ class AppState extends ChangeNotifier {
       }
     }
     _idCounter++;
-    _requests.insert(
-      0,
-      BorrowRequest(
-        id: 'req-new-$_idCounter',
-        itemId: item.id,
-        borrowerId: currentUser.id,
-        period: BorrowPeriod(start: s, end: e),
-        note: note.trim(),
-        status: 'pending',
-        createdAt: DateTime.now(),
-      ),
+    final request = BorrowRequest(
+      id: liveMode
+          ? LiveSync.instance.newDocId('requests')
+          : 'req-new-$_idCounter',
+      itemId: item.id,
+      borrowerId: currentUser.id,
+      period: BorrowPeriod(start: s, end: e),
+      note: note.trim(),
+      status: 'pending',
+      createdAt: DateTime.now(),
     );
+    _requests.insert(0, request);
     notifyListeners();
+    if (liveMode) {
+      _mirror(LiveSync.instance.createRequest(request, item.ownerId));
+    }
     return null;
   }
 
@@ -459,23 +690,26 @@ class AppState extends ChangeNotifier {
       }
     }
     _idCounter++;
-    _requests.insert(
-      0,
-      BorrowRequest(
-        id: 'req-new-$_idCounter',
-        itemId: listing.id,
-        borrowerId: currentUser.id,
-        period: period,
-        note: note.trim(),
-        status: 'pending',
-        offerAmount: listing.listingType == ListingType.sell
-            ? (offerAmount ?? listing.price)
-            : null,
-        slot: slot,
-        createdAt: DateTime.now(),
-      ),
+    final request = BorrowRequest(
+      id: liveMode
+          ? LiveSync.instance.newDocId('requests')
+          : 'req-new-$_idCounter',
+      itemId: listing.id,
+      borrowerId: currentUser.id,
+      period: period,
+      note: note.trim(),
+      status: 'pending',
+      offerAmount: listing.listingType == ListingType.sell
+          ? (offerAmount ?? listing.price)
+          : null,
+      slot: slot,
+      createdAt: DateTime.now(),
     );
+    _requests.insert(0, request);
     notifyListeners();
+    if (liveMode) {
+      _mirror(LiveSync.instance.createRequest(request, listing.ownerId));
+    }
     return null;
   }
 
@@ -502,6 +736,21 @@ class AppState extends ChangeNotifier {
       }
     }
     notifyListeners();
+    if (liveMode) {
+      final updated = _requests.firstWhere((x) => x.id == requestId);
+      final ownerId = ownerIdFor(updated);
+      final owner = userById(ownerId);
+      _mirror(
+        LiveSync.instance.transitionRequest(
+          request: updated,
+          ownerId: ownerId,
+          listingStatus: listing?.listingType == ListingType.sell
+              ? 'sold'
+              : null,
+          statsByUserId: {owner.id: owner.stats},
+        ),
+      );
+    }
   }
 
   /// Approving a sell offer reserves the listing (competing offers stay
@@ -529,7 +778,9 @@ class AppState extends ChangeNotifier {
   }) {
     _idCounter++;
     final item = Item(
-      id: 'i-new-$_idCounter',
+      id: liveMode
+          ? LiveSync.instance.newDocId('listings')
+          : 'i-new-$_idCounter',
       ownerId: currentUser.id,
       title: title.trim(),
       description: description.trim(),
@@ -549,6 +800,41 @@ class AppState extends ChangeNotifier {
     );
     _items.insert(0, item);
     notifyListeners();
+    if (liveMode) {
+      // The legacy wizard publishes Items; the live catalog is the
+      // unified Listing — create its twin so the item exists in
+      // Firestore (and on the web) too.
+      final twin = ItemListing(
+        id: item.id,
+        ownerId: item.ownerId,
+        listingType: dailyFee != null ? ListingType.rent : ListingType.borrow,
+        title: item.title,
+        description: item.description,
+        price: dailyFee ?? 0,
+        priceUnit: dailyFee != null ? PriceUnit.day : PriceUnit.fixed,
+        photos: item.photos,
+        location: ListingLocation(
+          lat: item.location.lat,
+          lng: item.location.lng,
+          city: currentUser.city,
+          area: currentUser.neighborhood,
+        ),
+        status: ListingStatus.active,
+        createdAt: item.createdAt,
+        updatedAt: item.createdAt,
+        details: ItemListingDetails(
+          category: item.category,
+          condition: item.condition,
+          depositAmount: depositAmount,
+          maxDurationDays: maxDurationDays,
+          pickupPreference: pickupPreference,
+          pickupInstructions: pickupInstructions.trim(),
+        ),
+      );
+      _listings.insert(0, twin);
+      _mirror(LiveSync.instance.createListing(twin));
+      notifyListeners();
+    }
     return item;
   }
 
@@ -609,6 +895,9 @@ class AppState extends ChangeNotifier {
 
   /// Returns null on success, or an error message.
   String? login(String email, String password) {
+    if (liveMode) {
+      return 'This build signs in with Google or the email form above.';
+    }
     final e = email.trim().toLowerCase();
     AppUser? found;
     for (final u in _users) {
@@ -627,6 +916,7 @@ class AppState extends ChangeNotifier {
   /// Instant demo login as any seed neighbor (no password check — the
   /// account picker on the Login screen uses this).
   void loginAs(AppUser user) {
+    if (liveMode) return; // No demo accounts exist in the live build.
     _currentUserId = user.id;
     isLoggedIn = true;
     _persistSession();
@@ -640,6 +930,9 @@ class AppState extends ChangeNotifier {
     required String password,
     required String neighborhood,
   }) {
+    if (liveMode) {
+      return 'This build creates accounts with the email form above.';
+    }
     final e = email.trim().toLowerCase();
     if (_users.any((u) => u.email.toLowerCase() == e)) {
       return 'An account already uses that email.';
@@ -698,6 +991,10 @@ class AppState extends ChangeNotifier {
     isLoggedIn = true;
     _persistSession();
     notifyListeners();
+    if (liveMode) {
+      _adoptedUser = user;
+      _startUserLive(user.id);
+    }
   }
 
   // ---------------- Phase 6: profile setup ----------------
@@ -820,6 +1117,10 @@ class AppState extends ChangeNotifier {
   }
 
   void signOut() {
+    if (liveMode) {
+      _stopUserLive();
+      _adoptedUser = null;
+    }
     isLoggedIn = false;
     _persistSession();
     notifyListeners();
@@ -836,6 +1137,7 @@ class AppState extends ChangeNotifier {
   }
 
   void resetDemoData() {
+    if (liveMode) return; // There is no demo data in the live build.
     _seedAll();
     _currentUserId = 'u-maya';
     notificationsEnabled = true;
@@ -855,6 +1157,15 @@ class AppState extends ChangeNotifier {
       neighborhood: neighborhood?.trim(),
     );
     notifyListeners();
+    if (liveMode) {
+      _mirror(
+        LiveSync.instance.updateUserFields(_currentUserId, {
+          if (name != null) 'name': name.trim(),
+          if (bio != null) 'bio': bio.trim(),
+          if (neighborhood != null) 'neighborhood': neighborhood.trim(),
+        }),
+      );
+    }
   }
 
   void verifyPhone() {
@@ -862,6 +1173,13 @@ class AppState extends ChangeNotifier {
     if (idx < 0) return;
     _users[idx] = _users[idx].copyWith(phoneVerified: true);
     notifyListeners();
+    if (liveMode) {
+      _mirror(
+        LiveSync.instance.updateUserFields(_currentUserId, {
+          'phoneVerified': true,
+        }),
+      );
+    }
   }
 
   void verifyEmail() {
@@ -869,6 +1187,13 @@ class AppState extends ChangeNotifier {
     if (idx < 0) return;
     _users[idx] = _users[idx].copyWith(emailVerified: true);
     notifyListeners();
+    if (liveMode) {
+      _mirror(
+        LiveSync.instance.updateUserFields(_currentUserId, {
+          'emailVerified': true,
+        }),
+      );
+    }
   }
 
   void setNotificationsEnabled(bool value) {
@@ -898,6 +1223,7 @@ class AppState extends ChangeNotifier {
       _items.insert(0, itemFromListing(listing));
     }
     notifyListeners();
+    if (liveMode) _mirror(LiveSync.instance.createListing(listing));
   }
 
   /// Owner status change, validated against the shared status machine.
@@ -913,6 +1239,9 @@ class AppState extends ChangeNotifier {
     final listing = _listings[idx];
     if (!canTransitionListingStatus(listing.status, status)) return false;
     _listings[idx] = listingWithStatus(listing, status);
+    if (liveMode) {
+      _mirror(LiveSync.instance.updateListingStatus(listingId, status.name));
+    }
     if (listing is ItemListing) {
       final itemIdx = _items.indexWhere((i) => i.id == listingId);
       if (itemIdx >= 0) {
@@ -958,11 +1287,51 @@ class AppState extends ChangeNotifier {
       ),
     );
     notifyListeners();
+    if (liveMode) {
+      final updated = _items[idx];
+      final lIdx = _listings.indexWhere((l) => l.id == itemId);
+      if (lIdx >= 0 && _listings[lIdx] is ItemListing) {
+        final old = _listings[lIdx] as ItemListing;
+        final twin = ItemListing(
+          id: old.id,
+          ownerId: old.ownerId,
+          listingType: old.listingType,
+          title: updated.title,
+          description: updated.description,
+          price: old.price,
+          currency: old.currency,
+          priceUnit: old.priceUnit,
+          negotiable: old.negotiable,
+          photos: updated.photos,
+          location: old.location,
+          status: old.status,
+          createdAt: old.createdAt,
+          updatedAt: DateTime.now(),
+          views: old.views,
+          details: ItemListingDetails(
+            category: updated.category,
+            condition: updated.condition,
+            depositAmount: updated.borrowTerms.depositAmount,
+            maxDurationDays: updated.borrowTerms.maxDurationDays,
+            pickupPreference: updated.borrowTerms.pickupPreference,
+            pickupInstructions: updated.borrowTerms.pickupInstructions,
+          ),
+        );
+        _listings[lIdx] = twin;
+        _mirror(LiveSync.instance.updateListing(twin));
+      }
+    }
     return _items[idx];
   }
 
   /// Returns null on success, or an explanation when deletion is blocked.
   String? deleteItem(String itemId) {
+    final pendingBefore = liveMode
+        ? _requests
+              .where((r) => r.itemId == itemId && r.status == 'pending')
+              .map((r) => r.id)
+              .toList()
+        : const <String>[];
     final blocking = _requests.any(
       (r) =>
           r.itemId == itemId &&
@@ -982,11 +1351,28 @@ class AppState extends ChangeNotifier {
       }
     }
     _items.removeWhere((i) => i.id == itemId);
+    if (liveMode) _listings.removeWhere((l) => l.id == itemId);
     notifyListeners();
+    if (liveMode) {
+      _mirror(LiveSync.instance.deleteListing(itemId));
+      for (final reqId in pendingBefore) {
+        final r = _requests.firstWhere((x) => x.id == reqId);
+        _mirror(LiveSync.instance.updateRequest(r, ownerIdFor(r)));
+      }
+    }
     return null;
   }
 
   void setItemAvailability(String itemId, String availability) {
+    if (liveMode) {
+      // Availability is the listing status in the live catalog.
+      if (availability == 'available') {
+        setListingStatus(itemId, ListingStatus.active, notify: true);
+      } else if (availability == 'borrowed') {
+        setListingStatus(itemId, ListingStatus.rented, notify: true);
+      }
+      return;
+    }
     final idx = _items.indexWhere((i) => i.id == itemId);
     if (idx < 0) return;
     _items[idx] = _items[idx].copyWith(availability: availability);
@@ -1024,29 +1410,47 @@ class AppState extends ChangeNotifier {
     final iAmBorrower = r.borrowerId == me.id;
     final revieweeId = iAmBorrower ? ownerId : r.borrowerId;
     _idCounter++;
-    _reviews.insert(
-      0,
-      Review(
-        id: 'rev-new-$_idCounter',
-        requestId: requestId,
-        itemId: r.itemId,
-        reviewerId: me.id,
-        revieweeId: revieweeId,
-        reviewerRole: iAmBorrower ? 'borrower' : 'lender',
-        rating: rating,
-        comment: comment.trim(),
-        createdAt: DateTime.now(),
-      ),
+    final review = Review(
+      id: liveMode
+          ? ReviewFirestoreMap.docId(requestId, me.id)
+          : 'rev-new-$_idCounter',
+      requestId: requestId,
+      itemId: r.itemId,
+      reviewerId: me.id,
+      revieweeId: revieweeId,
+      reviewerRole: iAmBorrower ? 'borrower' : 'lender',
+      rating: rating,
+      comment: comment.trim(),
+      createdAt: DateTime.now(),
     );
+    _reviews.insert(0, review);
     // Both parties reviewed -> terminal 'reviewed'.
     final reviewers = _reviews
         .where((x) => x.requestId == requestId)
         .map((x) => x.reviewerId)
         .toSet();
-    if (reviewers.contains(r.borrowerId) && reviewers.contains(ownerId)) {
+    final bothReviewed =
+        reviewers.contains(r.borrowerId) && reviewers.contains(ownerId);
+    if (bothReviewed) {
       _replaceRequest(r.copyWith(status: 'reviewed'));
     }
     notifyListeners();
+    if (liveMode) {
+      _mirror(
+        LiveSync.instance.addReview(
+          review,
+          revieweeName: me.name,
+          listingTitle:
+              listingByIdOrNull(r.itemId)?.title ??
+              itemByIdOrNull(r.itemId)?.title ??
+              'your listing',
+        ),
+      );
+      if (bothReviewed) {
+        final updated = _requests.firstWhere((x) => x.id == requestId);
+        _mirror(LiveSync.instance.updateRequest(updated, ownerId));
+      }
+    }
     return null;
   }
 
@@ -1064,6 +1468,20 @@ class AppState extends ChangeNotifier {
       ),
     );
     notifyListeners();
+    if (liveMode) {
+      final updated = _requests[idx];
+      _mirror(
+        LiveSync.instance.reportIssue(
+          request: updated,
+          ownerId: ownerIdFor(updated),
+          reporterName: currentUser.name,
+          listingTitle:
+              listingByIdOrNull(updated.itemId)?.title ??
+              itemByIdOrNull(updated.itemId)?.title ??
+              'your listing',
+        ),
+      );
+    }
   }
 
   // ---------------- Phase 8: reports, blocking, account deletion ----
@@ -1285,16 +1703,34 @@ class AppState extends ChangeNotifier {
     final text = body.trim();
     if (text.isEmpty) return;
     _idCounter++;
-    _messages.add(
-      Message(
-        id: 'msg-new-$_idCounter',
-        requestId: requestId,
-        senderId: currentUser.id,
-        body: text,
-        createdAt: DateTime.now(),
-      ),
+    final message = Message(
+      id: liveMode
+          ? LiveSync.instance.newDocId('messages')
+          : 'msg-new-$_idCounter',
+      requestId: requestId,
+      senderId: currentUser.id,
+      body: text,
+      createdAt: DateTime.now(),
     );
+    _messages.add(message);
     notifyListeners();
+    if (liveMode) {
+      final idx = _requests.indexWhere((x) => x.id == requestId);
+      if (idx >= 0) {
+        final r = _requests[idx];
+        final recipientId = r.borrowerId == currentUser.id
+            ? ownerIdFor(r)
+            : r.borrowerId;
+        _mirror(
+          LiveSync.instance.createMessage(
+            message,
+            recipientId: recipientId,
+            senderName: currentUser.name,
+            listingId: r.itemId,
+          ),
+        );
+      }
+    }
   }
 
   // ---------------- Item & user threads (ask the owner) ----------------
@@ -1350,6 +1786,11 @@ class AppState extends ChangeNotifier {
     required String otherUserId,
     required String body,
   }) {
+    // Live mode: the shared backend (like the web app) only has chat
+    // inside a request — there is no pre-request thread to write to,
+    // so these sends are not persisted. The chat screen explains this
+    // and routes the user to send a request instead.
+    if (liveMode) return;
     final text = body.trim();
     if (text.isEmpty) return;
     _idCounter++;
@@ -1547,6 +1988,28 @@ class AppState extends ChangeNotifier {
           }
           break;
       }
+    }
+    // Remote notification docs (written by either client — chat,
+    // reviews, admin warnings) for the event types the derivation
+    // above doesn't produce.
+    for (final n in _remoteNotifications) {
+      if (n.type != 'message-received' &&
+          n.type != 'review-received' &&
+          n.type != 'admin-warning') {
+        continue;
+      }
+      out.add(
+        DerivedNotification(
+          id: 'remote-${n.id}',
+          type: n.type,
+          title: n.title,
+          body: n.body,
+          createdAt: n.createdAt,
+          requestId: n.requestId,
+          itemId: n.listingId,
+          kind: 'info',
+        ),
+      );
     }
     // Action items first, newest first inside each group.
     out.sort((a, b) {

@@ -163,30 +163,45 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _ctrl,
-                      decoration: const InputDecoration(hintText: 'Message…'),
-                      onSubmitted: (_) => _send(state),
+          if (state.liveMode && widget.requestId == null)
+            SafeArea(
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Text(
+                  'Chat opens once a request is sent — send a request on '
+                  'this listing and the conversation lives there, just '
+                  'like the web app.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            )
+          else
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _ctrl,
+                        decoration: const InputDecoration(hintText: 'Message…'),
+                        onSubmitted: (_) => _send(state),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: () => _send(state),
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(48, 48),
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      onPressed: () => _send(state),
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                      ),
+                      icon: const Icon(Icons.send, size: 20),
                     ),
-                    icon: const Icon(Icons.send, size: 20),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

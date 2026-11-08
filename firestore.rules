@@ -28,6 +28,35 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Deal-stat fan-out (Phase 10 fix): when a deal finishes, the
+    // service batch updates BOTH parties' profiles — including the
+    // other party's doc, which the owner-only rule below would deny
+    // (and did: the E2E return flow failed permission-denied, taking
+    // the whole atomic batch down with it). This branch allows ONLY
+    // a stats-only diff where every counter stays or rises by
+    // exactly 1 and none goes negative — one deal's worth per write,
+    // and no profile field can change through it.
+    function statFieldOk(oldStats, newStats, key) {
+      return newStats.get(key, 0) is int
+        && newStats.get(key, 0) >= 0
+        && (newStats.get(key, 0) == oldStats.get(key, 0)
+          || newStats.get(key, 0) == oldStats.get(key, 0) + 1);
+    }
+
+    function statsDeltaOk(oldData, newData) {
+      let oldStats = oldData.get('stats', {});
+      let newStats = newData.get('stats', {});
+      return newStats.keys().hasOnly([
+          'successfulLends', 'successfulBorrows', 'salesCompleted',
+          'rentalsHosted', 'onTimeReturns', 'lateReturns'])
+        && statFieldOk(oldStats, newStats, 'successfulLends')
+        && statFieldOk(oldStats, newStats, 'successfulBorrows')
+        && statFieldOk(oldStats, newStats, 'salesCompleted')
+        && statFieldOk(oldStats, newStats, 'rentalsHosted')
+        && statFieldOk(oldStats, newStats, 'onTimeReturns')
+        && statFieldOk(oldStats, newStats, 'lateReturns');
+    }
+
     function isUser(uid) {
       return signedIn() && request.auth.uid == uid;
     }
@@ -148,6 +177,12 @@ service cloud.firestore {
       // role (no self-promotion to admin).
       allow update: if isUser(uid)
         && request.resource.data.get('role', 'member') == resource.data.get('role', 'member');
+      // Deal-stat fan-out: a deal participant may apply one deal's
+      // stat increments to the OTHER party's doc (see statsDeltaOk).
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['stats'])
+        && statsDeltaOk(resource.data, request.resource.data);
       // Admin actions (Phase 9): an admin may suspend/warn another user
       // or grant/revoke the admin role. isAdmin() reads the CALLER's
       // doc, so a non-admin can never reach these branches — and the

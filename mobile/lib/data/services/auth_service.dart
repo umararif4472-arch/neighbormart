@@ -177,6 +177,11 @@ class FirebaseAuthService {
     });
   }
 
+  /// Public entry to the profile parser (the live listeners in
+  /// live_sync.dart parse every profile doc the same way auth does).
+  AppUser userFromDocData(String uid, Map<String, dynamic> data) =>
+      _userFromMap(uid, data);
+
   AppUser _userFromMap(String uid, Map<String, dynamic> data) {
     final stats = (data['stats'] as Map<String, dynamic>?) ?? const {};
     final home = (data['homeLocation'] as Map<String, dynamic>?) ?? const {};
