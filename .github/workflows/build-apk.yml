@@ -31,6 +31,12 @@ jobs:
           mkdir -p "$HOME/.android"
           cp android/debug.keystore "$HOME/.android/debug.keystore"
 
+      # Diagnostic: prove which keystore CI actually has, and (after
+      # the build) which certificate the APK really carries.
+      - name: Show signing keystore fingerprint
+        run: |
+          keytool -list -v -keystore android/debug.keystore -storepass android -alias androiddebugkey 2>/dev/null | grep "SHA1:" || echo "repo keystore unreadable"
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -48,6 +54,11 @@ jobs:
 
       - name: Build release APK
         run: flutter build apk --release
+
+      - name: Show APK signer fingerprint
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-release.apk | grep -i "SHA-1 digest" || echo "apksigner unavailable"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
