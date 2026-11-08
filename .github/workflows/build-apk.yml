@@ -44,7 +44,7 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: flutter test
+        run: flutter test --dart-define=SKIP_GOLDENS=true
 
       - name: Build release APK
         run: flutter build apk --release

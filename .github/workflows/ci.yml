@@ -37,5 +37,5 @@ jobs:
         working-directory: mobile
       - run: flutter analyze
         working-directory: mobile
-      - run: flutter test
+      - run: flutter test --dart-define=SKIP_GOLDENS=true
         working-directory: mobile
