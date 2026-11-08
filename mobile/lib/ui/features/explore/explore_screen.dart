@@ -13,6 +13,7 @@ import '../item_detail/item_detail_screen.dart';
 import '../messages/messages_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../profile/user_profile_screen.dart';
+import 'explore_filters.dart';
 import 'item_map_view.dart';
 import 'listing_section_view.dart';
 
@@ -27,9 +28,11 @@ class _ExploreScreenState extends State<ExploreScreen>
   final _searchCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   String _query = '';
-  String? _category;
-  double? _maxDistance;
-  bool _onlyAvailable = false;
+
+  /// All Explore refinements (type, category, distance, price,
+  /// availability, sort) live behind the filter sheet — the screen
+  /// itself only carries search + the section switch.
+  ExploreFilter _filter = ExploreFilter.empty;
   bool _showMap = false;
 
   /// Initial-load placeholders (Phase 7): the catalog is local and
@@ -76,7 +79,7 @@ class _ExploreScreenState extends State<ExploreScreen>
   }
 
   void _selectCategory(String category) {
-    setState(() => _category = category);
+    setState(() => _filter = _filter.copyWith(category: category));
     if (_scrollCtrl.hasClients) {
       _scrollCtrl.animateTo(
         0,
@@ -86,14 +89,67 @@ class _ExploreScreenState extends State<ExploreScreen>
     }
   }
 
+  Future<void> _openFilters() async {
+    final edited = await showExploreFilterSheet(
+      context,
+      current: _filter,
+      showCategory: _section == null,
+    );
+    if (edited != null && mounted) setState(() => _filter = edited);
+  }
+
+  /// Applies the filter facets [AppState.filteredItems] doesn't know
+  /// about (listing types, max price, sort) to the Items view.
+  /// Legacy Items are borrow-only, so a type selection without
+  /// Borrow matches nothing here.
+  List<Item> _applyItemFacets(List<Item> items, AppState state) {
+    final f = _filter;
+    if (f.types.isNotEmpty && !f.types.contains(ListingType.borrow)) {
+      return const [];
+    }
+    var result = items;
+    if (f.maxPricePkr != null) {
+      result = result
+          .where((i) => (i.borrowTerms.dailyFee ?? 0) <= f.maxPricePkr!)
+          .toList();
+    }
+    switch (f.sort) {
+      case ExploreSort.recommended:
+      case ExploreSort.nearest:
+        // filteredItems already returns nearest-first.
+        break;
+      case ExploreSort.newest:
+        result = [...result]
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      case ExploreSort.priceLow:
+        result = [...result]
+          ..sort(
+            (a, b) => (a.borrowTerms.dailyFee ?? 0).compareTo(
+              b.borrowTerms.dailyFee ?? 0,
+            ),
+          );
+      case ExploreSort.priceHigh:
+        result = [...result]
+          ..sort(
+            (a, b) => (b.borrowTerms.dailyFee ?? 0).compareTo(
+              a.borrowTerms.dailyFee ?? 0,
+            ),
+          );
+    }
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final items = state.filteredItems(
-      query: _query,
-      category: _category,
-      maxDistanceKm: _maxDistance,
-      onlyAvailable: _onlyAvailable,
+    final items = _applyItemFacets(
+      state.filteredItems(
+        query: _query,
+        category: _filter.category,
+        maxDistanceKm: _filter.maxDistanceKm,
+        onlyAvailable: _filter.onlyAvailable,
+      ),
+      state,
     );
     final me = state.currentUser;
     return Scaffold(
@@ -153,13 +209,29 @@ class _ExploreScreenState extends State<ExploreScreen>
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: TextField(
-              controller: _searchCtrl,
-              decoration: const InputDecoration(
-                hintText: 'Search drills, tents, mixers…',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (v) => setState(() => _query = v),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchCtrl,
+                    decoration: const InputDecoration(
+                      hintText: 'Search drills, tents, mixers…',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: (v) => setState(() => _query = v),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton.filledTonal(
+                  tooltip: 'Filters',
+                  onPressed: _openFilters,
+                  icon: Badge.count(
+                    count: _filter.activeCount,
+                    isLabelVisible: _filter.activeCount > 0,
+                    child: const Icon(Icons.tune),
+                  ),
+                ),
+              ],
             ),
           ),
           // Phase 5: marketplace sections
@@ -200,71 +272,6 @@ class _ExploreScreenState extends State<ExploreScreen>
             ),
           ),
           if (_section == null)
-            SizedBox(
-              height: 48,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: const Text('All'),
-                      selected: _category == null,
-                      onSelected: (_) => setState(() => _category = null),
-                    ),
-                  ),
-                  ...kItemCategories.map(
-                    (c) => Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(c),
-                        selected: _category == c,
-                        onSelected: (_) => setState(
-                          () => _category = _category == c ? null : c,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                const Text(
-                  'Distance:',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                ),
-                ...<double?>[null, 1, 3, 5].map(
-                  (d) => ChoiceChip(
-                    label: Text(d == null ? 'Any' : '${d.toInt()} km'),
-                    selected: _maxDistance == d,
-                    onSelected: (_) => setState(() => _maxDistance = d),
-                  ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'Available only',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                    Switch(
-                      value: _onlyAvailable,
-                      activeThumbColor: Theme.of(context).colorScheme.secondary,
-                      onChanged: (v) => setState(() => _onlyAvailable = v),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          if (_section == null)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
               child: Row(
@@ -280,26 +287,13 @@ class _ExploreScreenState extends State<ExploreScreen>
                     ),
                   ),
                   const SizedBox(width: 8),
-                  SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(
-                        value: false,
-                        icon: Icon(Icons.list, size: 16),
-                        label: Text('List'),
-                      ),
-                      ButtonSegment(
-                        value: true,
-                        icon: Icon(Icons.map_outlined, size: 16),
-                        label: Text('Map'),
-                      ),
-                    ],
-                    selected: {_showMap},
-                    onSelectionChanged: (s) =>
-                        setState(() => _showMap = s.first),
-                    style: const ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  IconButton(
+                    tooltip: _showMap ? 'List view' : 'Map view',
+                    icon: Icon(
+                      _showMap ? Icons.list : Icons.map_outlined,
+                      size: 20,
                     ),
+                    onPressed: () => setState(() => _showMap = !_showMap),
                   ),
                 ],
               ),
@@ -313,7 +307,9 @@ class _ExploreScreenState extends State<ExploreScreen>
                     state: state,
                     section: _section!,
                     query: _query,
-                    maxDistanceKm: _maxDistance,
+                    filter: _filter,
+                    onClearFilters: () =>
+                        setState(() => _filter = ExploreFilter.empty),
                   )
                 : AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
@@ -323,7 +319,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                         ? ItemMapView(
                             key: const ValueKey('map'),
                             items: items,
-                            maxDistanceKm: _maxDistance,
+                            maxDistanceKm: _filter.maxDistanceKm,
                           )
                         : items.isEmpty
                         ? Center(
@@ -342,19 +338,42 @@ class _ExploreScreenState extends State<ExploreScreen>
                                         .withValues(alpha: 0.6),
                                   ),
                                   const SizedBox(height: 12),
-                                  const Text(
-                                    'Nothing matches — try widening your distance',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                                  if (_filter.activeCount > 0) ...[
+                                    const Text(
+                                      'No matches for these filters',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  const Text(
-                                    'Or clear your search and category filters.',
-                                    textAlign: TextAlign.center,
-                                  ),
+                                    const SizedBox(height: 6),
+                                    const Text(
+                                      'Try different filters, or clear them to see everything nearby.',
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 14),
+                                    OutlinedButton(
+                                      onPressed: () => setState(
+                                        () => _filter = ExploreFilter.empty,
+                                      ),
+                                      child: const Text('Clear filters'),
+                                    ),
+                                  ] else ...[
+                                    const Text(
+                                      'Nothing matches — try widening your distance',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    const Text(
+                                      'Or clear your search.',
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),

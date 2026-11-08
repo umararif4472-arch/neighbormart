@@ -6,6 +6,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../data/models/listing.dart';
 import '../../../state/app_state.dart';
 import '../listing_detail/listing_detail_screen.dart';
+import 'explore_filters.dart';
 
 /// Section emoji + labels (mirrors web SECTION_META).
 const Map<ListingSection, String> kSectionEmoji = {
@@ -190,18 +191,21 @@ class ListingCard extends StatelessWidget {
 }
 
 /// The Explore body for a non-items section: visible listings filtered
-/// by the search query and the distance chips.
+/// by the search query and the Explore [filter] (types, distance,
+/// max price, availability), ordered per the filter's sort.
 class SectionListingList extends StatelessWidget {
   final AppState state;
   final ListingSection section;
   final String query;
-  final double? maxDistanceKm;
+  final ExploreFilter filter;
+  final VoidCallback? onClearFilters;
   const SectionListingList({
     super.key,
     required this.state,
     required this.section,
     required this.query,
-    required this.maxDistanceKm,
+    required this.filter,
+    this.onClearFilters,
   });
 
   @override
@@ -213,31 +217,64 @@ class SectionListingList extends StatelessWidget {
       state.listings,
       state.blockedUserIdSet,
     );
-    final results =
-        visible.where((l) {
-          if (l.section != section || !l.isVisible) return false;
-          if (q.isNotEmpty &&
-              !'${l.title} ${l.description}'.toLowerCase().contains(q)) {
-            return false;
-          }
-          if (maxDistanceKm != null &&
-              distanceKm(me, l.location.latLng) > maxDistanceKm!) {
-            return false;
-          }
-          return true;
-        }).toList()..sort(
+    final results = visible.where((l) {
+      if (l.section != section || !l.isVisible) return false;
+      if (q.isNotEmpty &&
+          !'${l.title} ${l.description}'.toLowerCase().contains(q)) {
+        return false;
+      }
+      if (filter.types.isNotEmpty && !filter.types.contains(l.listingType)) {
+        return false;
+      }
+      if (filter.onlyAvailable && l.status != ListingStatus.active) {
+        return false;
+      }
+      if (filter.maxPricePkr != null && l.price > filter.maxPricePkr!) {
+        return false;
+      }
+      if (filter.maxDistanceKm != null &&
+          distanceKm(me, l.location.latLng) > filter.maxDistanceKm!) {
+        return false;
+      }
+      return true;
+    }).toList();
+    switch (filter.sort) {
+      case ExploreSort.recommended:
+      case ExploreSort.nearest:
+        results.sort(
           (a, b) => distanceKm(
             me,
             a.location.latLng,
           ).compareTo(distanceKm(me, b.location.latLng)),
         );
+      case ExploreSort.newest:
+        results.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      case ExploreSort.priceLow:
+        results.sort((a, b) => a.price.compareTo(b.price));
+      case ExploreSort.priceHigh:
+        results.sort((a, b) => b.price.compareTo(a.price));
+    }
     if (results.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text(
-            'Nothing here matches yet — try a different search or distance.',
-            textAlign: TextAlign.center,
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                filter.activeCount > 0
+                    ? 'No matches for these filters'
+                    : 'Nothing here matches yet — try a different search.',
+                textAlign: TextAlign.center,
+              ),
+              if (filter.activeCount > 0 && onClearFilters != null) ...[
+                const SizedBox(height: 14),
+                OutlinedButton(
+                  onPressed: onClearFilters,
+                  child: const Text('Clear filters'),
+                ),
+              ],
+            ],
           ),
         ),
       );
