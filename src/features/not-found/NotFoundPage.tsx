@@ -1,13 +1,17 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import symbol from '@/assets/brand/logo-symbol.svg'
 
-/** 404 with a little personality. */
+/** 404 with a little personality — the Open Door mark, slightly lost. */
 export function NotFoundPage() {
   return (
     <div className="flex flex-col items-center gap-4 py-20 text-center">
-      <span aria-hidden className="text-6xl">
-        🧭
-      </span>
+      <img
+        src={symbol}
+        alt=""
+        aria-hidden
+        className="h-20 w-20 -rotate-6 rounded-[1.4rem] shadow-md"
+      />
       <h1 className="font-display text-2xl font-extrabold text-bark">
         This page wandered off the block
       </h1>

@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { AppHydrationError, AppSplash } from '@/components/layout/BootScreens'
+import { DoorIntro } from '@/components/DoorIntro'
 import { Layout } from '@/components/layout/Layout'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { RequireAuth } from '@/components/layout/RequireAuth'
@@ -95,18 +96,32 @@ export default function App() {
   // Visible tier-up/down moments fire from anywhere in the app.
   useTierWatcher()
 
-  if (phase === 'loading') return <AppSplash />
+  // The Open Door intro overlays every boot branch: it watches the
+  // hydration phase itself and opens the moment the app is ready.
+  if (phase === 'loading') {
+    return (
+      <>
+        <DoorIntro />
+        <AppSplash />
+      </>
+    )
+  }
   if (phase === 'error') {
     return (
-      <AppHydrationError
-        message={state.hydration.message ?? 'Unknown error'}
-        onRetry={retryHydration}
-      />
+      <>
+        <DoorIntro />
+        <AppHydrationError
+          message={state.hydration.message ?? 'Unknown error'}
+          onRetry={retryHydration}
+        />
+      </>
     )
   }
 
   return (
-    <Suspense fallback={<RouteFallback />}>
+    <>
+      <DoorIntro />
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route element={<Layout />}>
           <Route
@@ -288,6 +303,7 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
-    </Suspense>
+      </Suspense>
+    </>
   )
 }

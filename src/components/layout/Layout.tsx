@@ -7,27 +7,30 @@ import { InstallPrompt } from './InstallPrompt'
 import { authApi, isFirebaseConfigured } from '@/services'
 import { BellIcon, HomeIcon, ChatIcon, PlusIcon, ListIcon, UserIcon } from '@/components/icons'
 import { cn } from '@/utils/cn'
+import { APP_NAME, APP_TAGLINE } from '@/config'
+import symbolSimple from '@/assets/brand/logo-symbol-simple.svg'
+import symbolDark from '@/assets/brand/logo-symbol-dark.svg'
 
 /**
  * App shell: skip link, top navbar, main outlet, mobile bottom tab bar,
  * footer. Mobile-first — the tab bar is the primary navigation on phones.
  */
 
+/**
+ * The Open Door brand mark (brand kit SVGs, used verbatim). At this
+ * 36px navbar size the kit rule applies — the simple symbol (no
+ * welcome mat) — with the dark-plate version on dark backgrounds.
+ * The wordmark text is set in Poppins Bold: "Neighbor" in ink,
+ * "Mart" in terracotta (lightened on dark, per the kit wordmark).
+ */
 export function LogoMark({ compact = false }: { compact?: boolean }) {
   return (
     <span className="flex items-center gap-2">
-      <span
-        aria-hidden
-        className="flex h-9 w-9 items-center justify-center rounded-2xl bg-terracotta-600 shadow-sm"
-      >
-        {/* Mini house mark matching the favicon */}
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="#FBF7F0" aria-hidden>
-          <path d="M12 4 3 11h2.5v8H10v-5h4v5h4.5v-8H21z" />
-        </svg>
-      </span>
+      <img src={symbolSimple} alt="" aria-hidden className="h-9 w-9 dark:hidden" />
+      <img src={symbolDark} alt="" aria-hidden className="hidden h-9 w-9 dark:block" />
       {!compact && (
-        <span className="font-display text-lg font-extrabold tracking-tight text-bark">
-          Neighbor<span className="text-terracotta-600 dark:text-terracotta-400">Mart</span>
+        <span className="font-display text-lg font-bold tracking-tight text-bark">
+          Neighbor<span className="text-wordmark-mart">Mart</span>
         </span>
       )}
     </span>
@@ -54,7 +57,7 @@ function Navbar() {
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6">
         <Link
           to="/"
-          aria-label="NeighborMart — home"
+          aria-label={`${APP_NAME} — home`}
           className="focus-visible:outline-2 focus-visible:outline-terracotta-600"
         >
           <LogoMark />
@@ -199,6 +202,7 @@ function Footer() {
     <footer className="mt-16 border-t border-bark/10 bg-parchment/60">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 py-8 text-center sm:px-6">
         <LogoMark />
+        <p className="font-display text-sm font-semibold text-bark">{APP_TAGLINE}</p>
         <p className="text-xs text-bark-light">
           Your local marketplace for borrowing, renting, buying and selling — items, vehicles,
           properties and arenas, right on your street.
@@ -258,7 +262,7 @@ export function Layout() {
           className="border-b border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/60 px-4 py-2.5 text-center text-sm font-medium text-red-800 dark:text-red-200"
         >
           Your account is suspended — you can browse, but posting listings, messaging and making
-          requests are paused. Contact the NeighborMart team if you think this is a mistake.
+          requests are paused. Contact the {APP_NAME} team if you think this is a mistake.
         </div>
       )}
       <main

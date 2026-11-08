@@ -315,6 +315,15 @@
 /* in kit geometry). The parent supplies the 3D perspective.          */
 /* ------------------------------------------------------------------ */
 
+/* Intro field: brand terracotta in light mode, warm charcoal in dark. */
+.nm-door-bg {
+  background-color: #a44b2d;
+}
+
+.dark .nm-door-bg {
+  background-color: #201b16;
+}
+
 @keyframes nm-door-in {
   0% {
     opacity: 0;

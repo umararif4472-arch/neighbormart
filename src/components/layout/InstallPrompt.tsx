@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { APP_NAME } from '@/config'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -35,12 +36,12 @@ export function InstallPrompt() {
   return (
     <div
       role="dialog"
-      aria-label="Install NeighborMart"
+      aria-label={`Install ${APP_NAME}`}
       className="fixed inset-x-3 bottom-24 z-40 flex items-center gap-3 rounded-3xl border border-bark/10 bg-surface p-3.5 shadow-xl md:bottom-6 md:left-auto md:right-6 md:w-96"
     >
       <img src="/icon-192.png" alt="" className="h-11 w-11 rounded-2xl" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-bark">Install NeighborMart</p>
+        <p className="text-sm font-bold text-bark">Install {APP_NAME}</p>
         <p className="text-xs text-bark-light">
           Faster access, works on flaky connections — like a real app.
         </p>
