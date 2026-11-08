@@ -333,11 +333,12 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   /// The wordmark and tagline. The kit's wordmark is set in
-  /// Poppins Bold ("Neighbor" in ink, "Mart" in terracotta); the
-  /// font isn't bundled and flutter_svg can't render the SVG
-  /// lockup's `<text>`, so the wordmark is styled text in the
-  /// same two-tone split (the sanctioned fallback in
-  /// docs/BRAND.md), next to the kit symbol in [BrandMark]. The
+  /// Poppins Bold ("Neighbor" in ink, "Mart" in terracotta).
+  /// flutter_svg can't render the SVG lockup's `<text>` and the
+  /// wordmark PNGs carry baked backgrounds, so the wordmark is
+  /// styled text in the bundled Poppins Bold (assets/fonts) with
+  /// the same two-tone split, next to the kit symbol in
+  /// [BrandMark]. The
   /// tagline is one [Text.rich] — one accessible string — whose
   /// two spans fade in on successive beats of the entrance.
   Widget _wordmark(BuildContext context, ColorScheme scheme) {
@@ -356,8 +357,9 @@ class _LoginScreenState extends State<LoginScreen>
         Text.rich(
           TextSpan(
             style: const TextStyle(
+              fontFamily: 'Poppins',
               fontSize: 27,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
             ),
             children: [

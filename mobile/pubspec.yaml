@@ -30,6 +30,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
   # Open Door brand assets (verbatim from the brand kit — see
   # docs/BRAND.md). Only the SVGs are bundled; the large source PNGs
   # in assets/brand/source/ are build-time inputs for the launcher
