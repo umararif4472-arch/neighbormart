@@ -127,7 +127,7 @@ class ListingDetailScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: sectionAccentOf(context, listing.section),
+                          color: sectionAccentTextOf(context, listing.section),
                         ),
                       ),
                     ),

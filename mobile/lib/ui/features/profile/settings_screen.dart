@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/config.dart';
 import '../../../core/theme/theme_preference.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../state/app_state.dart';
@@ -84,9 +85,7 @@ class SettingsScreen extends StatelessWidget {
           const ListTile(
             leading: Icon(Icons.info_outline),
             title: Text('About'),
-            subtitle: Text(
-              "NeighborMart · version 1.0.0 · prototype with demo data",
-            ),
+            subtitle: Text("$kAppName · $kAppTagline · version 1.0.0"),
           ),
           const Divider(height: 32),
           OutlinedButton.icon(

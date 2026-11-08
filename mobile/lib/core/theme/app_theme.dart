@@ -2,20 +2,27 @@ import 'package:flutter/material.dart';
 
 import 'theme_preference.dart';
 
-/// Brand palette (Phase 7 refresh, matched to the web app): warm
-/// terracotta primary, moss-green trust accent, cream/parchment
-/// surfaces, bark ink. Dark mode is a warm charcoal built from the
-/// same hues — never blue-grey.
+/// Brand palette ("Open Door" kit, matched to the web app — see
+/// docs/BRAND.md): terracotta primary, moss-green trust accent,
+/// cream surfaces, ink text. Dark mode is a warm charcoal built
+/// from the same hues — never blue-grey.
 class AppColors {
-  // Light
+  // Light — the kit tokens are terracottaDark (#A44B2D), cream
+  // (#F6EBDD), doorDark (#5E2815), brandAmber (#D99A2B) and bark
+  // (#3A2218, the kit ink).
   static const terracotta = Color(0xFFC05F3B);
   static const terracottaDark = Color(0xFFA44B2D);
+  static const doorDark = Color(0xFF5E2815);
+  static const brandAmber = Color(0xFFD99A2B);
   static const moss = Color(0xFF4A7040);
   static const mossDark = Color(0xFF47603F);
-  static const cream = Color(0xFFFBF7F0);
+  static const cream = Color(0xFFF6EBDD);
   static const creamSurface = Color(0xFFFFFDF9);
   static const creamDark = Color(0xFFF4EDE1);
-  static const bark = Color(0xFF44392F);
+  static const bark = Color(0xFF3A2218);
+  // The kit's lightened terracotta for the wordmark's "Mart" on
+  // dark backgrounds (docs/BRAND.md).
+  static const wordmarkMartDark = Color(0xFFD9805F);
   // Deepened one step from the original 0xFF7A6A5B so muted text also
   // reaches WCAG AA (4.5:1) on the raised creamDark surface, not just
   // on the plain surface.

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'core/config.dart';
 import 'core/firebase/firebase_init.dart';
 import 'core/theme/app_theme.dart';
 import 'data/services/auth_service.dart';
@@ -56,7 +57,7 @@ class NeighborMartApp extends StatelessWidget {
       // the whole app immediately, without a restart.
       child: Consumer<AppState>(
         builder: (context, appState, _) => MaterialApp(
-          title: "NeighborMart",
+          title: kAppName,
           debugShowCheckedModeBanner: false,
           theme: buildAppTheme(),
           darkTheme: buildDarkAppTheme(),

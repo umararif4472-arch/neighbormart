@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:neighbor_mart/core/theme/app_theme.dart';
+import 'package:neighbor_mart/core/theme/section_colors.dart';
 import 'package:neighbor_mart/core/widgets/shared_widgets.dart';
+import 'package:neighbor_mart/data/models/listing.dart';
 import 'package:neighbor_mart/state/app_state.dart';
 import 'package:neighbor_mart/ui/features/activity/activity_screen.dart';
 
@@ -79,6 +81,55 @@ void main() {
         expect(contrastRatio(accent, surface), greaterThanOrEqualTo(4.5));
         final tint = Color.alphaBlend(accent.withValues(alpha: 0.12), surface);
         expect(contrastRatio(accent, tint), greaterThanOrEqualTo(4.5));
+      }
+    });
+
+    test('Open Door brand pairs all reach 4.5:1', () {
+      // The pairs the brand guard pins (docs/BRAND.md): cream text
+      // on the terracotta and door-dark fields (intro, splash,
+      // logo plate), ink on the cream canvas, and the kit amber on
+      // the dark canvas (knob/mat graphics that double as large
+      // text accents in dark mode).
+      final pairs = <String, (Color, Color)>{
+        'cream/terracotta': (AppColors.cream, AppColors.terracottaDark),
+        'cream/doorDark': (AppColors.cream, AppColors.doorDark),
+        'ink/cream': (AppColors.bark, AppColors.cream),
+        'brandAmber/darkCanvas': (AppColors.brandAmber, AppColors.darkCanvas),
+      };
+      for (final pair in pairs.entries) {
+        expect(
+          contrastRatio(pair.value.$1, pair.value.$2),
+          greaterThanOrEqualTo(4.5),
+          reason: '${pair.key} must meet AA for text',
+        );
+      }
+    });
+
+    test('section text shades reach AA on surfaces and their tints', () {
+      // sectionAccentColor is graphics-only (exact kit hex); the
+      // text shade must pass on the plain surface AND on the
+      // accent's own container tint (the section badge pairing).
+      for (final section in ListingSection.values) {
+        for (final brightness in Brightness.values) {
+          final text = sectionAccentTextColor(section, brightness);
+          final surface = brightness == Brightness.dark
+              ? AppColors.darkSurface
+              : AppColors.creamSurface;
+          expect(
+            contrastRatio(text, surface),
+            greaterThanOrEqualTo(4.5),
+            reason: '$section $brightness text on surface',
+          );
+          final tint = Color.alphaBlend(
+            sectionAccentContainerColor(section, brightness),
+            surface,
+          );
+          expect(
+            contrastRatio(text, tint),
+            greaterThanOrEqualTo(4.5),
+            reason: '$section $brightness text on its container tint',
+          );
+        }
       }
     });
 

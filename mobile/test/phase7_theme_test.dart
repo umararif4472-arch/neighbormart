@@ -103,12 +103,15 @@ void main() {
   });
 
   group('section accents', () {
-    test('every section has the specified light + dark accent', () {
+    test('every section accent is the exact kit hex in both modes', () {
+      // "Open Door" kit hexes (docs/BRAND.md) — graphics accents,
+      // identical in light and dark. Text uses the AA shades from
+      // sectionAccentTextColor, guarded in dark_mode_contrast_test.
       const expected = {
-        ListingSection.items: (Color(0xFFB45309), Color(0xFFFBBF24)),
-        ListingSection.vehicles: (Color(0xFF1D4ED8), Color(0xFF60A5FA)),
-        ListingSection.properties: (Color(0xFF7E22CE), Color(0xFFC084FC)),
-        ListingSection.arenas: (Color(0xFF15803D), Color(0xFF4ADE80)),
+        ListingSection.items: (Color(0xFFD99A2B), Color(0xFFD99A2B)),
+        ListingSection.vehicles: (Color(0xFF3B7DD8), Color(0xFF3B7DD8)),
+        ListingSection.properties: (Color(0xFF8E4A8B), Color(0xFF8E4A8B)),
+        ListingSection.arenas: (Color(0xFF4F8A4B), Color(0xFF4F8A4B)),
       };
       for (final section in ListingSection.values) {
         final (light, dark) = expected[section]!;
