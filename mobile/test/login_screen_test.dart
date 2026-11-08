@@ -20,10 +20,9 @@ import 'package:neighbor_mart/ui/features/auth/login_screen.dart';
 /// fonts (Roboto + MaterialIcons, from the Flutter SDK cache) are
 /// loaded in [setUpAll] so text and icons render as real glyphs
 /// instead of the test font's placeholder blocks.
-/// Golden tests need the app's real fonts; where the SDK cache
-/// doesn't carry them (CI runners), the goldens skip instead of
-/// failing the build — they are verified locally, where they're made.
-bool _goldensReady = false;
+/// Golden tests need the app's real fonts; CI passes SKIP_GOLDENS
+/// (its SDK cache carries no font files), so the goldens are skipped
+/// there and verified locally, where they're made.
 
 void main() {
   setUpAll(() async {
@@ -48,17 +47,13 @@ void main() {
       return true;
     }
 
-    const skipRequested = bool.fromEnvironment('SKIP_GOLDENS');
-    if (!skipRequested) {
-      final roboto = await loadFamily('Roboto', [
+    if (!const bool.fromEnvironment('SKIP_GOLDENS')) {
+      await loadFamily('Roboto', [
         'Roboto-Regular.ttf',
         'Roboto-Medium.ttf',
         'Roboto-Bold.ttf',
       ]);
-      final icons = await loadFamily('MaterialIcons', [
-        'MaterialIcons-Regular.otf',
-      ]);
-      _goldensReady = roboto && icons;
+      await loadFamily('MaterialIcons', ['MaterialIcons-Regular.otf']);
     }
   });
 
@@ -311,36 +306,46 @@ void main() {
       expect(tester.takeException(), isNull);
     }
 
-    testWidgets('login — light, settled', skip: const bool.fromEnvironment('SKIP_GOLDENS'), (tester) async {
-      await pumpShot(tester, theme: buildAppTheme());
-      await expectLater(
-        find.byType(LoginScreen),
-        matchesGoldenFile('goldens/login_light.png'),
-      );
-    });
+    testWidgets(
+      'login — light, settled',
+      skip: const bool.fromEnvironment('SKIP_GOLDENS'),
+      (tester) async {
+        await pumpShot(tester, theme: buildAppTheme());
+        await expectLater(
+          find.byType(LoginScreen),
+          matchesGoldenFile('goldens/login_light.png'),
+        );
+      },
+    );
 
-    testWidgets('login — dark, settled', skip: const bool.fromEnvironment('SKIP_GOLDENS'), (tester) async {
-      await pumpShot(tester, theme: buildDarkAppTheme());
-      await expectLater(
-        find.byType(LoginScreen),
-        matchesGoldenFile('goldens/login_dark.png'),
-      );
-    });
+    testWidgets(
+      'login — dark, settled',
+      skip: const bool.fromEnvironment('SKIP_GOLDENS'),
+      (tester) async {
+        await pumpShot(tester, theme: buildDarkAppTheme());
+        await expectLater(
+          find.byType(LoginScreen),
+          matchesGoldenFile('goldens/login_dark.png'),
+        );
+      },
+    );
 
-    testWidgets('login — reduced motion, static frame', skip: const bool.fromEnvironment('SKIP_GOLDENS'), (
-      tester,
-    ) async {
-      await pumpShot(
-        tester,
-        theme: buildAppTheme(),
-        reduceMotion: true,
-        advance: Duration.zero,
-      );
-      await expectLater(
-        find.byType(LoginScreen),
-        matchesGoldenFile('goldens/login_reduced.png'),
-      );
-    });
+    testWidgets(
+      'login — reduced motion, static frame',
+      skip: const bool.fromEnvironment('SKIP_GOLDENS'),
+      (tester) async {
+        await pumpShot(
+          tester,
+          theme: buildAppTheme(),
+          reduceMotion: true,
+          advance: Duration.zero,
+        );
+        await expectLater(
+          find.byType(LoginScreen),
+          matchesGoldenFile('goldens/login_reduced.png'),
+        );
+      },
+    );
 
     for (final (name, ms) in <(String, int)>[
       ('frame_0', 120),
@@ -348,19 +353,21 @@ void main() {
       ('frame_2', 850),
       ('frame_3', 1500),
     ]) {
-      testWidgets('login — entrance $name', skip: const bool.fromEnvironment('SKIP_GOLDENS'), (
-        tester,
-      ) async {
-        await pumpShot(
-          tester,
-          theme: buildAppTheme(),
-          advance: Duration(milliseconds: ms),
-        );
-        await expectLater(
-          find.byType(LoginScreen),
-          matchesGoldenFile('goldens/login_$name.png'),
-        );
-      });
+      testWidgets(
+        'login — entrance $name',
+        skip: const bool.fromEnvironment('SKIP_GOLDENS'),
+        (tester) async {
+          await pumpShot(
+            tester,
+            theme: buildAppTheme(),
+            advance: Duration(milliseconds: ms),
+          );
+          await expectLater(
+            find.byType(LoginScreen),
+            matchesGoldenFile('goldens/login_$name.png'),
+          );
+        },
+      );
     }
   });
 }
