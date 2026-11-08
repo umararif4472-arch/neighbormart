@@ -175,8 +175,9 @@ export type ArenaListing = Extract<Listing, { section: 'arenas' }>
 /**
  * Filter shape shared by the browse UI (client-side filtering through
  * useFilteredListings) and the listing service (mock "server-side"
- * filtering). Section-specific filters (make, bedrooms, sport…) layer on
- * top in Phase 5; these are the cross-section basics.
+ * filtering). The first block is cross-section; the Phase 5 fields are
+ * section-specific and optional — when one is set, listings outside its
+ * section are excluded (same rule the category filter has always used).
  */
 export interface ListingFilters {
   query: string
@@ -188,6 +189,33 @@ export interface ListingFilters {
   maxDistanceKm: number | null
   /** 'all', or a single status (the browse UI mostly wants 'active'). */
   status: ListingStatus | 'all'
+
+  // --- Phase 5: location + price (all sections) -------------------------
+  /** '' means any city. */
+  city?: string
+  /** '' means any area/neighborhood. */
+  area?: string
+  priceMin?: number | null
+  priceMax?: number | null
+
+  // --- Phase 5: vehicles --------------------------------------------------
+  makes?: string[]
+  fuelTypes?: VehicleFuelType[]
+  transmissions?: VehicleTransmission[]
+  yearMin?: number | null
+  yearMax?: number | null
+  withDriverOnly?: boolean
+
+  // --- Phase 5: properties --------------------------------------------------
+  propertyTypes?: PropertyType[]
+  minBedrooms?: number | null
+  furnished?: 'any' | 'furnished' | 'unfurnished'
+
+  // --- Phase 5: arenas ------------------------------------------------------
+  sports?: string[]
+  minCapacity?: number | null
+  /** Every selected facility must be present on the arena. */
+  facilities?: Array<keyof ArenaFacilities>
 }
 
 export const EMPTY_LISTING_FILTERS: ListingFilters = {

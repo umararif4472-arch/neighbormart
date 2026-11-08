@@ -40,7 +40,10 @@ class _ReviewSheetState extends State<ReviewSheet> {
   Widget build(BuildContext context) {
     final state = context.read<AppState>();
     final req = state.requests.firstWhere((r) => r.id == widget.requestId);
-    final item = state.itemById(req.itemId);
+    final itemTitle =
+        state.itemByIdOrNull(req.itemId)?.title ??
+        state.listingByIdOrNull(req.itemId)?.title ??
+        'Listing';
     final other = state.otherPartyFor(req);
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -59,7 +62,7 @@ class _ReviewSheetState extends State<ReviewSheet> {
           ),
           const SizedBox(height: 4),
           Text(
-            'For borrowing: ${item.title}',
+            'For the deal: $itemTitle',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),

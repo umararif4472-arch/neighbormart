@@ -1,5 +1,6 @@
-import { collection, doc, getDoc, getDocs } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore'
 import type { User } from '@/types'
+import { ApiError } from '../errors'
 import { getDb } from '../firebase'
 import { COLLECTIONS, fromDoc, fromDocs } from './firestoreData'
 
@@ -13,4 +14,25 @@ export async function getUsers(): Promise<User[]> {
 export async function getUserById(userId: string): Promise<User | null> {
   const snap = await getDoc(doc(getDb(), COLLECTIONS.users, userId))
   return fromDoc<User>(snap)
+}
+
+/** Contact preferences (Phase 5) — owner-only, enforced here and by rules. */
+export async function updateContactPrefs(
+  userId: string,
+  actorId: string,
+  prefs: { phone: string; showPhone: boolean },
+): Promise<User> {
+  if (userId !== actorId) {
+    throw new ApiError('forbidden', 'Only the account owner can change contact preferences.')
+  }
+  const phone = prefs.phone.trim()
+  if (prefs.showPhone && phone.replace(/\D/g, '').length < 7) {
+    throw new ApiError('invalid', 'Add a valid phone number before showing it publicly.')
+  }
+  const ref = doc(getDb(), COLLECTIONS.users, userId)
+  await updateDoc(ref, { phone, showPhone: prefs.showPhone })
+  const snap = await getDoc(ref)
+  const user = fromDoc<User>(snap)
+  if (!user) throw new ApiError('not-found', 'User not found.')
+  return user
 }

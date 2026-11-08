@@ -1,14 +1,17 @@
-import { useMemo } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import type { User } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { useTrustScore } from '@/hooks/useTrustScore'
 import { useTrustTiers } from '@/hooks/useTrustTiers'
+import { usersApi, toErrorMessage } from '@/services'
 import { findById } from '@/utils/collections'
 import { formatMonthYear } from '@/utils/dates'
 import { haversineKm } from '@/utils/distance'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { TextField } from '@/components/ui/Field'
 import { TrustBadge, TrustMeter } from '@/components/ui/Trust'
 import { ListingCard } from '@/components/listings/ListingCard'
 import { ReviewsList } from '@/components/reviews/ReviewsList'
@@ -20,6 +23,95 @@ import { MapPinIcon } from '@/components/icons'
  * listings, and reviews about them. Graceful for users with zero reviews,
  * zero badges, or zero listings.
  */
+/**
+ * Owner-only contact settings: your phone number plus the switch that
+ * decides whether listing pages show Call / WhatsApp buttons. In-app
+ * chat is always available regardless — this only adds direct contact.
+ */
+function ContactPrefsCard({ user }: { user: User }) {
+  const { dispatch } = useApp()
+  const [phone, setPhone] = useState(user.phone)
+  const [showPhone, setShowPhone] = useState(user.showPhone)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    setSaving(true)
+    setSaved(false)
+    setError(null)
+    try {
+      const updated = await usersApi.updateContactPrefs(user.id, user.id, { phone, showPhone })
+      dispatch({ type: 'USERS_UPSERTED', users: [updated] })
+      setSaved(true)
+    } catch (err) {
+      setError(toErrorMessage(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section
+      aria-labelledby="contact-prefs"
+      className="flex flex-col gap-3 rounded-3xl border border-bark/10 bg-white p-5 shadow-sm"
+    >
+      <div>
+        <h2 id="contact-prefs" className="font-display text-lg font-bold text-bark">
+          Contact options
+        </h2>
+        <p className="mt-0.5 text-sm text-bark-light">
+          Neighbors can always message you in the app. Turn this on only if you also want buyers and
+          renters to reach you directly from your listings.
+        </p>
+      </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <TextField
+          label="Phone / WhatsApp number"
+          type="tel"
+          placeholder="+92 300 1234567"
+          value={phone}
+          onChange={(e) => {
+            setPhone(e.target.value)
+            setSaved(false)
+          }}
+        />
+        <label className="flex items-center gap-2 text-sm font-medium text-bark">
+          <input
+            type="checkbox"
+            checked={showPhone}
+            className="h-4 w-4 accent-terracotta-600"
+            onChange={(e) => {
+              setShowPhone(e.target.checked)
+              setSaved(false)
+            }}
+          />
+          Show Call / WhatsApp buttons on my listings
+        </label>
+        {error && (
+          <p
+            role="alert"
+            className="rounded-2xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+          >
+            {error}
+          </p>
+        )}
+        <div className="flex items-center gap-3">
+          <Button type="submit" size="sm" loading={saving}>
+            Save contact settings
+          </Button>
+          {saved && (
+            <span role="status" className="text-sm font-semibold text-moss-700">
+              Saved ✓
+            </span>
+          )}
+        </div>
+      </form>
+    </section>
+  )
+}
+
 export function ProfilePage() {
   const { id } = useParams<{ id: string }>()
   const { state } = useApp()
@@ -117,6 +209,9 @@ export function ProfilePage() {
           </div>
         </dl>
       </header>
+
+      {/* Contact preferences — only on your own profile (Phase 5) */}
+      {state.currentUser?.id === user.id && <ContactPrefsCard user={user} />}
 
       {/* Badges */}
       <section aria-labelledby="badges" className="flex flex-col gap-3">

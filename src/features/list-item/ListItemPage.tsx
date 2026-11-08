@@ -1,30 +1,40 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import type { ItemListing } from '@/types'
-import { ITEM_CATEGORIES } from '@/types'
+import type { Listing, ListingSection, ListingType, PriceUnit } from '@/types'
+import { ITEM_CATEGORIES, LISTING_SECTIONS, PROPERTY_TYPES } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { useListItemDraft } from './useListItemDraft'
 import { listingsApi, toErrorMessage } from '@/services'
-import { CATEGORY_META, categoryEmoji } from '@/utils/categoryMeta'
+import { SECTION_META } from '@/utils/categoryMeta'
 import { formatMoney } from '@/utils/money'
 import { cn } from '@/utils/cn'
 import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
 import { SelectField, TextAreaField, TextField } from '@/components/ui/Field'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { ListingPhoto } from '@/components/listings/ListingPhoto'
+import { ListingCard } from '@/components/listings/ListingCard'
 import { CheckIcon, ChevronLeftIcon, XIcon, CameraIcon } from '@/components/icons'
-import { LIST_ITEM_STEPS, MAX_PHOTOS, type DraftField, type ListItemDraft } from './listItemForm'
+import {
+  LIST_ITEM_STEPS,
+  PHOTO_LIMITS,
+  PHOTO_MINIMUM,
+  buildCreateInput,
+  buildPreviewListing,
+  dealTypesFor,
+  type DraftField,
+  type FormErrors,
+  type ListItemDraft,
+} from './listItemForm'
 
 /**
- * /list-item — multi-step listing flow.
+ * /list-item — the Phase 5 five-step listing wizard for ALL sections:
+ * section & type → details → photos → price & place → preview & publish.
  *
- * State lives in ONE form reducer (see listItemForm.ts) — no scattered
- * useState per field. Each step validates before "Next" with visible
- * inline errors. Progress persists to localStorage, so leaving mid-form
- * and coming back restores the draft (with a notice + "start over").
- * Publishing goes through listingsApi.createItemListing → shared mock store →
- * context, so the new listing appears everywhere immediately.
+ * State lives in ONE form reducer (listItemForm.ts) with localStorage
+ * autosave. Publishing goes through listingsApi.createListing — the
+ * shared service validator runs in buildCreateInput first, so a draft
+ * that reaches the service is already valid on both backends.
+ * Photo uploads to cloud storage arrive with the storage phase; here
+ * photos are device picks (session previews) or pasted image links.
  */
 export function ListItemPage() {
   const navigate = useNavigate()
@@ -32,21 +42,20 @@ export function ListItemPage() {
   const { state: form, dispatch: dispatchForm, discard, publishSucceeded } = useListItemDraft()
   const [publishing, setPublishing] = useState(false)
   const [publishError, setPublishError] = useState<string | null>(null)
-  const [published, setPublished] = useState<ItemListing | null>(null)
+  const [published, setPublished] = useState<Listing | null>(null)
 
   const step = LIST_ITEM_STEPS[form.stepIndex]
   const draft = form.draft
   const owner = state.currentUser
 
-  // Photo "upload" mock: local file input → object URLs (session-only).
   function onPhotoFiles(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? [])
     const urls = files
       .filter((file) => file.type.startsWith('image/'))
-      .slice(0, MAX_PHOTOS - draft.photos.length)
+      .slice(0, PHOTO_LIMITS[draft.section] - draft.photos.length)
       .map((file) => URL.createObjectURL(file))
     if (urls.length > 0) dispatchForm({ type: 'photos_add', urls })
-    event.target.value = '' // allow re-choosing the same file
+    event.target.value = ''
   }
 
   function setField(field: DraftField, value: ListItemDraft[DraftField]) {
@@ -55,32 +64,18 @@ export function ListItemPage() {
 
   async function handlePublish() {
     if (!owner) return
-    // Defensive: the stepper already gates this, but the service would
-    // reject an empty category anyway — fail with a clear message here.
-    if (!draft.category) {
-      setPublishError('Pick a category for your listing before publishing.')
+    const built = buildCreateInput(draft, owner.id)
+    if ('errors' in built) {
+      setPublishError(Object.values(built.errors)[0] ?? 'Check the form and try again.')
       return
     }
     setPublishing(true)
     setPublishError(null)
     try {
-      const item = await listingsApi.createItemListing({
-        ownerId: owner.id,
-        title: draft.title,
-        description: draft.description,
-        category: draft.category,
-        condition: draft.condition,
-        photos: draft.photos,
-        maxDurationDays: Number(draft.maxDurationDays),
-        depositAmount: draft.depositAmount === '' ? null : Number(draft.depositAmount),
-        dailyFee: draft.dailyFee === '' ? null : Number(draft.dailyFee),
-        pickupPreference: draft.pickupPreference,
-        pickupInstructions: draft.pickupInstructions,
-      })
-      // Single listing created → sync context once; every reader sees it.
-      dispatch({ type: 'LISTINGS_UPSERTED', listings: [item] })
+      const listing = await listingsApi.createListing(built.input)
+      dispatch({ type: 'LISTINGS_UPSERTED', listings: [listing] })
       publishSucceeded()
-      setPublished(item)
+      setPublished(listing)
     } catch (error) {
       setPublishError(toErrorMessage(error))
     } finally {
@@ -88,7 +83,7 @@ export function ListItemPage() {
     }
   }
 
-  // --- Published: confirmation screen with share --------------------------
+  // --- Published ------------------------------------------------------------
   if (published) {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center gap-5 py-8 text-center">
@@ -100,58 +95,24 @@ export function ListItemPage() {
         </span>
         <div>
           <h1 className="font-display text-2xl font-extrabold text-bark">
-            It&apos;s live on the block! 🎉
+            It&apos;s live on NeighborMart! 🎉
           </h1>
           <p className="mt-2 text-sm text-bark-light">
-            {published.title} is now visible to neighbors within walking distance. We&apos;ll notify
-            you the moment someone requests it.
+            {published.title} is now visible to neighbors in {published.location.area},{' '}
+            {published.location.city}. We&apos;ll notify you the moment someone reaches out.
           </p>
         </div>
-        <div className="flex w-full max-w-sm flex-col gap-3 rounded-3xl border border-bark/10 bg-white p-4 text-left shadow-sm">
-          <div className="flex gap-3">
-            <ListingPhoto
-              src={published.photos[0]}
-              alt={published.title}
-              emoji={categoryEmoji(published.details.category)}
-              className="h-16 w-16 rounded-2xl"
-            />
-            <div className="min-w-0">
-              <p className="truncate font-display font-bold text-bark">{published.title}</p>
-              <p className="text-xs text-bark-light">
-                {CATEGORY_META[published.details.category].emoji} {published.details.category} · up
-                to {published.details.maxDurationDays} days
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Link to={`/listing/${published.id}`} className="flex-1">
-              <Button variant="secondary" className="w-full">
-                View listing
-              </Button>
-            </Link>
-            <Button
-              variant="secondary"
-              className="flex-1"
-              onClick={() => {
-                const shareData = {
-                  title: 'NeighborMart',
-                  text: `My ${published.title} is now listed on NeighborMart — check it out!`,
-                  url: `${window.location.origin}/listing/${published.id}`,
-                }
-                // Best-effort share: native share sheet or clipboard copy.
-                if (navigator.share) {
-                  void navigator.share(shareData).catch(() => undefined)
-                } else {
-                  void navigator.clipboard
-                    ?.writeText(shareData.url)
-                    .then(() => setPublishError(null))
-                    .catch(() => undefined)
-                }
-              }}
-            >
-              Share
+        <div className="flex w-full max-w-sm gap-2">
+          <Link to={`/listing/${published.id}`} className="flex-1">
+            <Button variant="secondary" className="w-full">
+              View listing
             </Button>
-          </div>
+          </Link>
+          <Link to="/dashboard" className="flex-1">
+            <Button variant="secondary" className="w-full">
+              My dashboard
+            </Button>
+          </Link>
         </div>
         <Link
           to="/browse"
@@ -167,8 +128,8 @@ export function ListItemPage() {
     return (
       <EmptyState
         emoji="👋"
-        title="Sign in to list an item"
-        message="You need a neighbor profile before you can lend things."
+        title="Sign in to post a listing"
+        message="You need a neighbor profile before you can list anything."
       />
     )
   }
@@ -177,23 +138,19 @@ export function ListItemPage() {
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <header className="flex flex-col gap-2">
         <h1 className="font-display text-2xl font-extrabold text-bark sm:text-3xl">
-          List something you own
+          Post a listing
         </h1>
         <p className="text-sm text-bark-light">
-          That thing in the garage deserves better than dust. Two minutes, four steps.
+          An item, a vehicle, a place, an arena — five quick steps and it&apos;s live.
         </p>
       </header>
 
-      {/* Restored-draft notice (the abandon case handled) */}
       {form.restored && form.dirty && (
         <div
           role="status"
           className="flex items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
         >
-          <p>
-            Welcome back — we kept your draft ({LIST_ITEM_STEPS[form.stepIndex].toLowerCase()}{' '}
-            step).
-          </p>
+          <p>Welcome back — we kept your draft ({step.toLowerCase()} step).</p>
           <Button
             variant="ghost"
             size="sm"
@@ -236,37 +193,45 @@ export function ListItemPage() {
         Step {form.stepIndex + 1} of {LIST_ITEM_STEPS.length}: {step}
       </p>
 
-      {/* Step panels */}
       <div className="rounded-3xl border border-bark/10 bg-white p-5 shadow-sm sm:p-6">
-        {step === 'The basics' && (
-          <BasicsStep
+        {form.stepIndex === 0 && (
+          <SectionStep
             draft={draft}
-            showErrors={form.showErrors}
             errors={form.errors}
+            showErrors={form.showErrors}
             setField={setField}
-            onPhotoFiles={onPhotoFiles}
-            onRemovePhoto={(index) => dispatchForm({ type: 'photo_remove', index })}
           />
         )}
-        {step === 'Details' && (
+        {form.stepIndex === 1 && (
           <DetailsStep
             draft={draft}
-            showErrors={form.showErrors}
             errors={form.errors}
+            showErrors={form.showErrors}
             setField={setField}
           />
         )}
-        {step === 'Borrowing terms' && (
-          <TermsStep
+        {form.stepIndex === 2 && (
+          <PhotosStep
             draft={draft}
-            showErrors={form.showErrors}
             errors={form.errors}
-            setField={setField}
+            showErrors={form.showErrors}
+            onPhotoFiles={onPhotoFiles}
+            onAddUrl={(url) => dispatchForm({ type: 'photos_add', urls: [url] })}
+            onRemovePhoto={(index) => dispatchForm({ type: 'photo_remove', index })}
+            onCoverPhoto={(index) => dispatchForm({ type: 'photo_cover', index })}
           />
         )}
-        {step === 'Preview' && (
-          <PreviewStep draft={draft} ownerName={owner.name} ownerAvatarUrl={owner.avatarUrl} />
+        {form.stepIndex === 3 && (
+          <PriceStep
+            draft={draft}
+            errors={form.errors}
+            showErrors={form.showErrors}
+            setField={setField}
+            ownerArea={owner.neighborhood}
+            ownerCity={owner.city}
+          />
         )}
+        {form.stepIndex === 4 && <PreviewStep draft={draft} owner={owner} />}
       </div>
 
       {publishError && (
@@ -278,7 +243,6 @@ export function ListItemPage() {
         </p>
       )}
 
-      {/* Nav buttons */}
       <div className="flex items-center justify-between gap-3">
         <Button
           variant="ghost"
@@ -289,7 +253,6 @@ export function ListItemPage() {
           <ChevronLeftIcon className="h-4 w-4" />
           {form.stepIndex === 0 ? 'Cancel' : 'Back'}
         </Button>
-
         {form.stepIndex < LIST_ITEM_STEPS.length - 1 ? (
           <Button onClick={() => dispatchForm({ type: 'next' })}>
             Next: {LIST_ITEM_STEPS[form.stepIndex + 1]}
@@ -305,129 +268,97 @@ export function ListItemPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Step panels (presentational; state + validation come from the reducer)
+// Step panels
 // ---------------------------------------------------------------------------
 
-function fieldError(
-  errors: Partial<Record<DraftField, string>>,
-  showErrors: boolean,
-  field: DraftField,
-): string | undefined {
+type StepProps = {
+  draft: ListItemDraft
+  errors: FormErrors
+  showErrors: boolean
+  setField: (field: DraftField, value: ListItemDraft[DraftField]) => void
+}
+
+function fieldError(errors: FormErrors, showErrors: boolean, field: DraftField | 'photos') {
   return showErrors ? errors[field] : undefined
 }
 
-function BasicsStep({
-  draft,
-  showErrors,
-  errors,
-  setField,
-  onPhotoFiles,
-  onRemovePhoto,
-}: {
-  draft: ListItemDraft
-  showErrors: boolean
-  errors: Partial<Record<DraftField, string>>
-  setField: (field: DraftField, value: ListItemDraft[DraftField]) => void
-  onPhotoFiles: (event: ChangeEvent<HTMLInputElement>) => void
-  onRemovePhoto: (index: number) => void
-}) {
+const DEAL_LABEL: Record<ListingType, string> = {
+  borrow: 'Borrow — free',
+  rent: 'Rent — paid per period',
+  sell: 'Sell — one price',
+}
+
+function SectionStep({ draft, errors, showErrors, setField }: StepProps) {
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="font-display text-lg font-bold text-bark">The basics</h2>
-
-      <SelectField
-        label="Category"
-        required
-        value={draft.category}
-        onChange={(e) => setField('category', e.target.value as ListItemDraft['category'])}
-        error={fieldError(errors, showErrors, 'category')}
-      >
-        <option value="" disabled>
-          Pick a category…
-        </option>
-        {ITEM_CATEGORIES.map((category) => (
-          <option key={category} value={category}>
-            {CATEGORY_META[category].emoji} {category}
-          </option>
+      <h2 className="font-display text-lg font-bold text-bark">What are you listing?</h2>
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label="Section">
+        {LISTING_SECTIONS.map((section: ListingSection) => (
+          <button
+            key={section}
+            type="button"
+            aria-pressed={draft.section === section}
+            onClick={() => setField('section', section)}
+            className={cn(
+              'flex flex-col items-start gap-1 rounded-2xl border p-3 text-left transition-colors',
+              draft.section === section
+                ? 'border-terracotta-600 bg-terracotta-50'
+                : 'border-bark/15 bg-white hover:border-terracotta-300',
+            )}
+          >
+            <span className="text-2xl" aria-hidden>
+              {SECTION_META[section].emoji}
+            </span>
+            <span className="text-sm font-bold text-bark">{SECTION_META[section].label}</span>
+            <span className="text-xs text-bark-light">{SECTION_META[section].blurb}</span>
+          </button>
         ))}
-      </SelectField>
-      <p className="-mt-2 text-xs text-bark-light">
-        {draft.category
-          ? CATEGORY_META[draft.category].blurb
-          : 'Pick the closest fit — filters use it.'}
-      </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Deal type">
+        {dealTypesFor(draft.section).map((type) => (
+          <button
+            key={type}
+            type="button"
+            aria-pressed={draft.listingType === type}
+            onClick={() => setField('listingType', type)}
+            className={cn(
+              'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors',
+              draft.listingType === type
+                ? 'border-moss-600 bg-moss-600 text-white'
+                : 'border-bark/15 bg-white text-bark-light hover:border-moss-400',
+            )}
+          >
+            {DEAL_LABEL[type]}
+          </button>
+        ))}
+      </div>
+      {fieldError(errors, showErrors, 'listingType') && (
+        <p role="alert" className="text-xs font-medium text-red-700">
+          {errors.listingType}
+        </p>
+      )}
 
       <TextField
         label="Title"
         required
         value={draft.title}
         maxLength={80}
-        placeholder="e.g. 20V Cordless Drill + Bit Kit"
+        placeholder="e.g. Toyota Corolla GLi 2021 — neat & clean"
         hint="What would a neighbor type to find this?"
         onChange={(e) => setField('title', e.target.value)}
         error={fieldError(errors, showErrors, 'title')}
       />
-
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-semibold text-bark">
-          Photos <span className="font-normal text-bark-light">(optional, up to {MAX_PHOTOS})</span>
-        </legend>
-        <div className="flex flex-wrap gap-3">
-          {draft.photos.map((photo, index) => (
-            <div key={photo} className="relative">
-              <img
-                src={photo}
-                alt={`Listing photo ${index + 1}`}
-                className="h-20 w-20 rounded-2xl border border-bark/10 object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => onRemovePhoto(index)}
-                aria-label={`Remove photo ${index + 1}`}
-                className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-bark text-cream shadow-md transition-transform hover:scale-110"
-              >
-                <XIcon className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-          {draft.photos.length < MAX_PHOTOS && (
-            <label
-              className={cn(
-                'flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-bark/20 bg-cream/50 text-bark-light',
-                'transition-colors hover:border-terracotta-400 hover:text-terracotta-600',
-              )}
-            >
-              <CameraIcon className="h-6 w-6" aria-hidden />
-              <span className="text-[11px] font-semibold">Add photo</span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="sr-only"
-                onChange={onPhotoFiles}
-              />
-            </label>
-          )}
-        </div>
-        <p className="text-xs text-bark-light">
-          No photo yet? No problem — the listing gets a friendly category badge instead.
-        </p>
-      </fieldset>
     </div>
   )
 }
 
-function DetailsStep({
-  draft,
-  showErrors,
-  errors,
-  setField,
-}: {
-  draft: ListItemDraft
-  showErrors: boolean
-  errors: Partial<Record<DraftField, string>>
-  setField: (field: DraftField, value: ListItemDraft[DraftField]) => void
-}) {
+function DetailsStep({ draft, errors, showErrors, setField }: StepProps) {
+  const num = (field: DraftField) => ({
+    value: draft[field] as number | '',
+    onChange: (e: ChangeEvent<HTMLInputElement>) =>
+      setField(field, e.target.value === '' ? '' : Number(e.target.value)),
+  })
   return (
     <div className="flex flex-col gap-4">
       <h2 className="font-display text-lg font-bold text-bark">The details</h2>
@@ -437,195 +368,593 @@ function DetailsStep({
         value={draft.description}
         maxLength={1000}
         rows={5}
-        placeholder="What is it, what's included, and why is it great to borrow?"
+        placeholder="What is it, what's included, and why is it a good deal?"
         hint={`${draft.description.length}/1000 — honest and specific wins neighbors.`}
         onChange={(e) => setField('description', e.target.value)}
         error={fieldError(errors, showErrors, 'description')}
       />
-      <TextField
-        label="Condition"
-        required
-        value={draft.condition}
-        maxLength={200}
-        placeholder='e.g. "Good — one scuff, works perfectly"'
-        onChange={(e) => setField('condition', e.target.value)}
-        error={fieldError(errors, showErrors, 'condition')}
-      />
+
+      {draft.section === 'items' && (
+        <>
+          <SelectField
+            label="Category"
+            required
+            value={draft.category}
+            onChange={(e) => setField('category', e.target.value as ListItemDraft['category'])}
+            error={fieldError(errors, showErrors, 'category')}
+          >
+            <option value="" disabled>
+              Pick a category…
+            </option>
+            {ITEM_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label="Condition"
+            required
+            value={draft.condition}
+            maxLength={200}
+            placeholder='e.g. "Good — one scuff, works perfectly"'
+            onChange={(e) => setField('condition', e.target.value)}
+            error={fieldError(errors, showErrors, 'condition')}
+          />
+          {draft.listingType !== 'sell' && (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <TextField
+                  label="Max duration (days)"
+                  required
+                  type="number"
+                  min={1}
+                  max={60}
+                  placeholder="7"
+                  {...num('maxDurationDays')}
+                  error={fieldError(errors, showErrors, 'maxDurationDays')}
+                />
+                <TextField
+                  label="Deposit (Rs, optional)"
+                  type="number"
+                  min={0}
+                  max={200000}
+                  placeholder="0"
+                  hint="Refunded on return."
+                  {...num('depositAmount')}
+                  error={fieldError(errors, showErrors, 'depositAmount')}
+                />
+              </div>
+              <SelectField
+                label="Pickup preference"
+                value={draft.pickupPreference}
+                onChange={(e) =>
+                  setField('pickupPreference', e.target.value as ListItemDraft['pickupPreference'])
+                }
+              >
+                <option value="either">Pickup or drop-off — whatever works</option>
+                <option value="pickup">Pickup at my place</option>
+                <option value="drop-off">I can drop it off</option>
+              </SelectField>
+              <TextAreaField
+                label="Pickup instructions"
+                required
+                value={draft.pickupInstructions}
+                maxLength={300}
+                rows={3}
+                placeholder="e.g. Porch pickup after 5pm — message when you're close."
+                onChange={(e) => setField('pickupInstructions', e.target.value)}
+                error={fieldError(errors, showErrors, 'pickupInstructions')}
+              />
+            </>
+          )}
+        </>
+      )}
+
+      {draft.section === 'vehicles' && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="Make"
+              required
+              value={draft.make}
+              placeholder="Toyota"
+              onChange={(e) => setField('make', e.target.value)}
+              error={fieldError(errors, showErrors, 'make')}
+            />
+            <TextField
+              label="Model"
+              required
+              value={draft.model}
+              placeholder="Corolla GLi"
+              onChange={(e) => setField('model', e.target.value)}
+              error={fieldError(errors, showErrors, 'model')}
+            />
+            <TextField
+              label="Year"
+              required
+              type="number"
+              placeholder="2021"
+              {...num('year')}
+              error={fieldError(errors, showErrors, 'year')}
+            />
+            <TextField
+              label="Mileage (km)"
+              required
+              type="number"
+              placeholder="45000"
+              {...num('mileageKm')}
+              error={fieldError(errors, showErrors, 'mileageKm')}
+            />
+            <SelectField
+              label="Fuel"
+              value={draft.fuelType}
+              onChange={(e) => setField('fuelType', e.target.value as ListItemDraft['fuelType'])}
+            >
+              {(['petrol', 'diesel', 'cng', 'hybrid', 'electric'] as const).map((f) => (
+                <option key={f} value={f}>
+                  {f.toUpperCase()}
+                </option>
+              ))}
+            </SelectField>
+            <SelectField
+              label="Transmission"
+              value={draft.transmission}
+              onChange={(e) =>
+                setField('transmission', e.target.value as ListItemDraft['transmission'])
+              }
+            >
+              <option value="manual">Manual</option>
+              <option value="automatic">Automatic</option>
+            </SelectField>
+          </div>
+          <TextField
+            label="Condition"
+            required
+            value={draft.condition}
+            maxLength={200}
+            placeholder='e.g. "Total genuine, new tyres"'
+            onChange={(e) => setField('condition', e.target.value)}
+            error={fieldError(errors, showErrors, 'condition')}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="Registration city"
+              required
+              value={draft.registrationCity}
+              placeholder="Lahore"
+              onChange={(e) => setField('registrationCity', e.target.value)}
+              error={fieldError(errors, showErrors, 'registrationCity')}
+            />
+            <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium text-bark">
+              <input
+                type="checkbox"
+                checked={draft.withDriver}
+                className="h-4 w-4 accent-terracotta-600"
+                onChange={(e) => setField('withDriver', e.target.checked)}
+              />
+              Comes with a driver
+            </label>
+          </div>
+        </>
+      )}
+
+      {draft.section === 'properties' && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Property type"
+              required
+              value={draft.propertyType}
+              onChange={(e) =>
+                setField('propertyType', e.target.value as ListItemDraft['propertyType'])
+              }
+              error={fieldError(errors, showErrors, 'propertyType')}
+            >
+              <option value="" disabled>
+                Pick a type…
+              </option>
+              {PROPERTY_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </option>
+              ))}
+            </SelectField>
+            <div className="flex gap-2">
+              <TextField
+                label="Area size"
+                required
+                type="number"
+                placeholder="10"
+                {...num('areaSize')}
+                error={fieldError(errors, showErrors, 'areaSize')}
+                className="flex-1"
+              />
+              <SelectField
+                label="Unit"
+                value={draft.areaUnit}
+                onChange={(e) => setField('areaUnit', e.target.value as ListItemDraft['areaUnit'])}
+              >
+                {(['marla', 'kanal', 'sqft', 'sqyd'] as const).map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </SelectField>
+            </div>
+            <TextField
+              label="Bedrooms (if any)"
+              type="number"
+              placeholder="3"
+              {...num('bedrooms')}
+              error={fieldError(errors, showErrors, 'bedrooms')}
+            />
+            <TextField
+              label="Bathrooms (if any)"
+              type="number"
+              placeholder="2"
+              {...num('bathrooms')}
+              error={fieldError(errors, showErrors, 'bathrooms')}
+            />
+            <TextField
+              label="Available from"
+              type="date"
+              value={draft.availableFrom}
+              onChange={(e) => setField('availableFrom', e.target.value)}
+            />
+            <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium text-bark">
+              <input
+                type="checkbox"
+                checked={draft.furnished}
+                className="h-4 w-4 accent-terracotta-600"
+                onChange={(e) => setField('furnished', e.target.checked)}
+              />
+              Furnished
+            </label>
+          </div>
+          <TextField
+            label="Amenities (comma-separated)"
+            value={draft.amenities}
+            placeholder="Parking, UPS, Separate gate"
+            onChange={(e) => setField('amenities', e.target.value)}
+          />
+        </>
+      )}
+
+      {draft.section === 'arenas' && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="Sports (comma-separated)"
+              required
+              value={draft.sportTypes}
+              placeholder="Futsal, Cricket"
+              onChange={(e) => setField('sportTypes', e.target.value)}
+              error={fieldError(errors, showErrors, 'sportTypes')}
+            />
+            <TextField
+              label="Surface"
+              required
+              value={draft.surface}
+              placeholder="Astro turf"
+              onChange={(e) => setField('surface', e.target.value)}
+              error={fieldError(errors, showErrors, 'surface')}
+            />
+            <TextField
+              label="Capacity (people)"
+              required
+              type="number"
+              placeholder="40"
+              {...num('capacity')}
+              error={fieldError(errors, showErrors, 'capacity')}
+            />
+            <SelectField
+              label="Slot length"
+              value={String(draft.slotMinutes)}
+              onChange={(e) => setField('slotMinutes', Number(e.target.value))}
+            >
+              {[30, 60, 90, 120].map((m) => (
+                <option key={m} value={m}>
+                  {m} minutes
+                </option>
+              ))}
+            </SelectField>
+            <TextField
+              label="Opens at"
+              type="time"
+              value={draft.opens}
+              onChange={(e) => setField('opens', e.target.value)}
+              error={fieldError(errors, showErrors, 'opens')}
+            />
+            <TextField
+              label="Closes at"
+              type="time"
+              value={draft.closes}
+              onChange={(e) => setField('closes', e.target.value)}
+            />
+            <TextField
+              label="Min. booking notice (hours)"
+              type="number"
+              placeholder="2"
+              {...num('minAdvanceHours')}
+            />
+            <TextField
+              label="Book ahead up to (days)"
+              type="number"
+              placeholder="14"
+              {...num('maxAdvanceDays')}
+            />
+          </div>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-semibold text-bark">Facilities</legend>
+            <div className="flex flex-wrap gap-4">
+              {(
+                [
+                  ['floodlights', 'Floodlights'],
+                  ['parking', 'Parking'],
+                  ['washrooms', 'Washrooms'],
+                  ['changingRooms', 'Changing rooms'],
+                ] as Array<[DraftField, string]>
+              ).map(([field, label]) => (
+                <label
+                  key={field}
+                  className="flex items-center gap-2 text-sm font-medium text-bark"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(draft[field])}
+                    className="h-4 w-4 accent-terracotta-600"
+                    onChange={(e) => setField(field, e.target.checked)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </>
+      )}
     </div>
   )
 }
 
-function TermsStep({
+function PhotosStep({
   draft,
-  showErrors,
   errors,
-  setField,
+  showErrors,
+  onPhotoFiles,
+  onAddUrl,
+  onRemovePhoto,
+  onCoverPhoto,
 }: {
   draft: ListItemDraft
+  errors: FormErrors
   showErrors: boolean
-  errors: Partial<Record<DraftField, string>>
-  setField: (field: DraftField, value: ListItemDraft[DraftField]) => void
+  onPhotoFiles: (event: ChangeEvent<HTMLInputElement>) => void
+  onAddUrl: (url: string) => void
+  onRemovePhoto: (index: number) => void
+  onCoverPhoto: (index: number) => void
 }) {
+  const [url, setUrl] = useState('')
+  const limit = PHOTO_LIMITS[draft.section]
+  const minimum = PHOTO_MINIMUM[draft.section] ?? 0
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="font-display text-lg font-bold text-bark">Borrowing terms</h2>
+      <h2 className="font-display text-lg font-bold text-bark">Photos</h2>
+      <p className="text-sm text-bark-light">
+        {minimum > 0
+          ? `This section needs at least ${minimum} photos to publish (up to ${limit}). `
+          : `Photos are optional but listings with them get far more interest (up to ${limit}). `}
+        The first photo is the cover — tap “Make cover” on any other to promote it. Cloud uploads
+        arrive with the storage update; for now, pick from your device or paste image links.
+      </p>
 
-      <TextField
-        label="Max borrow duration (days)"
-        required
-        type="number"
-        min={1}
-        max={60}
-        value={draft.maxDurationDays}
-        placeholder="7"
-        hint="How long can a neighbor keep it? (1–60)"
-        onChange={(e) =>
-          setField('maxDurationDays', e.target.value === '' ? '' : Number(e.target.value))
-        }
-        error={fieldError(errors, showErrors, 'maxDurationDays')}
-      />
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TextField
-          label="Deposit (Rs, optional)"
-          type="number"
-          min={0}
-          max={200000}
-          value={draft.depositAmount}
-          placeholder="0"
-          hint="Refunded on return. Leave empty for none."
-          onChange={(e) =>
-            setField('depositAmount', e.target.value === '' ? '' : Number(e.target.value))
-          }
-          error={fieldError(errors, showErrors, 'depositAmount')}
-        />
-        <TextField
-          label="Daily fee (Rs, optional)"
-          type="number"
-          min={0}
-          max={50000}
-          value={draft.dailyFee}
-          placeholder="0"
-          hint="Most items are free — leave empty."
-          onChange={(e) =>
-            setField('dailyFee', e.target.value === '' ? '' : Number(e.target.value))
-          }
-          error={fieldError(errors, showErrors, 'dailyFee')}
-        />
+      <div className="flex flex-wrap gap-3">
+        {draft.photos.map((photo, index) => (
+          <div key={`${photo}-${index}`} className="relative w-24">
+            <img
+              src={photo}
+              alt={`Listing photo ${index + 1}`}
+              className="h-24 w-24 rounded-2xl border border-bark/10 object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => onRemovePhoto(index)}
+              aria-label={`Remove photo ${index + 1}`}
+              className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-bark text-cream shadow-md transition-transform hover:scale-110"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </button>
+            {index === 0 ? (
+              <span className="absolute bottom-1 left-1 rounded-full bg-bark/80 px-2 py-0.5 text-[10px] font-bold text-cream">
+                Cover
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onCoverPhoto(index)}
+                className="absolute bottom-1 left-1 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-bark shadow"
+              >
+                Make cover
+              </button>
+            )}
+          </div>
+        ))}
+        {draft.photos.length < limit && (
+          <label
+            className={cn(
+              'flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-bark/20 bg-cream/50 text-bark-light',
+              'transition-colors hover:border-terracotta-400 hover:text-terracotta-600',
+            )}
+          >
+            <CameraIcon className="h-6 w-6" aria-hidden />
+            <span className="text-[11px] font-semibold">Add photo</span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="sr-only"
+              onChange={onPhotoFiles}
+            />
+          </label>
+        )}
       </div>
 
-      <SelectField
-        label="Pickup preference"
-        value={draft.pickupPreference}
-        onChange={(e) =>
-          setField('pickupPreference', e.target.value as ListItemDraft['pickupPreference'])
-        }
-      >
-        <option value="either">Pickup or drop-off — whatever works</option>
-        <option value="pickup">Pickup at my place</option>
-        <option value="drop-off">I can drop it off</option>
-      </SelectField>
+      <div className="flex gap-2">
+        <TextField
+          label="…or paste an image link"
+          value={url}
+          placeholder="https://…"
+          onChange={(e) => setUrl(e.target.value)}
+          className="flex-1"
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          className="self-end"
+          disabled={!url.trim() || draft.photos.length >= limit}
+          onClick={() => {
+            onAddUrl(url.trim())
+            setUrl('')
+          }}
+        >
+          Add link
+        </Button>
+      </div>
 
-      <TextAreaField
-        label="Pickup instructions"
-        required
-        value={draft.pickupInstructions}
-        maxLength={300}
-        rows={3}
-        placeholder="e.g. Porch pickup after 5pm — text when you're close."
-        onChange={(e) => setField('pickupInstructions', e.target.value)}
-        error={fieldError(errors, showErrors, 'pickupInstructions')}
-      />
+      {fieldError(errors, showErrors, 'photos') && (
+        <p role="alert" className="text-sm font-medium text-red-700">
+          {errors.photos}
+        </p>
+      )}
+    </div>
+  )
+}
+
+const PRICE_UNITS: Array<{ value: PriceUnit; label: string }> = [
+  { value: 'hour', label: 'per hour' },
+  { value: 'day', label: 'per day' },
+  { value: 'week', label: 'per week' },
+  { value: 'month', label: 'per month' },
+]
+
+function PriceStep({
+  draft,
+  errors,
+  showErrors,
+  setField,
+  ownerArea,
+  ownerCity,
+}: StepProps & { ownerArea: string; ownerCity: string }) {
+  const unitOptions =
+    draft.section === 'properties'
+      ? PRICE_UNITS.filter((u) => u.value === 'month' || u.value === 'week')
+      : PRICE_UNITS
+  return (
+    <div className="flex flex-col gap-4">
+      <h2 className="font-display text-lg font-bold text-bark">Price & place</h2>
+
+      {draft.listingType === 'borrow' ? (
+        <p className="rounded-2xl bg-moss-50 px-4 py-3 text-sm font-semibold text-moss-900">
+          Free borrow — neighbors lend this one for nothing. Karma points included.
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-end gap-3">
+            <TextField
+              label={draft.listingType === 'sell' ? 'Asking price (Rs)' : 'Price (Rs)'}
+              required
+              type="number"
+              min={1}
+              placeholder="5000"
+              value={draft.price}
+              onChange={(e) =>
+                setField('price', e.target.value === '' ? '' : Number(e.target.value))
+              }
+              error={fieldError(errors, showErrors, 'price')}
+              className="flex-1"
+            />
+            {draft.listingType === 'rent' && draft.section !== 'arenas' && (
+              <SelectField
+                label="Charged"
+                value={draft.priceUnit}
+                onChange={(e) => setField('priceUnit', e.target.value as PriceUnit)}
+              >
+                {unitOptions.map((u) => (
+                  <option key={u.value} value={u.value}>
+                    {u.label}
+                  </option>
+                ))}
+              </SelectField>
+            )}
+            {draft.section === 'arenas' && (
+              <p className="pb-2 text-sm font-medium text-bark-light">charged per hour</p>
+            )}
+          </div>
+          {draft.listingType === 'sell' && (
+            <label className="flex items-center gap-2 text-sm font-medium text-bark">
+              <input
+                type="checkbox"
+                checked={draft.negotiable}
+                className="h-4 w-4 accent-terracotta-600"
+                onChange={(e) => setField('negotiable', e.target.checked)}
+              />
+              Open to offers (negotiable)
+            </label>
+          )}
+          {draft.price !== '' && Number(draft.price) > 0 && (
+            <p className="text-sm text-bark-light">
+              Neighbors will see:{' '}
+              <span className="font-semibold text-bark">
+                {formatMoney(Number(draft.price), 'PKR')}
+                {draft.listingType === 'rent'
+                  ? ` per ${draft.section === 'arenas' ? 'hour' : draft.priceUnit}`
+                  : ''}
+              </span>
+            </p>
+          )}
+        </>
+      )}
+
+      <div className="rounded-2xl bg-bark/5 p-4 text-sm">
+        <p className="font-semibold text-bark">Location</p>
+        <p className="mt-1 text-bark-light">
+          Your listing is placed at your home area — {ownerArea}, {ownerCity} — so nearby neighbors
+          find it first. (Per-listing locations arrive in a later update.)
+        </p>
+      </div>
     </div>
   )
 }
 
 function PreviewStep({
   draft,
-  ownerName,
-  ownerAvatarUrl,
+  owner,
 }: {
   draft: ListItemDraft
-  ownerName: string
-  ownerAvatarUrl: string
+  owner: NonNullable<ReturnType<typeof useApp>['state']['currentUser']>
 }) {
-  const summary = useMemo(
-    () =>
-      [
-        [
-          'Category',
-          `${CATEGORY_META[draft.category as keyof typeof CATEGORY_META]?.emoji ?? '📦'} ${draft.category}`,
-        ],
-        ['Max duration', `${draft.maxDurationDays} days`],
-        [
-          'Deposit',
-          draft.depositAmount === '' || draft.depositAmount === 0
-            ? 'None'
-            : formatMoney(draft.depositAmount, 'PKR'),
-        ],
-        [
-          'Daily fee',
-          draft.dailyFee === '' || draft.dailyFee === 0
-            ? 'Free'
-            : `${formatMoney(draft.dailyFee, 'PKR')}/day`,
-        ],
-      ] as const,
-    [draft],
-  )
-
+  const preview = useMemo(() => buildPreviewListing(draft, owner), [draft, owner])
+  const built = useMemo(() => buildCreateInput(draft, owner.id), [draft, owner.id])
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="font-display text-lg font-bold text-bark">Preview</h2>
-      <p className="text-sm text-bark-light">
-        This is exactly what neighbors will see. Last chance to polish.
-      </p>
-
-      <article className="flex flex-col gap-3 overflow-hidden rounded-3xl border border-bark/10 bg-white shadow-sm">
-        <ListingPhoto
-          src={draft.photos[0]}
-          alt={draft.title}
-          emoji={categoryEmoji(draft.category)}
-          className="aspect-[4/3] w-full"
-          emojiClassName="text-6xl"
-        />
-        <div className="flex flex-col gap-2 p-4">
-          <Badge tone="success" dot className="w-fit">
-            Available
-          </Badge>
-          <p className="font-display text-lg font-bold text-bark">
-            {draft.title || 'Untitled listing'}
-          </p>
-          <p className="whitespace-pre-line text-sm leading-relaxed text-bark-light">
-            {draft.description}
-          </p>
-          <p className="text-sm text-bark">
-            <span className="font-semibold">Condition: </span>
-            {draft.condition}
-          </p>
-          <div className="flex items-center gap-2 border-t border-bark/10 pt-3">
-            <img
-              src={ownerAvatarUrl}
-              alt=""
-              onError={(e) => {
-                e.currentTarget.style.display = 'none'
-              }}
-              className="h-6 w-6 rounded-full object-cover"
-            />
-            <span className="text-xs font-medium text-bark-light">Shared by you — {ownerName}</span>
+      <h2 className="font-display text-lg font-bold text-bark">Preview & publish</h2>
+      {preview ? (
+        <>
+          <p className="text-sm text-bark-light">This is exactly the card neighbors will see.</p>
+          <div className="mx-auto w-full max-w-sm">
+            <ListingCard listing={preview} owner={owner} ownerTier={null} distanceKm={null} />
           </div>
+        </>
+      ) : (
+        <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          <p className="font-semibold">A few things still need fixing:</p>
+          <ul className="mt-1 list-disc pl-5">
+            {'errors' in built &&
+              Object.values(built.errors).map((message) => <li key={message}>{message}</li>)}
+          </ul>
+          <p className="mt-1">Use Back to fix them, then return here.</p>
         </div>
-      </article>
-
-      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {summary.map(([label, value]) => (
-          <div key={label} className="flex flex-col gap-0.5 rounded-2xl bg-bark/5 p-3">
-            <dt className="text-[11px] font-semibold uppercase tracking-wide text-bark-light">
-              {label}
-            </dt>
-            <dd className="text-sm font-semibold text-bark">{value}</dd>
-          </div>
-        ))}
-      </dl>
+      )}
     </div>
   )
 }

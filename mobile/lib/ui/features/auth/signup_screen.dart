@@ -108,7 +108,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               controller: _neighborhood,
               decoration: const InputDecoration(
                 labelText: 'Neighborhood *',
-                hintText: 'e.g. Richmond',
+                hintText: 'e.g. Gulberg',
                 prefixIcon: Icon(Icons.location_on_outlined),
               ),
               validator: (v) => (v == null || v.trim().isEmpty)

@@ -63,6 +63,15 @@ function Navbar() {
           <NavLink to="/browse" className={navLinkClass}>
             Browse
           </NavLink>
+          <NavLink to="/vehicles" className={navLinkClass}>
+            Vehicles
+          </NavLink>
+          <NavLink to="/properties" className={navLinkClass}>
+            Properties
+          </NavLink>
+          <NavLink to="/arenas" className={navLinkClass}>
+            Arenas
+          </NavLink>
           <NavLink to="/dashboard" className={navLinkClass}>
             Dashboard
           </NavLink>

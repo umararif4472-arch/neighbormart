@@ -1,6 +1,13 @@
-import type { EffectiveRequestStatus, ISODateString, RequestStatus } from '@/types'
+import type {
+  ArenaListing,
+  ArenaSlot,
+  BorrowPeriod,
+  EffectiveRequestStatus,
+  ISODateString,
+  RequestStatus,
+} from '@/types'
 import type { RequestStatus as Status } from '@/types'
-import { periodsOverlap } from './dates'
+import { localDateFromToday, periodsOverlap } from './dates'
 
 /**
  * THE request lifecycle state machine. One place computes transitions and
@@ -19,9 +26,12 @@ import { periodsOverlap } from './dates'
 
 export const REQUEST_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {
   pending: ['approved', 'declined', 'cancelled'],
-  approved: ['active', 'cancelled'],
+  // approved → completed covers the no-return-leg deals (Phase 5):
+  // a sale handed over, or an arena slot that has been played.
+  approved: ['active', 'cancelled', 'completed'],
   active: ['returned'],
   returned: ['reviewed'],
+  completed: ['reviewed'],
   reviewed: [],
   declined: [],
   cancelled: [],
@@ -111,6 +121,7 @@ export const STATUS_META: Record<
   active: { label: 'Out now', tone: 'terracotta', hint: 'Borrow in progress' },
   overdue: { label: 'Overdue', tone: 'danger', hint: 'Past the agreed return date' },
   returned: { label: 'Pending review', tone: 'moss', hint: 'Returned — review still outstanding' },
+  completed: { label: 'Completed', tone: 'success', hint: 'Deal done — no return needed' },
   reviewed: {
     label: 'Reviewed ✓',
     tone: 'neutral',
@@ -118,6 +129,79 @@ export const STATUS_META: Record<
   },
   declined: { label: 'Declined', tone: 'danger', hint: 'The lender declined this time' },
   cancelled: { label: 'Cancelled', tone: 'neutral', hint: 'Withdrawn before approval' },
+}
+
+// ---------------------------------------------------------------------------
+// Arena slots (Phase 5) — collision + booking-window validation
+// ---------------------------------------------------------------------------
+
+/** Two arena slots collide when they share a date and their times overlap. */
+export function slotsOverlap(a: ArenaSlot, b: ArenaSlot): boolean {
+  return a.date === b.date && a.startTime < b.endTime && b.startTime < a.endTime
+}
+
+/** Collision test that understands both date periods and arena slots. */
+export function requestsCollide(
+  a: { period: BorrowPeriod; slot: ArenaSlot | null },
+  b: { period: BorrowPeriod; slot: ArenaSlot | null },
+): boolean {
+  if (a.slot && b.slot) return slotsOverlap(a.slot, b.slot)
+  return periodsOverlap(a.period, b.period)
+}
+
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+const toMinutes = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))
+
+/**
+ * Arena slot rules: inside the advance-booking window, on the slot grid
+ * defined by opening hours + slotMinutes, and far enough ahead to
+ * satisfy the minimum notice. Returns a friendly error or null. Used by
+ * BOTH service backends and the booking UI, so they can never drift.
+ */
+export function validateArenaSlot(listing: ArenaListing, slot: ArenaSlot): string | null {
+  const d = listing.details
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(slot.date) ||
+    !TIME_RE.test(slot.startTime) ||
+    !TIME_RE.test(slot.endTime)
+  ) {
+    return 'Pick a valid date and time for your slot.'
+  }
+  if (slot.date < localDateFromToday(0)) return 'That date is in the past.'
+  if (slot.date > localDateFromToday(d.advanceBooking.maxAdvanceDays)) {
+    return `This arena takes bookings at most ${d.advanceBooking.maxAdvanceDays} days ahead.`
+  }
+  const opens = toMinutes(d.openingHours.opens)
+  const closes = toMinutes(d.openingHours.closes)
+  const start = toMinutes(slot.startTime)
+  const end = toMinutes(slot.endTime)
+  if (start < opens || end > closes || end <= start) {
+    return `Slots run between ${d.openingHours.opens} and ${d.openingHours.closes}.`
+  }
+  if ((start - opens) % d.slotMinutes !== 0 || (end - opens) % d.slotMinutes !== 0) {
+    return `Slots start on the ${d.slotMinutes}-minute grid from ${d.openingHours.opens}.`
+  }
+  const startMs = Date.parse(`${slot.date}T${slot.startTime}:00`)
+  if (startMs < Date.now() + d.advanceBooking.minAdvanceHours * 3_600_000) {
+    return `Book at least ${d.advanceBooking.minAdvanceHours} hours ahead.`
+  }
+  return null
+}
+
+/** All bookable slots for one day (start/end pairs on the grid). */
+export function arenaSlotsForDay(
+  listing: ArenaListing,
+): Array<{ startTime: string; endTime: string }> {
+  const d = listing.details
+  const opens = toMinutes(d.openingHours.opens)
+  const closes = toMinutes(d.openingHours.closes)
+  const fmt = (mins: number) =>
+    `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`
+  const slots: Array<{ startTime: string; endTime: string }> = []
+  for (let start = opens; start + d.slotMinutes <= closes; start += d.slotMinutes) {
+    slots.push({ startTime: fmt(start), endTime: fmt(start + d.slotMinutes) })
+  }
+  return slots
 }
 
 // ---------------------------------------------------------------------------

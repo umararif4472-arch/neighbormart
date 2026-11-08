@@ -1,4 +1,5 @@
 import 'user.dart';
+import 'item.dart';
 
 /// The unified Listing model (Phase 2) — one type for everything posted
 /// on NeighborMart, replacing the borrow-only [Item] as the data model
@@ -384,6 +385,127 @@ class ArenaListing extends Listing {
 
   @override
   ListingSection get section => ListingSection.arenas;
+}
+
+// ---------------------------------------------------------------------------
+// Status copy + legacy Item adapter (Phase 5)
+// ---------------------------------------------------------------------------
+
+/// A copy of [listing] with a new status. Listings are immutable and
+/// each subclass carries its own details, so the copy is rebuilt per
+/// subclass — one place, used by owner management actions.
+Listing listingWithStatus(Listing listing, ListingStatus status) {
+  switch (listing) {
+    case ItemListing l:
+      return ItemListing(
+        id: l.id,
+        ownerId: l.ownerId,
+        listingType: l.listingType,
+        title: l.title,
+        description: l.description,
+        price: l.price,
+        currency: l.currency,
+        priceUnit: l.priceUnit,
+        negotiable: l.negotiable,
+        photos: l.photos,
+        location: l.location,
+        status: status,
+        createdAt: l.createdAt,
+        updatedAt: DateTime.now(),
+        views: l.views,
+        details: l.details,
+      );
+    case VehicleListing l:
+      return VehicleListing(
+        id: l.id,
+        ownerId: l.ownerId,
+        listingType: l.listingType,
+        title: l.title,
+        description: l.description,
+        price: l.price,
+        currency: l.currency,
+        priceUnit: l.priceUnit,
+        negotiable: l.negotiable,
+        photos: l.photos,
+        location: l.location,
+        status: status,
+        createdAt: l.createdAt,
+        updatedAt: DateTime.now(),
+        views: l.views,
+        details: l.details,
+      );
+    case PropertyListing l:
+      return PropertyListing(
+        id: l.id,
+        ownerId: l.ownerId,
+        listingType: l.listingType,
+        title: l.title,
+        description: l.description,
+        price: l.price,
+        currency: l.currency,
+        priceUnit: l.priceUnit,
+        negotiable: l.negotiable,
+        photos: l.photos,
+        location: l.location,
+        status: status,
+        createdAt: l.createdAt,
+        updatedAt: DateTime.now(),
+        views: l.views,
+        details: l.details,
+      );
+    case ArenaListing l:
+      return ArenaListing(
+        id: l.id,
+        ownerId: l.ownerId,
+        listingType: l.listingType,
+        title: l.title,
+        description: l.description,
+        price: l.price,
+        currency: l.currency,
+        priceUnit: l.priceUnit,
+        negotiable: l.negotiable,
+        photos: l.photos,
+        location: l.location,
+        status: status,
+        createdAt: l.createdAt,
+        updatedAt: DateTime.now(),
+        views: l.views,
+        details: l.details,
+      );
+  }
+  // Unreachable: the switch is exhaustive over the sealed-by-convention
+  // subclass set. Kept for the compiler.
+  throw StateError('Unknown listing subtype: ${listing.runtimeType}');
+}
+
+/// Project an items-section [Listing] onto the legacy [Item] model so
+/// the pre-Phase-5 screens (item detail, activity, chat) keep working
+/// unchanged for items — ids coincide, so requests resolve across both.
+Item itemFromListing(ItemListing listing) {
+  final d = listing.details;
+  return Item(
+    id: listing.id,
+    ownerId: listing.ownerId,
+    title: listing.title,
+    description: listing.description,
+    category: d.category,
+    condition: d.condition,
+    photos: listing.photos,
+    location: listing.location.latLng,
+    availability: switch (listing.status) {
+      ListingStatus.active => 'available',
+      ListingStatus.rented => 'borrowed',
+      _ => 'unavailable',
+    },
+    borrowTerms: BorrowTerms(
+      maxDurationDays: d.maxDurationDays,
+      depositAmount: d.depositAmount,
+      dailyFee: listing.listingType == ListingType.rent ? listing.price : null,
+      pickupPreference: d.pickupPreference,
+      pickupInstructions: d.pickupInstructions,
+    ),
+    createdAt: listing.createdAt,
+  );
 }
 
 // ---------------------------------------------------------------------------

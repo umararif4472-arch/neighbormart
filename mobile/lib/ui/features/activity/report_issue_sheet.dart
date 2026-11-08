@@ -47,7 +47,10 @@ class _ReportIssueSheetState extends State<ReportIssueSheet> {
   Widget build(BuildContext context) {
     final state = context.read<AppState>();
     final req = state.requests.firstWhere((r) => r.id == widget.requestId);
-    final item = state.itemById(req.itemId);
+    final itemTitle =
+        state.itemByIdOrNull(req.itemId)?.title ??
+        state.listingByIdOrNull(req.itemId)?.title ??
+        'Listing';
     return Padding(
       padding: EdgeInsets.fromLTRB(
         20,
@@ -64,7 +67,7 @@ class _ReportIssueSheetState extends State<ReportIssueSheet> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 4),
-          Text(item.title, style: Theme.of(context).textTheme.bodySmall),
+          Text(itemTitle, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 14),
           const Text(
             'What happened?',

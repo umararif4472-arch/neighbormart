@@ -174,6 +174,8 @@ describe('buildTrustHistory', () => {
     neighborhood: '',
     homeLocation: { lat: 0, lng: 0 },
     joinedAt: '2025-09-05',
+    phone: '+92 300 0000000',
+    showPhone: false,
     phoneVerified: true,
     emailVerified: false,
     idVerified: true,

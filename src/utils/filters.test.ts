@@ -166,6 +166,45 @@ describe('filterListings', () => {
   })
 })
 
+describe('filterListings — Phase 5 section filters', () => {
+  it('filters by price range across sections', () => {
+    const result = filterListings(
+      listings,
+      { ...EMPTY_LISTING_FILTERS, priceMin: 1, priceMax: 9000 },
+      ORIGIN,
+    )
+    expect(result.map((l) => l.id)).toEqual(['corolla'])
+  })
+
+  it('filters by city', () => {
+    const result = filterListings(listings, { ...EMPTY_LISTING_FILTERS, city: 'Lahore' }, ORIGIN)
+    expect(result).toHaveLength(5)
+    expect(
+      filterListings(listings, { ...EMPTY_LISTING_FILTERS, city: 'Karachi' }, ORIGIN),
+    ).toHaveLength(0)
+  })
+
+  it('vehicle filters narrow to matching vehicles only', () => {
+    const byMake = filterListings(listings, { ...EMPTY_LISTING_FILTERS, makes: ['Toyota'] }, ORIGIN)
+    expect(byMake.map((l) => l.id)).toEqual(['corolla'])
+    expect(
+      filterListings(listings, { ...EMPTY_LISTING_FILTERS, makes: ['Honda'] }, ORIGIN),
+    ).toHaveLength(0)
+    expect(
+      filterListings(listings, { ...EMPTY_LISTING_FILTERS, fuelTypes: ['diesel'] }, ORIGIN),
+    ).toHaveLength(0)
+    expect(
+      filterListings(listings, { ...EMPTY_LISTING_FILTERS, yearMin: 2021 }, ORIGIN),
+    ).toHaveLength(0)
+    expect(
+      filterListings(listings, { ...EMPTY_LISTING_FILTERS, yearMin: 2019, yearMax: 2021 }, ORIGIN),
+    ).toHaveLength(1)
+    expect(
+      filterListings(listings, { ...EMPTY_LISTING_FILTERS, withDriverOnly: true }, ORIGIN),
+    ).toHaveLength(0)
+  })
+})
+
 describe('countByCategory', () => {
   it('counts item listings per category', () => {
     const itemListings = listings.filter((l): l is ItemListing => l.section === 'items')

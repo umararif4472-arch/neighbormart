@@ -67,7 +67,7 @@ function buildView(
   const reviewsForRequest = reviews.filter((r) => r.requestId === request.id)
 
   const review =
-    request.status === 'returned' || request.status === 'reviewed'
+    request.status === 'returned' || request.status === 'completed' || request.status === 'reviewed'
       ? getReviewProgress(reviewsForRequest, listing.ownerId, request.borrowerId)
       : null
 
@@ -175,6 +175,16 @@ export function useMyRequests() {
     [applyResult, currentUser],
   )
 
+  const markCompleted = useCallback(
+    async (requestId: string) => {
+      if (!currentUser) throw new Error('Not signed in')
+      const result = await requestsApi.markCompleted(requestId, currentUser.id)
+      applyResult(result)
+      return result.request
+    },
+    [applyResult, currentUser],
+  )
+
   const cancelRequest = useCallback(
     async (requestId: string) => {
       if (!currentUser) throw new Error('Not signed in')
@@ -222,6 +232,7 @@ export function useMyRequests() {
     respondToRequest,
     confirmPickup,
     markReturned,
+    markCompleted,
     cancelRequest,
     sendReview,
     reportIssue,

@@ -31,6 +31,10 @@ interface RequestSeed {
   respondedHoursAgo?: number
   /** Hours ago the item was returned (returned/reviewed only). */
   returnedHoursAgo?: number
+  /** Sell listings: the buyer's offer (Phase 5). */
+  offerAmount?: number
+  /** Arena listings: the booked slot, day offset from today (Phase 5). */
+  slot?: { dayOffset: number; startTime: string; endTime: string }
 }
 
 const LIVE: RequestSeed[] = [
@@ -127,6 +131,44 @@ const LIVE: RequestSeed[] = [
     createdHoursAgo: 24 * 17,
     respondedHoursAgo: 24 * 16,
   },
+  {
+    // Phase 5, outgoing: Maya's padel booking at Marcus's court is
+    // APPROVED for tomorrow 18:00–19:00 — the arena slot demo.
+    id: 'req-arena-padel-next',
+    listingId: 'a-padel',
+    borrowerId: 'u-maya',
+    period: [1, 1],
+    note: 'Doubles with the DHA crew — see you at 6!',
+    status: 'approved',
+    createdHoursAgo: 5,
+    respondedHoursAgo: 3,
+    slot: { dayOffset: 1, startTime: '18:00', endTime: '19:00' },
+  },
+  {
+    // Phase 5, outgoing: Maya already played a padel slot last week —
+    // a COMPLETED arena deal (no return leg; reviews still possible).
+    id: 'req-arena-padel-done',
+    listingId: 'a-padel',
+    borrowerId: 'u-maya',
+    period: [-6, -6],
+    note: 'Great game — court was in perfect shape.',
+    status: 'completed',
+    createdHoursAgo: 24 * 7,
+    respondedHoursAgo: 24 * 7 + 1,
+    slot: { dayOffset: -6, startTime: '19:00', endTime: '20:00' },
+  },
+  {
+    // Phase 5, outgoing: Maya offered Rs 6,500,000 on Marcus's Civic
+    // (asking 6,850,000, negotiable) — the sell-offer demo, awaiting him.
+    id: 'req-offer-civic',
+    listingId: 'v-civic',
+    borrowerId: 'u-maya',
+    period: [0, 0],
+    note: 'Saw the car on Sunday — genuine condition as described. This is my firm offer; transfer expenses on me.',
+    status: 'pending',
+    createdHoursAgo: 9,
+    offerAmount: 6_500_000,
+  },
 ]
 
 /**
@@ -172,6 +214,14 @@ export function seedRequests(): BorrowRequest[] {
     borrowerId: seed.borrowerId,
     period: { start: localDateFromToday(seed.period[0]), end: localDateFromToday(seed.period[1]) },
     note: seed.note,
+    offerAmount: seed.offerAmount ?? null,
+    slot: seed.slot
+      ? {
+          date: localDateFromToday(seed.slot.dayOffset),
+          startTime: seed.slot.startTime,
+          endTime: seed.slot.endTime,
+        }
+      : null,
     status: seed.status,
     createdAt: isoHoursAgo(seed.createdHoursAgo),
     respondedAt: seed.respondedHoursAgo != null ? isoHoursAgo(seed.respondedHoursAgo) : null,
@@ -194,6 +244,8 @@ export function seedRequests(): BorrowRequest[] {
         borrowerId,
         period: { start: localDateFromToday(startOffset), end: localDateFromToday(endOffset) },
         note: '',
+        offerAmount: null,
+        slot: null,
         status,
         createdAt: isoHoursAgo(createdHoursAgo + 72),
         respondedAt: isoHoursAgo(createdHoursAgo + 48),

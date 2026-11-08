@@ -114,7 +114,9 @@ async function main(): Promise<void> {
       }
     }
     const { id: _id, ...profile } = user
-    await db.doc(`users/${user.id}`).set(stripUndefined({ ...profile, email, phone: '' }))
+    // The profile spread carries the seeded phone + showPhone (Phase 5);
+    // email is the only extra field the app model doesn't hold.
+    await db.doc(`users/${user.id}`).set(stripUndefined({ ...profile, email }))
   }
 
   // 2) Listings.

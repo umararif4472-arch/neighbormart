@@ -65,9 +65,11 @@ export async function ensureUserProfile(
       lateReturns: 0,
     },
     badges: [],
-    // Stored alongside the profile for contact purposes; not part of the
-    // app-facing User type (auth owns the canonical copies).
+    // Contact prefs (Phase 5): no number yet, and hidden by default —
+    // the user opts in from their profile. `email` is stored alongside
+    // the profile for contact purposes; auth owns the canonical copy.
     phone: '',
+    showPhone: false,
     email: fbUser.email ?? '',
   }
   const { id: _id, ...docData } = profile

@@ -2,29 +2,24 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import {
   DRAFT_STORAGE_KEY,
   EMPTY_DRAFT,
-  LIST_ITEM_STEPS,
+  buildCreateInput,
   initialListItemFormState,
   isDraftWorthSaving,
   listItemFormReducer,
   readDraftFromStorage,
-  validateBasicsStep,
   validateDetailsStep,
-  validateTermsStep,
+  validatePhotosStep,
+  validatePriceStep,
+  validateSectionStep,
   type ListItemDraft,
 } from './listItemForm'
 
-const VALID_DRAFT: ListItemDraft = {
-  ...EMPTY_DRAFT,
-  category: 'Tools',
-  title: 'Cordless Drill',
-  description: 'Reliable drill with two batteries.',
-  condition: 'Good — works great',
-  maxDurationDays: 7,
-  pickupPreference: 'either',
-  pickupInstructions: 'Porch pickup after 5pm.',
-}
+/**
+ * The wizard form is pure logic — validators, the section coercion in
+ * the reducer, the CreateListingInput builder, and draft persistence
+ * are all tested without rendering React.
+ */
 
-/** Minimal localStorage shim (vitest runs in the node environment). */
 class MemoryStorage {
   private map = new Map<string, string>()
   getItem(key: string): string | null {
@@ -48,111 +43,168 @@ beforeAll(() => {
   localStorage.clear()
 })
 
+const draft = (patch: Partial<ListItemDraft>): ListItemDraft => ({ ...EMPTY_DRAFT, ...patch })
+
+const validVehicle = draft({
+  section: 'vehicles',
+  listingType: 'sell',
+  title: 'Toyota Corolla GLi 2021',
+  description: 'Total genuine car, new tyres, token paid, family used.',
+  make: 'Toyota',
+  model: 'Corolla GLi',
+  year: 2021,
+  mileageKm: 45000,
+  condition: 'Excellent',
+  registrationCity: 'Lahore',
+  price: 4850000,
+  photos: ['https://x/1.jpg', 'https://x/2.jpg', 'https://x/3.jpg'],
+})
+
 describe('step validators', () => {
-  it('basics: requires a category and a 3–80 char title', () => {
-    const errors = validateBasicsStep(EMPTY_DRAFT)
-    expect(errors.category).toBeDefined()
-    expect(errors.title).toBeDefined()
-    expect(validateBasicsStep({ ...VALID_DRAFT, title: 'ab' }).title).toBeDefined()
-    expect(validateBasicsStep({ ...VALID_DRAFT, title: 'x'.repeat(81) }).title).toBeDefined()
-    expect(Object.keys(validateBasicsStep(VALID_DRAFT))).toHaveLength(0)
-  })
-
-  it('details: requires 10+ char description and 3+ char condition', () => {
-    const errors = validateDetailsStep({ ...VALID_DRAFT, description: 'short', condition: 'ok' })
-    expect(errors.description).toBeDefined()
-    expect(errors.condition).toBeDefined()
-    expect(Object.keys(validateDetailsStep(VALID_DRAFT))).toHaveLength(0)
-  })
-
-  it('terms: requires duration 1–60, sane money, 5+ char instructions', () => {
-    const bad = validateTermsStep({
-      ...VALID_DRAFT,
-      maxDurationDays: 0,
-      depositAmount: -5,
-      dailyFee: 50001,
-      pickupInstructions: 'hi',
-    })
-    expect(bad.maxDurationDays).toBeDefined()
-    expect(bad.depositAmount).toBeDefined()
-    expect(bad.dailyFee).toBeDefined()
-    expect(bad.pickupInstructions).toBeDefined()
-    expect(Object.keys(validateTermsStep(VALID_DRAFT))).toHaveLength(0)
-    // Empty deposit/fee are fine (optional).
+  it('section step: title rules + deal types per section', () => {
+    expect(validateSectionStep(draft({ title: 'ab' })).title).toBeTruthy()
+    expect(validateSectionStep(draft({ title: 'Good title' }))).toEqual({})
     expect(
-      Object.keys(validateTermsStep({ ...VALID_DRAFT, depositAmount: '', dailyFee: '' })),
-    ).toHaveLength(0)
+      validateSectionStep(draft({ section: 'vehicles', listingType: 'borrow', title: 'Car' }))
+        .listingType,
+    ).toBeTruthy()
+    expect(
+      validateSectionStep(draft({ section: 'arenas', listingType: 'rent', title: 'Turf' })),
+    ).toEqual({})
+  })
+
+  it('details step: per-section required fields', () => {
+    expect(validateDetailsStep(draft({})).description).toBeTruthy()
+    expect(validateDetailsStep(validVehicle)).toEqual({})
+    const arena = draft({
+      section: 'arenas',
+      listingType: 'rent',
+      description: 'Floodlit turf in Johar Town, open late.',
+      sportTypes: 'Futsal',
+      surface: 'Astro turf',
+      capacity: 40,
+    })
+    expect(validateDetailsStep(arena)).toEqual({})
+    expect(validateDetailsStep({ ...arena, opens: '23:00', closes: '08:00' }).opens).toBeTruthy()
+  })
+
+  it('photos step: vehicles/properties need at least 3', () => {
+    expect(validatePhotosStep(draft({ photos: [] }))).toEqual({})
+    expect(validatePhotosStep({ ...validVehicle, photos: ['a'] }).photos).toBeTruthy()
+    expect(validatePhotosStep(validVehicle)).toEqual({})
+  })
+
+  it('price step: borrow is free, rent/sell need a positive price', () => {
+    expect(validatePriceStep(draft({ listingType: 'borrow' }))).toEqual({})
+    expect(validatePriceStep(draft({ listingType: 'rent', price: '' })).price).toBeTruthy()
+    expect(validatePriceStep(draft({ listingType: 'sell', price: 100 }))).toEqual({})
+  })
+})
+
+describe('buildCreateInput', () => {
+  it('builds a valid vehicle sell input', () => {
+    const built = buildCreateInput(validVehicle, 'u-maya')
+    expect('input' in built && built.input.section).toBe('vehicles')
+    expect('input' in built && built.input.priceUnit).toBe('fixed')
+    expect('input' in built && built.input.price).toBe(4850000)
+  })
+
+  it('arenas default the advance-booking window and charge per hour', () => {
+    const built = buildCreateInput(
+      draft({
+        section: 'arenas',
+        listingType: 'rent',
+        title: 'Padel Court',
+        description: 'Indoor padel court with coaching on request.',
+        sportTypes: 'Padel, Squash',
+        surface: 'Indoor wooden',
+        capacity: 12,
+        price: 3000,
+      }),
+      'u-marcus',
+    )
+    if (!('input' in built)) throw new Error(JSON.stringify(built))
+    expect(built.input.priceUnit).toBe('hour')
+    const details = built.input.details as {
+      sportTypes: string[]
+      advanceBooking: { maxAdvanceDays: number }
+    }
+    expect(details.sportTypes).toEqual(['Padel', 'Squash'])
+    expect(details.advanceBooking.maxAdvanceDays).toBe(14)
+  })
+
+  it('items borrow forces price 0', () => {
+    const built = buildCreateInput(
+      draft({
+        title: 'Cordless drill',
+        description: 'Bosch drill with a full bit set and two batteries.',
+        category: 'Tools',
+        condition: 'Good',
+        maxDurationDays: 7,
+        pickupInstructions: 'Porch pickup after 5pm.',
+        price: 999,
+      }),
+      'u-maya',
+    )
+    expect('input' in built && built.input.price).toBe(0)
   })
 })
 
 describe('listItemFormReducer', () => {
-  it('blocks "next" on an invalid step and surfaces field errors', () => {
-    const blocked = listItemFormReducer(initialListItemFormState, { type: 'next' })
-    expect(blocked.stepIndex).toBe(0)
-    expect(blocked.showErrors).toBe(true)
-    expect(blocked.errors.category).toBeDefined()
-    expect(blocked.errors.title).toBeDefined()
+  it('blocks "next" on an invalid step and surfaces errors', () => {
+    const next = listItemFormReducer(initialListItemFormState, { type: 'next' })
+    expect(next.stepIndex).toBe(0)
+    expect(next.showErrors).toBe(true)
+    expect(next.errors.title).toBeTruthy()
   })
 
-  it('advances when the step is valid', () => {
-    let state = initialListItemFormState
-    state = listItemFormReducer(state, { type: 'field', field: 'category', value: 'Tools' })
-    state = listItemFormReducer(state, { type: 'field', field: 'title', value: 'Cordless Drill' })
-    state = listItemFormReducer(state, { type: 'next' })
-    expect(state.stepIndex).toBe(1)
-  })
-
-  it('clears a field error as soon as the field is fixed', () => {
-    let state = listItemFormReducer(initialListItemFormState, { type: 'next' })
-    expect(state.errors.title).toBeDefined()
-    state = listItemFormReducer(state, { type: 'field', field: 'title', value: 'Cordless Drill' })
-    expect(state.errors.title).toBeUndefined()
-    expect(state.errors.category).toBeDefined() // still missing
-  })
-
-  it('round-trips steps with back/goto without skipping validation on next', () => {
-    let state = { ...initialListItemFormState, draft: VALID_DRAFT, dirty: true }
-    state = listItemFormReducer(state, { type: 'next' }) // → details
-    state = listItemFormReducer(state, { type: 'next' }) // → terms
-    state = listItemFormReducer(state, { type: 'next' }) // → preview
-    expect(state.stepIndex).toBe(3)
-    expect(LIST_ITEM_STEPS[state.stepIndex]).toBe('Preview')
-    state = listItemFormReducer(state, { type: 'goto', stepIndex: 0 })
-    expect(state.stepIndex).toBe(0)
-    // Going next from step 0 re-validates basics even though we came back.
-    state = listItemFormReducer(state, { type: 'field', field: 'title', value: 'x' })
-    state = listItemFormReducer(state, { type: 'next' })
-    expect(state.stepIndex).toBe(0)
-  })
-
-  it('adds and removes photos with a cap', () => {
-    let state = initialListItemFormState
-    state = listItemFormReducer(state, {
-      type: 'photos_add',
-      urls: ['a.png', 'b.png', 'c.png', 'd.png'],
+  it('switching section coerces the deal type (vehicles/arenas → rent)', () => {
+    const withVehicle = listItemFormReducer(initialListItemFormState, {
+      type: 'field',
+      field: 'section',
+      value: 'vehicles',
     })
-    expect(state.draft.photos).toEqual(['a.png', 'b.png', 'c.png'])
-    state = listItemFormReducer(state, { type: 'photo_remove', index: 1 })
-    expect(state.draft.photos).toEqual(['a.png', 'c.png'])
+    expect(withVehicle.draft.listingType).toBe('rent')
+    const arena = listItemFormReducer(withVehicle, {
+      type: 'field',
+      field: 'section',
+      value: 'arenas',
+    })
+    expect(arena.draft.listingType).toBe('rent')
+    expect(arena.draft.priceUnit).toBe('hour')
+  })
+
+  it('photo cover promotes to front; remove drops it', () => {
+    let s = listItemFormReducer(initialListItemFormState, {
+      type: 'photos_add',
+      urls: ['a', 'b', 'c'],
+    })
+    s = listItemFormReducer(s, { type: 'photo_cover', index: 2 })
+    expect(s.draft.photos).toEqual(['c', 'a', 'b'])
+    s = listItemFormReducer(s, { type: 'photo_remove', index: 0 })
+    expect(s.draft.photos).toEqual(['a', 'b'])
   })
 
   it('reset returns to the pristine initial state', () => {
-    let state = { ...initialListItemFormState, draft: VALID_DRAFT, stepIndex: 2, dirty: true }
-    state = listItemFormReducer(state, { type: 'reset' })
-    expect(state).toEqual(initialListItemFormState)
+    const dirty = listItemFormReducer(initialListItemFormState, {
+      type: 'field',
+      field: 'title',
+      value: 'Something',
+    })
+    expect(listItemFormReducer(dirty, { type: 'reset' })).toEqual(initialListItemFormState)
   })
 })
 
 describe('draft persistence helpers', () => {
   it('only saves drafts worth saving', () => {
     expect(isDraftWorthSaving(EMPTY_DRAFT)).toBe(false)
-    expect(isDraftWorthSaving({ ...EMPTY_DRAFT, title: 'Drill' })).toBe(true)
+    expect(isDraftWorthSaving(draft({ title: 'Drill' }))).toBe(true)
   })
 
   it('returns null for missing/garbage storage instead of throwing', () => {
-    localStorage.setItem(DRAFT_STORAGE_KEY, '{not json')
+    localStorage.clear()
     expect(readDraftFromStorage()).toBeNull()
-    localStorage.removeItem(DRAFT_STORAGE_KEY)
+    localStorage.setItem(DRAFT_STORAGE_KEY, '{not json')
     expect(readDraftFromStorage()).toBeNull()
   })
 
@@ -160,17 +212,21 @@ describe('draft persistence helpers', () => {
     localStorage.setItem(
       DRAFT_STORAGE_KEY,
       JSON.stringify({
-        draft: { category: 'Nonsense', title: 42, photos: ['a.png', 7], maxDurationDays: 'x' },
-        stepIndex: 99,
+        draft: {
+          ...EMPTY_DRAFT,
+          section: 'vehicles',
+          title: 'Car',
+          year: 'not-a-number',
+          photos: [42, 'ok'],
+        },
+        stepIndex: 1,
+        savedAt: Date.now(),
       }),
     )
     const restored = readDraftFromStorage()
-    expect(restored).not.toBeNull()
-    expect(restored!.draft.category).toBe('')
-    expect(restored!.draft.title).toBe('')
-    expect(restored!.draft.photos).toEqual(['a.png'])
-    expect(restored!.draft.maxDurationDays).toBe('')
-    expect(restored!.stepIndex).toBe(LIST_ITEM_STEPS.length - 1) // clamped
-    localStorage.clear()
+    expect(restored?.draft.title).toBe('Car')
+    expect(restored?.draft.year).toBe('')
+    expect(restored?.draft.photos).toEqual(['ok'])
+    expect(restored?.draft.listingType).toBe('rent') // coerced from borrow
   })
 })

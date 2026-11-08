@@ -22,24 +22,27 @@ import {
   hasActiveFilters,
   type BrowseFilterState,
 } from './FilterBar'
+import { SectionFilters } from './SectionFilters'
 import { ListingMap } from './ListingMap'
 
 /**
- * /browse — Items & Tools, the neighborhood's shared garage.
+ * Section browse — one page serves /browse (items) and the Phase 5
+ * section routes (/vehicles, /properties, /arenas) via the `routeSection`
+ * prop; the legacy ?section= param still works when no prop is given.
  *
  * List and map views share ONE filter state, so toggling between them
  * preserves everything. Search is debounced; filtering runs inside
- * useFilteredListings (no inline .filter() in JSX). The other sections
- * get their own browse pages in Phase 5; this page is scoped to
- * section: 'items'.
+ * useFilteredListings (no inline .filter() in JSX).
  */
-export function BrowsePage() {
+export function BrowsePage({ routeSection }: { routeSection?: ListingSection } = {}) {
   const { state } = useApp()
   const [searchParams] = useSearchParams()
   const sectionParam = searchParams.get('section')
-  const section: ListingSection = LISTING_SECTIONS.includes(sectionParam as ListingSection)
-    ? (sectionParam as ListingSection)
-    : 'items'
+  const section: ListingSection =
+    routeSection ??
+    (LISTING_SECTIONS.includes(sectionParam as ListingSection)
+      ? (sectionParam as ListingSection)
+      : 'items')
   const { listings, loading, error, reload } = useListings()
   const currentUser = state.currentUser
   const origin = currentUser?.homeLocation ?? null
@@ -56,18 +59,53 @@ export function BrowsePage() {
     () => ({
       query: debouncedQuery,
       section,
-      listingType: 'all' as const,
+      listingType: filters.listingType,
       categories: filters.categories,
       maxDistanceKm: filters.radiusKm,
       status: filters.status,
+      city: filters.city,
+      area: filters.area,
+      priceMin: filters.priceMin,
+      priceMax: filters.priceMax,
+      makes: filters.makes,
+      fuelTypes: filters.fuelTypes,
+      transmissions: filters.transmissions,
+      yearMin: filters.yearMin,
+      yearMax: filters.yearMax,
+      withDriverOnly: filters.withDriverOnly,
+      propertyTypes: filters.propertyTypes,
+      minBedrooms: filters.minBedrooms,
+      furnished: filters.furnished,
+      sports: filters.sports,
+      minCapacity: filters.minCapacity,
+      facilities: filters.facilities,
     }),
-    [debouncedQuery, filters.categories, filters.radiusKm, filters.status, section],
+    [debouncedQuery, filters, section],
   )
 
   const visible = useFilteredListings(listings, listingFilters, origin, sort)
   const sectionCount = useMemo(
     () => listings.filter((l) => l.section === section).length,
     [listings, section],
+  )
+  const sectionListings = useMemo(
+    () => listings.filter((l) => l.section === section),
+    [listings, section],
+  )
+  const cities = useMemo(
+    () => [...new Set(listings.map((l) => l.location.city))].sort(),
+    [listings],
+  )
+  const areas = useMemo(
+    () =>
+      [
+        ...new Set(
+          listings
+            .filter((l) => !filters.city || l.location.city === filters.city)
+            .map((l) => l.location.area),
+        ),
+      ].sort(),
+    [listings, filters.city],
   )
 
   // Precompute owner tiers in one batch for the whole grid.
@@ -136,6 +174,15 @@ export function BrowsePage() {
         totalCount={sectionCount}
         searching={searching}
         showCategories={section === 'items'}
+        cities={cities}
+        areas={areas}
+      />
+
+      <SectionFilters
+        section={section}
+        listings={sectionListings}
+        filters={filters}
+        onPatch={patchFilters}
       />
 
       {/* Loading / error / empty / grid */}
@@ -202,6 +249,8 @@ export function BrowsePage() {
               >
                 <option value="distance">Nearest first</option>
                 <option value="newest">Newest first</option>
+                <option value="priceAsc">Price: low to high</option>
+                <option value="priceDesc">Price: high to low</option>
               </select>
             </label>
           </div>

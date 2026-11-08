@@ -58,6 +58,39 @@ export default function App() {
             </ErrorBoundary>
           }
         />
+        {/* Phase 5 section routes — same browse page, section-locked. */}
+        <Route
+          path="items"
+          element={
+            <ErrorBoundary>
+              <BrowsePage routeSection="items" />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="vehicles"
+          element={
+            <ErrorBoundary>
+              <BrowsePage routeSection="vehicles" />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="properties"
+          element={
+            <ErrorBoundary>
+              <BrowsePage routeSection="properties" />
+            </ErrorBoundary>
+          }
+        />
+        <Route
+          path="arenas"
+          element={
+            <ErrorBoundary>
+              <BrowsePage routeSection="arenas" />
+            </ErrorBoundary>
+          }
+        />
         <Route
           path="listing/:id"
           element={

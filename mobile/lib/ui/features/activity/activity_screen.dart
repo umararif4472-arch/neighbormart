@@ -6,7 +6,9 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/trust_score.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/borrow_request.dart';
+import '../../../data/models/listing.dart';
 import '../../../state/app_state.dart';
+import '../explore/listing_section_view.dart';
 import '../messages/chat_screen.dart';
 import '../profile/user_profile_screen.dart';
 import 'report_issue_sheet.dart';
@@ -134,10 +136,15 @@ class _RequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.read<AppState>();
     final watched = context.watch<AppState>();
-    final item = watched.itemById(request.itemId);
+    // Phase 5: requests can target any section's listing, not just
+    // legacy items — resolve title/owner across both catalogs.
+    final item = watched.itemByIdOrNull(request.itemId);
+    final listing = watched.listingByIdOrNull(request.itemId);
+    final title = item?.title ?? listing?.title ?? 'Listing';
+    final ownerId = item?.ownerId ?? listing?.ownerId ?? '';
     final other = isLending
         ? watched.userById(request.borrowerId)
-        : watched.userById(item.ownerId);
+        : watched.userById(ownerId);
     final overdue = request.isOverdue;
     final overlaps = isLending && request.status == 'pending'
         ? watched.pendingOverlaps(request)
@@ -153,14 +160,31 @@ class _RequestCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ItemPhoto.forItem(item, width: 48, height: 48, radius: 12),
+                  if (item != null)
+                    ItemPhoto.forItem(item, width: 48, height: 48, radius: 12)
+                  else
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.creamDark,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        listing != null
+                            ? (kSectionEmoji[listing.section] ?? '📦')
+                            : '📦',
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                    ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          item.title,
+                          title,
                           style: Theme.of(context).textTheme.titleMedium,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -204,6 +228,23 @@ class _RequestCard extends StatelessWidget {
                   color: overdue ? AppColors.errorRed : AppColors.bark,
                 ),
               ),
+              if (request.slot != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    '🏟️ Slot: ${request.slot!.date} · ${request.slot!.startTime}–${request.slot!.endTime}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              if (request.offerAmount != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'Offer: ${formatRs(request.offerAmount!)}'
+                    '${listing != null ? ' (asking ${formatRs(listing.price)})' : ''}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
               if (request.note.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
@@ -279,7 +320,9 @@ class _RequestCard extends StatelessWidget {
                     ],
                   ),
                 ),
-              if (request.status == 'returned' || request.status == 'reviewed')
+              if (request.status == 'returned' ||
+                  request.status == 'reviewed' ||
+                  request.status == 'completed')
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(
@@ -293,6 +336,8 @@ class _RequestCard extends StatelessWidget {
                       Text(
                         request.status == 'reviewed'
                             ? 'Completed — both sides reviewed'
+                            : request.status == 'completed'
+                            ? 'Deal completed'
                             : 'Completed — item returned',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
@@ -347,20 +392,49 @@ class _RequestCard extends StatelessWidget {
       );
     }
     if (request.status == 'approved') {
+      // Phase 5: sell + arena deals close with "mark completed" on the
+      // owner's side — there is no pickup/return leg.
+      final listing = state.listingByIdOrNull(request.itemId);
+      final closesDeal =
+          isLending &&
+          listing != null &&
+          (listing.listingType == ListingType.sell ||
+              listing.section == ListingSection.arenas);
       gap();
       widgets.add(
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () {
-              state.markPickedUp(request.id);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Marked as picked up — borrow is now active.'),
-                ),
-              );
-            },
-            child: const Text('Mark picked up'),
+            onPressed: closesDeal
+                ? () {
+                    state.markCompleted(request.id);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          listing.listingType == ListingType.sell
+                              ? 'Marked sold — deal completed.'
+                              : 'Marked completed — deal done.',
+                        ),
+                      ),
+                    );
+                  }
+                : () {
+                    state.markPickedUp(request.id);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Marked as picked up — borrow is now active.',
+                        ),
+                      ),
+                    );
+                  },
+            child: Text(
+              closesDeal
+                  ? (listing.listingType == ListingType.sell
+                        ? 'Mark sold'
+                        : 'Mark completed')
+                  : 'Mark picked up',
+            ),
           ),
         ),
       );
@@ -407,9 +481,9 @@ class _RequestCard extends StatelessWidget {
         ),
       );
     }
-    // Leave a review — returned and I have not reviewed yet.
+    // Leave a review — deal finished and I have not reviewed yet.
     final canReview =
-        request.status == 'returned' &&
+        (request.status == 'returned' || request.status == 'completed') &&
         !context.read<AppState>().hasReviewed(
           request.id,
           context.read<AppState>().currentUser.id,

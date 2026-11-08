@@ -44,9 +44,10 @@ service cloud.firestore {
     // Request lifecycle — mirrors REQUEST_TRANSITIONS.
     function requestTransitionOk(from, to) {
       return (from == 'pending' && to in ['approved', 'declined', 'cancelled'])
-        || (from == 'approved' && to in ['active', 'cancelled'])
+        || (from == 'approved' && to in ['active', 'cancelled', 'completed'])
         || (from == 'active' && to in ['returned'])
-        || (from == 'returned' && to in ['reviewed']);
+        || (from == 'returned' && to in ['reviewed'])
+        || (from == 'completed' && to in ['reviewed']);
     }
 
     // --- User profiles -----------------------------------------------------
@@ -103,10 +104,11 @@ service cloud.firestore {
         && request.resource.data.ownerId == resource.data.ownerId
         && (request.resource.data.status == resource.data.status
           || (requestTransitionOk(resource.data.status, request.resource.data.status)
-            // Role split inside the lifecycle: only the owner approves or
-            // declines; only the borrower cancels. Pickup / return /
-            // review-completion may be recorded by either participant.
-            && (request.resource.data.status in ['approved', 'declined']
+            // Role split inside the lifecycle: only the owner approves,
+            // declines, or completes a deal; only the borrower cancels.
+            // Pickup / return / review-completion may be recorded by
+            // either participant.
+            && (request.resource.data.status in ['approved', 'declined', 'completed']
               ? resource.data.ownerId == request.auth.uid
               : request.resource.data.status == 'cancelled'
                 ? resource.data.borrowerId == request.auth.uid

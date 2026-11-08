@@ -16,7 +16,8 @@ export type RequestStatus =
   | 'approved' // lender said yes; pickup not yet confirmed
   | 'active' // picked up; return pending
   | 'returned' // returned; one or both reviews still outstanding
-  | 'reviewed' // returned AND both parties reviewed (terminal)
+  | 'completed' // deal finished without a return leg (sale handed over, arena slot played)
+  | 'reviewed' // returned/completed AND both parties reviewed (terminal)
   | 'declined' // lender said no (terminal)
   | 'cancelled' // borrower withdrew before approval (terminal)
 
@@ -27,6 +28,18 @@ export type EffectiveRequestStatus = RequestStatus | 'overdue'
 export interface BorrowPeriod {
   start: ISODateString
   end: ISODateString
+}
+
+/**
+ * One booked arena slot (Phase 5). `date` is a local calendar stamp
+ * (YYYY-MM-DD); times are local 'HH:mm'. The request's `period` mirrors
+ * the slot's date so date-based logic (conflicts, dashboard grouping)
+ * keeps working uniformly.
+ */
+export interface ArenaSlot {
+  date: string
+  startTime: string
+  endTime: string
 }
 
 export interface BorrowRequest {
@@ -40,6 +53,14 @@ export interface BorrowRequest {
   period: BorrowPeriod
   /** Free-text note from the borrower to the lender. */
   note: string
+  /**
+   * Sell listings (Phase 5): the buyer's offer in the listing currency.
+   * null means "the asking price" (and for borrow/rent flows, unused).
+   * Negotiation happens in chat; the owner accepts by approving.
+   */
+  offerAmount: number | null
+  /** Arena listings (Phase 5): the booked slot; null for other sections. */
+  slot: ArenaSlot | null
   status: RequestStatus
   createdAt: ISODateString
   /** When the lender approved or declined. */

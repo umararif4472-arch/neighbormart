@@ -8,9 +8,21 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore'
-import type { AppNotification, BorrowPeriod, BorrowRequest, Listing, User } from '@/types'
-import { periodsOverlap } from '@/utils/dates'
-import { assertTransition, getReviewProgress } from '@/utils/requestLifecycle'
+import type {
+  AppNotification,
+  ArenaSlot,
+  BorrowPeriod,
+  BorrowRequest,
+  Listing,
+  User,
+} from '@/types'
+import { localDateFromToday } from '@/utils/dates'
+import {
+  assertTransition,
+  getReviewProgress,
+  requestsCollide,
+  validateArenaSlot,
+} from '@/utils/requestLifecycle'
 import { validateBorrowPeriod } from '@/utils/validation'
 import { ApiError } from '../errors'
 import { getDb } from '../firebase'
@@ -41,6 +53,10 @@ export interface CreateRequestInput {
   borrowerId: string
   period: BorrowPeriod
   note?: string
+  /** Sell listings: the buyer's offer (null = asking price). */
+  offerAmount?: number | null
+  /** Arena listings: the slot being booked. */
+  slot?: ArenaSlot | null
 }
 
 export interface RequestMutationResult {
@@ -108,16 +124,13 @@ export async function getRequestsForListing(listingId: string): Promise<BorrowRe
   return fromDocs<RequestDoc>(snap.docs).map(toRequest)
 }
 
+/** How long a rent period may run, per section (days) — mirrors the mock. */
+const RENT_PERIOD_CAPS: Record<string, number> = { vehicles: 30, properties: 366 }
+
 export async function createRequest(input: CreateRequestInput): Promise<RequestMutationResult> {
   const listing = await fetchListing(input.listingId)
   const borrower = await fetchUser(input.borrowerId)
 
-  if (listing.section !== 'items') {
-    throw new ApiError(
-      'invalid',
-      'Booking for this section arrives with its own flow — this listing cannot be requested yet.',
-    )
-  }
   if (listing.ownerId === borrower.id) {
     throw new ApiError('invalid', 'You can’t request your own listing — it’s already yours!')
   }
@@ -130,36 +143,74 @@ export async function createRequest(input: CreateRequestInput): Promise<RequestM
     )
   }
 
-  const validation = validateBorrowPeriod(
-    input.period.start.slice(0, 10),
-    input.period.end.slice(0, 10),
-    listing.details.maxDurationDays,
-  )
-  if (!validation.valid) {
-    const first = Object.values(validation.errors).find(Boolean)
-    throw new ApiError('invalid', first ?? 'Those dates don’t work for this listing.')
+  const note = (input.note ?? '').trim().slice(0, 500)
+  let offerAmount: number | null = null
+  let slot: ArenaSlot | null = null
+  let period: BorrowPeriod = { ...input.period }
+
+  if (listing.section === 'arenas') {
+    if (!input.slot) throw new ApiError('invalid', 'Pick a slot to book.')
+    const slotError = validateArenaSlot(listing, input.slot)
+    if (slotError) throw new ApiError('invalid', slotError)
+    slot = { ...input.slot }
+    period = { start: slot.date, end: slot.date }
+  } else if (listing.listingType === 'sell') {
+    const offer = input.offerAmount ?? listing.price
+    if (!Number.isFinite(offer) || offer <= 0) {
+      throw new ApiError('invalid', 'Make an offer above Rs 0.')
+    }
+    if (!listing.negotiable && offer !== listing.price) {
+      throw new ApiError('invalid', 'This listing isn’t negotiable — offer the asking price.')
+    }
+    if (offer > listing.price * 2) {
+      throw new ApiError(
+        'invalid',
+        'That offer is more than double the asking price — message the owner instead.',
+      )
+    }
+    offerAmount = offer
+    const today = localDateFromToday(0)
+    period = { start: today, end: today }
+  } else {
+    const maxDays =
+      listing.section === 'items'
+        ? listing.details.maxDurationDays
+        : (RENT_PERIOD_CAPS[listing.section] ?? 30)
+    const validation = validateBorrowPeriod(
+      input.period.start.slice(0, 10),
+      input.period.end.slice(0, 10),
+      maxDays,
+    )
+    if (!validation.valid) {
+      const first = Object.values(validation.errors).find(Boolean)
+      throw new ApiError('invalid', first ?? 'Those dates don’t work for this listing.')
+    }
   }
 
-  const note = (input.note ?? '').trim().slice(0, 500)
-
-  const existing = await getRequestsForListing(listing.id)
-  const conflict = existing.some(
-    (request) =>
-      BUSY_STATUSES.includes(request.status) && periodsOverlap(request.period, input.period),
-  )
-  if (conflict) {
-    throw new ApiError(
-      'conflict',
-      'Someone already has a request for those dates — try different days.',
+  if (listing.listingType !== 'sell') {
+    const existing = await getRequestsForListing(listing.id)
+    const conflict = existing.some(
+      (request) =>
+        BUSY_STATUSES.includes(request.status) && requestsCollide(request, { period, slot }),
     )
+    if (conflict) {
+      throw new ApiError(
+        'conflict',
+        slot
+          ? 'That slot is already booked — pick another time.'
+          : 'Someone already has a request for those dates — try different days.',
+      )
+    }
   }
 
   const requestData: Omit<RequestDoc, 'id'> = {
     listingId: listing.id,
     borrowerId: borrower.id,
     ownerId: listing.ownerId,
-    period: { ...input.period },
+    period,
     note,
+    offerAmount,
+    slot,
     status: 'pending',
     createdAt: new Date().toISOString(),
     respondedAt: null,
@@ -194,13 +245,13 @@ export async function respondToRequest(
     throw new ApiError('conflict', transition.error)
   }
 
-  if (decision === 'approved') {
-    const siblings = await getRequestsForListing(listing.id)
+  const siblings = decision === 'approved' ? await getRequestsForListing(listing.id) : []
+  if (decision === 'approved' && listing.listingType !== 'sell') {
     const collision = siblings.some(
       (other) =>
         other.id !== request.id &&
         BUSY_STATUSES.includes(other.status) &&
-        periodsOverlap(other.period, request.period),
+        requestsCollide(other, request),
     )
     if (collision) {
       throw new ApiError(
@@ -210,18 +261,36 @@ export async function respondToRequest(
     }
   }
 
-  const batch = writeBatch(getDb())
+  const db = getDb()
+  const batch = writeBatch(db)
   const updates: Partial<RequestDoc> = {
     status: decision,
     respondedAt: new Date().toISOString(),
   }
   if (decision === 'approved') updates.dueAt = request.period.end
-  batch.update(doc(getDb(), COLLECTIONS.requests, requestId), stripUndefined(updates))
+  batch.update(doc(db, COLLECTIONS.requests, requestId), stripUndefined(updates))
+
+  // Sell flow: approving an offer reserves the listing and declines the
+  // competing offers, all in the same batch.
+  let updatedListing: Listing | null = null
+  if (decision === 'approved' && listing.listingType === 'sell') {
+    const now = new Date().toISOString()
+    for (const other of siblings) {
+      if (other.id !== request.id && other.status === 'pending') {
+        batch.update(doc(db, COLLECTIONS.requests, other.id), {
+          status: 'declined',
+          respondedAt: now,
+        })
+      }
+    }
+    batch.update(doc(db, COLLECTIONS.listings, listing.id), { status: 'reserved', updatedAt: now })
+    updatedListing = { ...listing, status: 'reserved', updatedAt: now }
+  }
   await batch.commit()
 
   return {
     request: toRequest({ ...request, ...updates }),
-    listing: null,
+    listing: updatedListing,
     users: [],
     notifications: [],
   }
@@ -319,7 +388,7 @@ export async function markReturned(
 export async function maybeCompleteReview(requestId: string): Promise<BorrowRequest | null> {
   const request = await fetchRequest(requestId)
   const listing = await fetchListing(request.listingId).catch(() => null)
-  if (!listing || request.status !== 'returned') return null
+  if (!listing || (request.status !== 'returned' && request.status !== 'completed')) return null
 
   const snap = await getDocs(
     query(collection(getDb(), COLLECTIONS.reviews), where('requestId', '==', requestId)),
@@ -338,6 +407,56 @@ export async function maybeCompleteReview(requestId: string): Promise<BorrowRequ
   return toRequest({ ...request, status: 'reviewed' })
 }
 
+/**
+ * Close a no-return-leg deal (Phase 5): a sale handed over, or an arena
+ * slot played. Owner-only; batch-committed like every other mutation.
+ */
+export async function markCompleted(
+  requestId: string,
+  actorId: string,
+): Promise<RequestMutationResult> {
+  const request = await fetchRequest(requestId)
+  const listing = await fetchListing(request.listingId)
+  const owner = await fetchUser(listing.ownerId)
+  const borrower = await fetchUser(request.borrowerId)
+
+  if (listing.ownerId !== actorId) {
+    throw new ApiError('forbidden', 'Only the owner can complete this deal.')
+  }
+
+  const transition = assertTransition(request.status, 'completed')
+  if (!transition.ok) {
+    throw new ApiError('conflict', transition.error)
+  }
+
+  const now = new Date().toISOString()
+  const db = getDb()
+  const batch = writeBatch(db)
+  batch.update(doc(db, COLLECTIONS.requests, requestId), { status: 'completed' })
+
+  let updatedListing: Listing | null = null
+  let updatedOwner: User = owner
+  if (listing.listingType === 'sell') {
+    batch.update(doc(db, COLLECTIONS.listings, listing.id), { status: 'sold', updatedAt: now })
+    updatedListing = { ...listing, status: 'sold', updatedAt: now }
+    const stats = { ...owner.stats, salesCompleted: owner.stats.salesCompleted + 1 }
+    batch.update(doc(db, COLLECTIONS.users, owner.id), { stats })
+    updatedOwner = { ...owner, stats }
+  } else if (listing.listingType === 'rent') {
+    const stats = { ...owner.stats, rentalsHosted: owner.stats.rentalsHosted + 1 }
+    batch.update(doc(db, COLLECTIONS.users, owner.id), { stats })
+    updatedOwner = { ...owner, stats }
+  }
+  await batch.commit()
+
+  return {
+    request: toRequest({ ...request, status: 'completed' }),
+    listing: updatedListing,
+    users: [updatedOwner, borrower],
+    notifications: [],
+  }
+}
+
 export async function cancelRequest(
   requestId: string,
   actorId: string,
@@ -352,13 +471,25 @@ export async function cancelRequest(
     throw new ApiError('conflict', transition.error)
   }
 
-  const batch = writeBatch(getDb())
-  batch.update(doc(getDb(), COLLECTIONS.requests, requestId), { status: 'cancelled' })
+  const db = getDb()
+  const batch = writeBatch(db)
+  batch.update(doc(db, COLLECTIONS.requests, requestId), { status: 'cancelled' })
+
+  // A cancelled approved offer frees the listing (reserved → active).
+  let updatedListing: Listing | null = null
+  if (request.status === 'approved') {
+    const listing = await fetchListing(request.listingId).catch(() => null)
+    if (listing && listing.listingType === 'sell' && listing.status === 'reserved') {
+      const now = new Date().toISOString()
+      batch.update(doc(db, COLLECTIONS.listings, listing.id), { status: 'active', updatedAt: now })
+      updatedListing = { ...listing, status: 'active', updatedAt: now }
+    }
+  }
   await batch.commit()
 
   return {
     request: toRequest({ ...request, status: 'cancelled' }),
-    listing: null,
+    listing: updatedListing,
     users: [],
     notifications: [],
   }

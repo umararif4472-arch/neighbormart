@@ -13,10 +13,12 @@ import { clone, findUser, getStore, nextId, simulateLatency } from './store'
  * same signatures.
  */
 
-export type { CreateItemListingInput } from './listingValidation'
-export { validateCreateItemListingInput } from './listingValidation'
-import type { CreateItemListingInput } from './listingValidation'
-import { validateCreateItemListingInput } from './listingValidation'
+export type { CreateItemListingInput, CreateListingInput } from './listingValidation'
+export { validateCreateItemListingInput, validateCreateListingInput } from './listingValidation'
+import type { CreateItemListingInput, CreateListingInput } from './listingValidation'
+import { validateCreateItemListingInput, validateCreateListingInput } from './listingValidation'
+import { canTransitionListingStatus } from '@/utils/listingStatus'
+import type { ListingStatus } from '@/types'
 
 /** Optional server-side filtering — mirrors the pure client util exactly. */
 export async function getListings(
@@ -33,7 +35,11 @@ export async function getListings(
 export async function getListingById(listingId: string): Promise<Listing | null> {
   await simulateLatency()
   const listing = getStore().listings.find((l) => l.id === listingId)
-  return listing ? clone(listing) : null
+  if (!listing) return null
+  // View counter for the owner dashboard. Fire-and-forget by design:
+  // the returned clone carries the pre-increment value, the store the new.
+  listing.views += 1
+  return clone(listing)
 }
 
 /**
@@ -85,5 +91,109 @@ export async function createItemListing(input: CreateItemListingInput): Promise<
   }
 
   getStore().listings.push(listing)
+  return clone(listing)
+}
+
+/**
+ * Publish a listing in ANY section (Phase 5 — the 5-step wizard). Same
+ * contract as createItemListing: validate here, store, return the stored
+ * listing. New listings live at the owner's home (mock geolocation).
+ */
+export async function createListing(input: CreateListingInput): Promise<Listing> {
+  await simulateLatency(300, 600)
+
+  const errors = validateCreateListingInput(input)
+  if (Object.keys(errors).length > 0) {
+    throw new ApiError('invalid', Object.values(errors)[0])
+  }
+
+  const owner: User = findUser(input.ownerId)
+  const now = new Date().toISOString()
+
+  const base = {
+    id: nextId('listing'),
+    ownerId: input.ownerId,
+    listingType: input.listingType,
+    title: input.title.trim(),
+    description: input.description.trim(),
+    price: input.listingType === 'borrow' ? 0 : input.price,
+    currency: DEFAULT_CURRENCY,
+    priceUnit: input.listingType === 'borrow' ? ('fixed' as const) : input.priceUnit,
+    negotiable: input.listingType === 'sell' ? input.negotiable : false,
+    photos: input.photos.filter((url) => url.trim().length > 0),
+    location: { ...owner.homeLocation, city: owner.city, area: owner.neighborhood },
+    status: 'active' as const,
+    createdAt: now,
+    updatedAt: now,
+    views: 0,
+  }
+
+  const listing = { ...base, section: input.section, details: input.details } as Listing
+  getStore().listings.push(listing)
+  return clone(listing)
+}
+
+export type { UpdateListingBasicsInput } from './listingValidation'
+import type { UpdateListingBasicsInput } from './listingValidation'
+
+export async function updateListingBasics(
+  listingId: string,
+  ownerId: string,
+  patch: UpdateListingBasicsInput,
+): Promise<Listing> {
+  await simulateLatency(200, 400)
+  const listing = getStore().listings.find((l) => l.id === listingId)
+  if (!listing) throw new ApiError('not-found', 'That listing no longer exists.')
+  if (listing.ownerId !== ownerId) {
+    throw new ApiError('forbidden', 'Only the owner can edit this listing.')
+  }
+  if (patch.title !== undefined) {
+    if (patch.title.trim().length < 3 || patch.title.trim().length > 80) {
+      throw new ApiError('invalid', 'Title must be 3–80 characters.')
+    }
+    listing.title = patch.title.trim()
+  }
+  if (patch.description !== undefined) {
+    if (patch.description.trim().length < 10 || patch.description.trim().length > 1000) {
+      throw new ApiError('invalid', 'Description must be 10–1000 characters.')
+    }
+    listing.description = patch.description.trim()
+  }
+  if (patch.price !== undefined) {
+    if (!Number.isFinite(patch.price) || patch.price < 0) {
+      throw new ApiError('invalid', 'Price can’t be negative.')
+    }
+    if (listing.listingType === 'borrow' && patch.price !== 0) {
+      throw new ApiError('invalid', 'Borrow listings are free.')
+    }
+    listing.price = patch.price
+  }
+  if (patch.negotiable !== undefined && listing.listingType === 'sell') {
+    listing.negotiable = patch.negotiable
+  }
+  listing.updatedAt = new Date().toISOString()
+  return clone(listing)
+}
+
+/**
+ * Owner-driven status change (pause / resume / mark sold / remove) —
+ * validated against the same status machine the Firestore rules enforce.
+ */
+export async function updateListingStatus(
+  listingId: string,
+  ownerId: string,
+  status: ListingStatus,
+): Promise<Listing> {
+  await simulateLatency(200, 400)
+  const listing = getStore().listings.find((l) => l.id === listingId)
+  if (!listing) throw new ApiError('not-found', 'That listing no longer exists.')
+  if (listing.ownerId !== ownerId) {
+    throw new ApiError('forbidden', 'Only the owner can change this listing’s status.')
+  }
+  if (!canTransitionListingStatus(listing.status, status)) {
+    throw new ApiError('conflict', `A ${listing.status} listing can’t become ${status}.`)
+  }
+  listing.status = status
+  listing.updatedAt = new Date().toISOString()
   return clone(listing)
 }

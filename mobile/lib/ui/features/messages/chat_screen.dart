@@ -96,13 +96,16 @@ class _ChatScreenState extends State<ChatScreen> {
       if (req == null) {
         return const NotFoundScreen(message: 'That conversation is gone.');
       }
-      final item = state.itemById(req.itemId);
+      final itemTitle =
+          state.itemByIdOrNull(req.itemId)?.title ??
+          state.listingByIdOrNull(req.itemId)?.title ??
+          'Listing';
       final other = state.otherPartyFor(req);
       msgs = state.messagesForRequest(req.id);
       emptyText = 'No messages yet. Say hi and sort out the pickup.';
       header = _PersonHeader(
         title: other.name,
-        subtitle: item.title,
+        subtitle: itemTitle,
         leading: UserAvatar(user: other, radius: 18),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(

@@ -56,6 +56,17 @@ export function LandingPage() {
     return counts
   }, [listings])
 
+  // "Featured" — the most-viewed active listings (Phase 5): social proof
+  // up top, straight from the real view counters.
+  const featuredListings = useMemo(
+    () =>
+      listings
+        .filter((l) => l.status === 'active')
+        .sort((a, b) => b.views - a.views)
+        .slice(0, 3),
+    [listings],
+  )
+
   return (
     <div className="flex flex-col gap-16">
       {/* Hero */}
@@ -132,7 +143,7 @@ export function LandingPage() {
           {LISTING_SECTIONS.map((section) => (
             <li key={section}>
               <Link
-                to={section === 'items' ? '/browse' : `/browse?section=${section}`}
+                to={section === 'items' ? '/browse' : `/${section}`}
                 className="flex h-full flex-col gap-2 rounded-3xl border border-bark/10 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-terracotta-600"
               >
                 <span aria-hidden className="text-3xl">
@@ -187,6 +198,35 @@ export function LandingPage() {
           ))}
         </ol>
       </section>
+
+      {/* Featured — most-viewed active listings */}
+      {!loading && featuredListings.length > 0 && (
+        <section aria-labelledby="featured-listings" className="flex flex-col gap-6">
+          <div>
+            <h2
+              id="featured-listings"
+              className="font-display text-2xl font-extrabold text-bark sm:text-3xl"
+            >
+              Featured near you
+            </h2>
+            <p className="mt-1 text-sm text-bark-light">
+              The listings everyone keeps opening — most viewed this season.
+            </p>
+          </div>
+          <ul className="grid list-none grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredListings.map((listing) => (
+              <li key={listing.id}>
+                <ListingCard
+                  listing={listing}
+                  owner={findById(state.users, listing.ownerId)}
+                  ownerTier={ownerTiers[listing.ownerId] ?? null}
+                  distanceKm={origin ? haversineKm(origin, listing.location) : null}
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Live feed */}
       <section aria-labelledby="fresh-listings" className="flex flex-col gap-6">

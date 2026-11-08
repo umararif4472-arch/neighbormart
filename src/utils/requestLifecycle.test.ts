@@ -23,6 +23,8 @@ function request(overrides: Partial<BorrowRequest>): BorrowRequest {
     borrowerId: 'u-borrower',
     period: { start: '2026-09-01T00:00:00', end: '2026-09-04T00:00:00' },
     note: '',
+    offerAmount: null,
+    slot: null,
     status: 'pending',
     createdAt: iso('2026-08-30'),
     respondedAt: null,
@@ -45,6 +47,14 @@ describe('REQUEST_TRANSITIONS (the machine)', () => {
     expect(canTransition('pending', 'declined')).toBe(true)
     expect(canTransition('pending', 'cancelled')).toBe(true)
     expect(canTransition('approved', 'cancelled')).toBe(true)
+  })
+
+  it('Phase 5: approved → completed (sale/arena), then completed → reviewed', () => {
+    expect(canTransition('approved', 'completed')).toBe(true)
+    expect(canTransition('completed', 'reviewed')).toBe(true)
+    expect(canTransition('pending', 'completed')).toBe(false) // must be approved first
+    expect(canTransition('active', 'completed')).toBe(false) // active deals end via returned
+    expect(isTerminalStatus('completed')).toBe(false)
   })
 
   it('rejects every illegal jump', () => {
@@ -70,6 +80,7 @@ describe('REQUEST_TRANSITIONS (the machine)', () => {
       'approved',
       'active',
       'returned',
+      'completed',
       'reviewed',
       'declined',
       'cancelled',

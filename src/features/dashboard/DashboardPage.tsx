@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { EffectiveRequestStatus } from '@/types'
+import type { EffectiveRequestStatus, Listing, ListingStatus } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { useMyRequests, type RequestView } from '@/hooks/useRequests'
 import { useDerivedNotifications } from '@/hooks/useDerivedNotifications'
 import { useTrustScore } from '@/hooks/useTrustScore'
+import { listingsApi } from '@/services'
 import { relativeTime } from '@/utils/dates'
+import { formatPrice } from '@/utils/money'
+import { listingEmoji } from '@/utils/categoryMeta'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge, listingStatusTone } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -15,6 +18,7 @@ import { cn } from '@/utils/cn'
 import { RequestCard } from './RequestCard'
 import { ReviewModal } from './ReviewModal'
 import { ReportIssueModal } from './ReportIssueModal'
+import { EditListingModal } from './EditListingModal'
 
 /**
  * /dashboard — the request lifecycle, live.
@@ -39,6 +43,7 @@ const LENDING_GROUPS: Array<{ status: EffectiveRequestStatus; label: string }> =
   { status: 'overdue', label: 'Overdue — needs a nudge' },
   { status: 'active', label: 'Out with neighbors' },
   { status: 'approved', label: 'Pickup to confirm' },
+  { status: 'completed', label: 'Deals completed' },
   { status: 'returned', label: 'Reviews pending' },
   { status: 'reviewed', label: 'Fully wrapped up' },
   { status: 'declined', label: 'Declined' },
@@ -51,19 +56,21 @@ const BORROWING_GROUPS: Array<{ status: EffectiveRequestStatus; label: string }>
   { status: 'active', label: 'Out now' },
   { status: 'approved', label: 'Pickup to plan' },
   { status: 'pending', label: 'Awaiting a yes' },
+  { status: 'completed', label: 'Deals completed' },
   { status: 'returned', label: 'Reviews pending' },
   { status: 'reviewed', label: 'Fully wrapped up' },
   { status: 'declined', label: 'Declined' },
 ]
 
 export function DashboardPage() {
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
   const {
     incoming,
     outgoing,
     respondToRequest,
     confirmPickup,
     markReturned,
+    markCompleted,
     cancelRequest,
     toErrorMessage,
   } = useMyRequests()
@@ -75,11 +82,35 @@ export function DashboardPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [reviewTarget, setReviewTarget] = useState<RequestView | null>(null)
   const [issueTarget, setIssueTarget] = useState<RequestView | null>(null)
+  const [editTarget, setEditTarget] = useState<Listing | null>(null)
 
   const myListings = useMemo(
-    () => state.listings.filter((listing) => listing.ownerId === state.currentUser?.id),
+    () =>
+      state.listings.filter(
+        (listing) => listing.ownerId === state.currentUser?.id && listing.status !== 'removed',
+      ),
     [state.listings, state.currentUser],
   )
+
+  const listingStats = useMemo(() => {
+    const me = state.currentUser
+    return {
+      views: myListings.reduce((sum, l) => sum + l.views, 0),
+      inquiries: incoming.length,
+      dealsDone: me
+        ? me.stats.successfulLends + me.stats.salesCompleted + me.stats.rentalsHosted
+        : 0,
+    }
+  }, [myListings, incoming, state.currentUser])
+
+  async function runListingAction(listing: Listing, status: ListingStatus) {
+    const me = state.currentUser
+    if (!me) return
+    await runAction(`listing:${listing.id}`, async () => {
+      const updated = await listingsApi.updateListingStatus(listing.id, me.id, status)
+      dispatch({ type: 'LISTINGS_UPSERTED', listings: [updated] })
+    })
+  }
 
   async function runAction(id: string, action: () => Promise<unknown>) {
     setBusyId(id)
@@ -213,7 +244,7 @@ export function DashboardPage() {
       {/* LENDING */}
       {tab === 'lending' && (
         <div className="flex flex-col gap-6">
-          <section aria-label="Your items" className="flex flex-col gap-3">
+          <section aria-label="Your listings" className="flex flex-col gap-3">
             <h2 className="font-display text-lg font-bold text-bark">
               Your listings{' '}
               <span className="text-sm font-medium text-bark-light">({myListings.length})</span>
@@ -225,26 +256,123 @@ export function DashboardPage() {
                 message="The garage is full of maybes — list one and it'll show up here."
                 action={
                   <Link to="/list-item">
-                    <Button variant="secondary">List an item</Button>
+                    <Button variant="secondary">List something</Button>
                   </Link>
                 }
               />
             ) : (
-              <ul className="grid list-none grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-                {myListings.map((item) => (
-                  <li key={item.id}>
-                    <Link
-                      to={`/listing/${item.id}`}
-                      className="flex h-full flex-col justify-between gap-2 rounded-3xl border border-bark/10 bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+              <>
+                {/* Owner stats strip */}
+                <dl className="grid grid-cols-3 gap-2">
+                  {(
+                    [
+                      ['Total views', listingStats.views],
+                      ['Inquiries', listingStats.inquiries],
+                      ['Deals done', listingStats.dealsDone],
+                    ] as const
+                  ).map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="flex flex-col rounded-2xl border border-bark/10 bg-white p-3 shadow-sm"
                     >
-                      <p className="line-clamp-2 text-xs font-semibold text-bark">{item.title}</p>
-                      <Badge tone={listingStatusTone(item.status)} dot>
-                        {item.status === 'rented' ? 'Out' : item.status}
-                      </Badge>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                      <dt className="text-[11px] font-semibold uppercase tracking-wide text-bark-light">
+                        {label}
+                      </dt>
+                      <dd className="font-display text-xl font-bold text-bark">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                <ul className="flex list-none flex-col gap-2">
+                  {myListings.map((item) => {
+                    const busy = busyId === `listing:${item.id}`
+                    return (
+                      <li
+                        key={item.id}
+                        className="flex flex-wrap items-center gap-3 rounded-3xl border border-bark/10 bg-white p-3 shadow-sm"
+                      >
+                        <span aria-hidden className="text-2xl">
+                          {listingEmoji(item)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            to={`/listing/${item.id}`}
+                            className="block truncate text-sm font-semibold text-bark hover:text-terracotta-700"
+                          >
+                            {item.title}
+                          </Link>
+                          <p className="text-xs text-bark-light">
+                            {formatPrice(item)} · {item.views} views
+                          </p>
+                        </div>
+                        <Badge tone={listingStatusTone(item.status)} dot>
+                          {item.status === 'rented' ? 'Out' : item.status}
+                        </Badge>
+                        <div className="flex flex-wrap gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={busy}
+                            onClick={() => setEditTarget(item)}
+                          >
+                            Edit
+                          </Button>
+                          {item.status === 'active' && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              loading={busy}
+                              onClick={() => runListingAction(item, 'paused')}
+                            >
+                              Pause
+                            </Button>
+                          )}
+                          {item.status === 'paused' && (
+                            <Button
+                              size="sm"
+                              loading={busy}
+                              onClick={() => runListingAction(item, 'active')}
+                            >
+                              Resume
+                            </Button>
+                          )}
+                          {item.status === 'active' && item.listingType === 'sell' && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={busy}
+                              onClick={() => runListingAction(item, 'sold')}
+                            >
+                              Mark sold
+                            </Button>
+                          )}
+                          {(item.status === 'active' ||
+                            item.status === 'paused' ||
+                            item.status === 'sold') && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-700 hover:bg-red-50"
+                              disabled={busy}
+                              onClick={() => runListingAction(item, 'removed')}
+                            >
+                              Remove
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled
+                            title="Boosts arrive with payments — coming in a later update"
+                          >
+                            Boost 🚀
+                          </Button>
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
             )}
           </section>
 
@@ -300,16 +428,45 @@ export function DashboardPage() {
                                 </Button>
                               </>
                             )}
-                            {view.effective === 'approved' && (
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                loading={busyId === view.request.id}
-                                onClick={() =>
-                                  runAction(view.request.id, () => confirmPickup(view.request.id))
-                                }
-                              >
-                                Confirm pickup
+                            {view.effective === 'approved' &&
+                              (view.listing.listingType === 'sell' ||
+                              view.listing.section === 'arenas' ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    loading={busyId === view.request.id}
+                                    onClick={() =>
+                                      runAction(view.request.id, () =>
+                                        markCompleted(view.request.id),
+                                      )
+                                    }
+                                  >
+                                    {view.listing.listingType === 'sell'
+                                      ? 'Mark sold'
+                                      : 'Mark completed'}
+                                  </Button>
+                                  <Link
+                                    to={`/messages/${view.request.id}`}
+                                    className="rounded-full px-3 py-1.5 text-xs font-semibold text-terracotta-700 hover:bg-terracotta-50"
+                                  >
+                                    Chat →
+                                  </Link>
+                                </>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  loading={busyId === view.request.id}
+                                  onClick={() =>
+                                    runAction(view.request.id, () => confirmPickup(view.request.id))
+                                  }
+                                >
+                                  Confirm pickup
+                                </Button>
+                              ))}
+                            {view.effective === 'completed' && !view.iReviewed && (
+                              <Button size="sm" onClick={() => setReviewTarget(view)}>
+                                Review {view.counterpartName.split(' ')[0]}
                               </Button>
                             )}
                             {(view.effective === 'active' || view.effective === 'overdue') && (
@@ -437,11 +594,12 @@ export function DashboardPage() {
                                 )}
                               </>
                             )}
-                            {view.effective === 'returned' && !view.iReviewed && (
-                              <Button size="sm" onClick={() => setReviewTarget(view)}>
-                                Review {view.counterpartName.split(' ')[0]}
-                              </Button>
-                            )}
+                            {(view.effective === 'returned' || view.effective === 'completed') &&
+                              !view.iReviewed && (
+                                <Button size="sm" onClick={() => setReviewTarget(view)}>
+                                  Review {view.counterpartName.split(' ')[0]}
+                                </Button>
+                              )}
                           </>
                         }
                       />
@@ -527,6 +685,9 @@ export function DashboardPage() {
       )}
       {issueTarget && (
         <ReportIssueModal view={issueTarget} open onClose={() => setIssueTarget(null)} />
+      )}
+      {editTarget && (
+        <EditListingModal listing={editTarget} open onClose={() => setEditTarget(null)} />
       )}
     </div>
   )

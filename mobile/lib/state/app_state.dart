@@ -5,11 +5,13 @@ import '../core/utils/trust_score.dart';
 import '../core/utils/formatters.dart';
 import '../data/models/user.dart';
 import '../data/models/item.dart';
+import '../data/models/listing.dart';
 import '../data/models/borrow_request.dart';
 import '../data/models/wishlist_item.dart';
 import '../data/models/message.dart';
 import '../data/models/app_notification.dart';
 import '../data/mock/seed_data.dart';
+import '../data/mock/seed_listings.dart';
 import '../data/services/auth_service.dart';
 
 /// Groups [items] by category for the sectioned Explore list. Sections
@@ -36,6 +38,11 @@ class AppState extends ChangeNotifier {
 
   late List<AppUser> _users;
   late List<Item> _items;
+
+  /// The unified Phase 2/5 catalog (all four sections). Items-section
+  /// entries share ids with [_items]; the legacy list remains the
+  /// working surface for the original borrow flows.
+  late List<Listing> _listings;
   late List<BorrowRequest> _requests;
   late List<WishlistItem> _wishlist;
   late List<Review> _reviews;
@@ -59,6 +66,7 @@ class AppState extends ChangeNotifier {
   void _seedAll() {
     _users = List.of(seedUsers());
     _items = List.of(seedItems(_users));
+    _listings = List.of(seedListings());
     _requests = List.of(seedRequests());
     _reviews = List.of(seedReviews());
     _wishlist = List.of(seedWishlist());
@@ -73,10 +81,12 @@ class AppState extends ChangeNotifier {
     required List<WishlistItem> wishlist,
     required List<Review> reviews,
     List<Message>? messages,
+    List<Listing>? listings,
     String currentUserId = 'u-maya',
   }) {
     _users = users;
     _items = items;
+    _listings = List.of(listings ?? seedListings());
     _requests = requests;
     _wishlist = wishlist;
     _reviews = reviews;
@@ -86,6 +96,7 @@ class AppState extends ChangeNotifier {
 
   List<AppUser> get users => List.unmodifiable(_users);
   List<Item> get items => List.unmodifiable(_items);
+  List<Listing> get listings => List.unmodifiable(_listings);
   List<BorrowRequest> get requests => List.unmodifiable(_requests);
   List<WishlistItem> get wishlist => List.unmodifiable(_wishlist);
   List<Review> get reviews => List.unmodifiable(_reviews);
@@ -108,6 +119,16 @@ class AppState extends ChangeNotifier {
     }
     return null;
   }
+
+  Listing? listingByIdOrNull(String id) {
+    for (final l in _listings) {
+      if (l.id == id) return l;
+    }
+    return null;
+  }
+
+  List<Listing> get myListings =>
+      _listings.where((l) => l.ownerId == currentUser.id).toList();
 
   List<Review> reviewsFor(String userId) =>
       _reviews.where((r) => r.revieweeId == userId).toList();
@@ -183,13 +204,13 @@ class AppState extends ChangeNotifier {
       _items.where((i) => _favoriteItemIds.contains(i.id)).toList();
 
   List<BorrowRequest> get incomingRequests {
-    final myIds = myItems.map((i) => i.id).toSet();
-    // include items owned by Maya even if list changes
-    final owned = _items
-        .where((i) => i.ownerId == currentUser.id)
-        .map((i) => i.id)
-        .toSet();
-    final ids = {...myIds, ...owned};
+    // Ownership resolves across BOTH catalogs: legacy items and the
+    // unified listings share ids for the items section, and Phase 5
+    // requests can target any section's listing.
+    final ids = <String>{
+      ..._items.where((i) => i.ownerId == currentUser.id).map((i) => i.id),
+      ...myListings.map((l) => l.id),
+    };
     return _requests.where((r) => ids.contains(r.itemId)).toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
@@ -202,7 +223,8 @@ class AppState extends ChangeNotifier {
   int get pendingIncomingCount =>
       incomingRequests.where((r) => r.status == 'pending').length;
 
-  String ownerIdFor(BorrowRequest r) => itemById(r.itemId).ownerId;
+  String ownerIdFor(BorrowRequest r) =>
+      listingByIdOrNull(r.itemId)?.ownerId ?? itemById(r.itemId).ownerId;
 
   void _replaceRequest(BorrowRequest updated) {
     final idx = _requests.indexWhere((r) => r.id == updated.id);
@@ -219,6 +241,7 @@ class AppState extends ChangeNotifier {
         dueAt: r.period.end,
       ),
     );
+    _onRequestApproved(r);
     notifyListeners();
   }
 
@@ -238,6 +261,13 @@ class AppState extends ChangeNotifier {
     // mark item borrowed
     final idx = _items.indexWhere((i) => i.id == r.itemId);
     if (idx >= 0) _items[idx] = _items[idx].copyWith(availability: 'borrowed');
+    // Non-item rent listings flip to rented for the duration.
+    final listing = listingByIdOrNull(r.itemId);
+    if (listing != null &&
+        listing.section != ListingSection.items &&
+        listing.listingType == ListingType.rent) {
+      setListingStatus(listing.id, ListingStatus.rented);
+    }
     notifyListeners();
   }
 
@@ -247,6 +277,10 @@ class AppState extends ChangeNotifier {
     _replaceRequest(r.copyWith(status: 'returned', returnedAt: DateTime.now()));
     final idx = _items.indexWhere((i) => i.id == r.itemId);
     if (idx >= 0) _items[idx] = _items[idx].copyWith(availability: 'available');
+    final rentedListing = listingByIdOrNull(r.itemId);
+    if (rentedListing != null && rentedListing.status == ListingStatus.rented) {
+      setListingStatus(rentedListing.id, ListingStatus.active);
+    }
     // update borrower stats
     final bIdx = _users.indexWhere((u) => u.id == r.borrowerId);
     if (bIdx >= 0) {
@@ -261,7 +295,7 @@ class AppState extends ChangeNotifier {
       );
     }
     // lender successful lends
-    final ownerId = itemById(r.itemId).ownerId;
+    final ownerId = ownerIdFor(r);
     final lIdx = _users.indexWhere((u) => u.id == ownerId);
     if (lIdx >= 0) {
       final u = _users[lIdx];
@@ -334,6 +368,110 @@ class AppState extends ChangeNotifier {
     );
     notifyListeners();
     return null;
+  }
+
+  // ---------------- Phase 5: section requests & deals ----------------
+
+  static const _busyRequestStatuses = {'pending', 'approved', 'active'};
+
+  /// Generalized request for ANY section's listing (vehicles/properties
+  /// rent periods, sell offers, arena slots). Returns null on success,
+  /// or an error message — mirroring the web service's rules in
+  /// simplified form for the local catalog.
+  String? createListingRequest({
+    required Listing listing,
+    required BorrowPeriod period,
+    String note = '',
+    int? offerAmount,
+    ArenaSlot? slot,
+  }) {
+    if (listing.ownerId == currentUser.id) {
+      return 'This is your own listing.';
+    }
+    if (listing.status != ListingStatus.active) {
+      return 'This listing is not taking requests right now.';
+    }
+    if (listing.section == ListingSection.arenas) {
+      if (slot == null) return 'Pick a slot first.';
+      for (final r in _requests) {
+        if (r.itemId == listing.id &&
+            r.slot != null &&
+            _busyRequestStatuses.contains(r.status) &&
+            r.slot!.overlaps(slot)) {
+          return 'That slot was just booked — pick another one.';
+        }
+      }
+    } else if (listing.listingType == ListingType.sell) {
+      final offer = offerAmount ?? listing.price;
+      if (offer <= 0) return 'Enter an offer above Rs 0.';
+      if (!listing.negotiable && offer != listing.price) {
+        return 'This listing isn’t negotiable — offer the asking price.';
+      }
+    } else {
+      // Borrow/rent by period: block overlaps with confirmed bookings.
+      for (final r in _requests) {
+        if (r.itemId != listing.id) continue;
+        if (r.status != 'approved' && r.status != 'active') continue;
+        if (_periodsOverlap(r.period, period)) {
+          return 'Those dates overlap an existing booking for this listing.';
+        }
+      }
+    }
+    _idCounter++;
+    _requests.insert(
+      0,
+      BorrowRequest(
+        id: 'req-new-$_idCounter',
+        itemId: listing.id,
+        borrowerId: currentUser.id,
+        period: period,
+        note: note.trim(),
+        status: 'pending',
+        offerAmount: listing.listingType == ListingType.sell
+            ? (offerAmount ?? listing.price)
+            : null,
+        slot: slot,
+        createdAt: DateTime.now(),
+      ),
+    );
+    notifyListeners();
+    return null;
+  }
+
+  /// Owner closes an approved deal that has no return leg: a sale is
+  /// handed over (listing → sold, sales stat +1) or an arena slot was
+  /// played / a rental finished (rentals stat +1 for rent deals).
+  void markCompleted(String requestId) {
+    final r = _requests.firstWhere((x) => x.id == requestId);
+    if (r.status != 'approved') return;
+    _replaceRequest(r.copyWith(status: 'completed'));
+    final listing = listingByIdOrNull(r.itemId);
+    if (listing != null) {
+      if (listing.listingType == ListingType.sell) {
+        setListingStatus(listing.id, ListingStatus.sold);
+      }
+      final lIdx = _users.indexWhere((u) => u.id == listing.ownerId);
+      if (lIdx >= 0) {
+        final u = _users[lIdx];
+        _users[lIdx] = u.copyWith(
+          stats: listing.listingType == ListingType.sell
+              ? u.stats.copyWith(salesCompleted: u.stats.salesCompleted + 1)
+              : u.stats.copyWith(rentalsHosted: u.stats.rentalsHosted + 1),
+        );
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Approving a sell offer reserves the listing (competing offers stay
+  /// pending on the web; here the detail screen stops new offers).
+  void _onRequestApproved(BorrowRequest r) {
+    final listing = listingByIdOrNull(r.itemId);
+    if (listing != null &&
+        listing.listingType == ListingType.sell &&
+        listing.status == ListingStatus.active) {
+      setListingStatus(listing.id, ListingStatus.reserved);
+    }
   }
 
   Item createItem({
@@ -569,6 +707,42 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---------------- Manage my listings (Phase 5) ----------------
+
+  /// Add a freshly created listing (any section). Items-section
+  /// listings also land in the legacy item list via the adapter so the
+  /// original borrow flows work on them immediately.
+  void addListing(Listing listing) {
+    _listings.insert(0, listing);
+    if (listing is ItemListing) {
+      _items.insert(0, itemFromListing(listing));
+    }
+    notifyListeners();
+  }
+
+  /// Owner status change, validated against the shared status machine.
+  /// Internal callers batch their own notification; UI callers pass
+  /// [notify] to refresh immediately.
+  bool setListingStatus(
+    String listingId,
+    ListingStatus status, {
+    bool notify = false,
+  }) {
+    final idx = _listings.indexWhere((l) => l.id == listingId);
+    if (idx < 0) return false;
+    final listing = _listings[idx];
+    if (!canTransitionListingStatus(listing.status, status)) return false;
+    _listings[idx] = listingWithStatus(listing, status);
+    if (listing is ItemListing) {
+      final itemIdx = _items.indexWhere((i) => i.id == listingId);
+      if (itemIdx >= 0) {
+        _items[itemIdx] = itemFromListing(_listings[idx] as ItemListing);
+      }
+    }
+    if (notify) notifyListeners();
+    return true;
+  }
+
   // ---------------- Manage my items ----------------
 
   Item? updateItem(
@@ -656,17 +830,19 @@ class AppState extends ChangeNotifier {
       (x) => x.id == requestId,
       orElse: () => throw StateError('unknown request'),
     );
-    if (r.status != 'returned' && r.status != 'reviewed') {
-      return 'Reviews open once the item is returned.';
+    if (r.status != 'returned' &&
+        r.status != 'completed' &&
+        r.status != 'reviewed') {
+      return 'Reviews open once the deal is done.';
     }
     if (rating < 1 || rating > 5) return 'Pick a star rating first.';
     final me = currentUser;
     if (hasReviewed(requestId, me.id)) {
       return 'You have already reviewed this borrow.';
     }
-    final item = itemById(r.itemId);
+    final ownerId = ownerIdFor(r);
     final iAmBorrower = r.borrowerId == me.id;
-    final revieweeId = iAmBorrower ? item.ownerId : r.borrowerId;
+    final revieweeId = iAmBorrower ? ownerId : r.borrowerId;
     _idCounter++;
     _reviews.insert(
       0,
@@ -687,7 +863,7 @@ class AppState extends ChangeNotifier {
         .where((x) => x.requestId == requestId)
         .map((x) => x.reviewerId)
         .toSet();
-    if (reviewers.contains(r.borrowerId) && reviewers.contains(item.ownerId)) {
+    if (reviewers.contains(r.borrowerId) && reviewers.contains(ownerId)) {
       _replaceRequest(r.copyWith(status: 'reviewed'));
     }
     notifyListeners();
@@ -763,7 +939,7 @@ class AppState extends ChangeNotifier {
   }
 
   AppUser otherPartyFor(BorrowRequest r) {
-    final ownerId = itemById(r.itemId).ownerId;
+    final ownerId = ownerIdFor(r);
     return userById(r.borrowerId == currentUser.id ? ownerId : r.borrowerId);
   }
 
@@ -771,9 +947,11 @@ class AppState extends ChangeNotifier {
   /// recently active first (requests without messages sort by creation).
   List<BorrowRequest> get myConversations {
     final mine = _requests.where((r) {
-      if (itemByIdOrNull(r.itemId) == null) return false;
-      return r.borrowerId == currentUser.id ||
-          itemById(r.itemId).ownerId == currentUser.id;
+      if (itemByIdOrNull(r.itemId) == null &&
+          listingByIdOrNull(r.itemId) == null) {
+        return false;
+      }
+      return r.borrowerId == currentUser.id || ownerIdFor(r) == currentUser.id;
     }).toList();
     DateTime activity(BorrowRequest r) =>
         lastMessageFor(r.id)?.createdAt ?? r.createdAt;
@@ -878,6 +1056,7 @@ class AppState extends ChangeNotifier {
           requestId: r.id,
           itemId: r.itemId,
           item: itemByIdOrNull(r.itemId),
+          listingTitle: listingByIdOrNull(r.itemId)?.title,
           other: otherPartyFor(r),
           lastMessage: lastMessageFor(r.id),
           lastActivity: lastMessageFor(r.id)?.createdAt ?? r.createdAt,
@@ -943,12 +1122,16 @@ class AppState extends ChangeNotifier {
 
     for (final r in _requests) {
       final item = itemByIdOrNull(r.itemId);
-      if (item == null) continue;
-      final isLender = item.ownerId == me.id;
+      final listing = listingByIdOrNull(r.itemId);
+      if (item == null && listing == null) continue;
+      // Title/owner resolve across both catalogs (Phase 5 listings).
+      final itemTitle = item?.title ?? listing!.title;
+      final itemOwnerId = item?.ownerId ?? listing!.ownerId;
+      final isLender = itemOwnerId == me.id;
       final isBorrower = r.borrowerId == me.id;
       if (!isLender && !isBorrower) continue;
       final borrower = userById(r.borrowerId);
-      final owner = userById(item.ownerId);
+      final owner = userById(itemOwnerId);
       final other = isLender ? borrower : owner;
 
       if (r.issue != null && r.issue!.reportedBy != me.id) {
@@ -958,7 +1141,7 @@ class AppState extends ChangeNotifier {
           'issue-reported',
           'action',
           'Issue reported',
-          '${userById(r.issue!.reportedBy).name} reported an issue (${r.issue!.reason}) with ${item.title}.',
+          '${userById(r.issue!.reportedBy).name} reported an issue (${r.issue!.reason}) with $itemTitle.',
           r.issue!.reportedAt,
         );
       }
@@ -970,8 +1153,8 @@ class AppState extends ChangeNotifier {
               'pending-in',
               'request-received',
               'action',
-              'New borrow request',
-              '${borrower.name} wants to borrow your ${item.title}.',
+              'New request',
+              '${borrower.name} sent a request for your $itemTitle.',
               r.createdAt,
             );
           }
@@ -984,8 +1167,8 @@ class AppState extends ChangeNotifier {
             isLender ? 'action' : 'info',
             isLender ? 'Confirm pickup' : 'Request approved',
             isLender
-                ? 'Once ${other.name} picks up the ${item.title}, mark it picked up in Activity.'
-                : '${other.name} approved the ${item.title} — plan the pickup in Messages.',
+                ? 'Once ${other.name} picks up the $itemTitle, mark it picked up in Activity.'
+                : '${other.name} approved the $itemTitle — plan the pickup in Messages.',
             r.respondedAt ?? r.createdAt,
           );
           break;
@@ -997,7 +1180,7 @@ class AppState extends ChangeNotifier {
               'request-declined',
               'info',
               'Request declined',
-              '${other.name} declined your request for ${item.title}.',
+              '${other.name} declined your request for $itemTitle.',
               r.respondedAt ?? r.createdAt,
             );
           }
@@ -1011,8 +1194,8 @@ class AppState extends ChangeNotifier {
               'action',
               isLender ? 'Item overdue' : 'Return overdue',
               isLender
-                  ? '${other.name} still has your ${item.title} — it was due ${shortDate(r.period.end)}.'
-                  : 'The ${item.title} was due ${shortDate(r.period.end)}. Return it or message ${other.name}.',
+                  ? '${other.name} still has your $itemTitle — it was due ${shortDate(r.period.end)}.'
+                  : 'The $itemTitle was due ${shortDate(r.period.end)}. Return it or message ${other.name}.',
               r.period.end,
             );
           } else if (dueInDays(r.period.end) <= 1) {
@@ -1022,12 +1205,13 @@ class AppState extends ChangeNotifier {
               'return-reminder',
               'action',
               'Return coming up',
-              '${item.title} is ${dueLabel(r.period.end).toLowerCase()}.',
+              '$itemTitle is ${dueLabel(r.period.end).toLowerCase()}.',
               r.createdAt,
             );
           }
           break;
         case 'returned':
+        case 'completed':
           if (!hasReviewed(r.id, me.id)) {
             push(
               r,
@@ -1035,7 +1219,7 @@ class AppState extends ChangeNotifier {
               'review-requested',
               'action',
               'Leave a review',
-              'How did borrowing ${item.title} go? Review ${other.name}.',
+              'How did the $itemTitle deal go? Review ${other.name}.',
               r.returnedAt ?? r.createdAt,
             );
           }
@@ -1064,6 +1248,10 @@ class Conversation {
   final String? requestId;
   final String? itemId;
   final Item? item;
+
+  /// Title of a Phase 5 listing when the thread's target is not a
+  /// legacy item (vehicles, properties, arenas).
+  final String? listingTitle;
   final AppUser other;
   final Message? lastMessage;
   final DateTime lastActivity;
@@ -1072,6 +1260,7 @@ class Conversation {
     this.requestId,
     this.itemId,
     this.item,
+    this.listingTitle,
     required this.other,
     this.lastMessage,
     required this.lastActivity,

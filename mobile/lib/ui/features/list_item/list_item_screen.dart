@@ -8,7 +8,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
+import '../../../data/models/listing.dart';
 import '../../../state/app_state.dart';
+import '../explore/listing_section_view.dart';
+import 'list_listing_screen.dart';
 
 /// Persists an in-progress listing form to SharedPreferences, like the
 /// web app's useListItemDraft. Degrades to no-op when prefs are missing
@@ -431,6 +434,39 @@ class _ListItemScreenState extends State<ListItemScreen> {
 
   List<Widget> _detailsStep() {
     return [
+      if (!_isEdit) ...[
+        const Text(
+          'What are you listing?',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            const ChoiceChip(
+              label: Text('🧰 Items & Tools'),
+              selected: true,
+              onSelected: null,
+            ),
+            ...[
+              ListingSection.vehicles,
+              ListingSection.properties,
+              ListingSection.arenas,
+            ].map(
+              (s) => ChoiceChip(
+                label: Text('${kSectionEmoji[s]} ${kSectionLabel[s]}'),
+                selected: false,
+                onSelected: (_) => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => ListListingScreen(section: s),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+      ],
       const Text(
         'Share something neighbors can borrow. Be specific — brand, size, and what it is good for.',
         style: TextStyle(color: Colors.black54),
@@ -629,7 +665,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
         maxLines: 2,
         decoration: const InputDecoration(
           labelText: 'Pickup instructions',
-          hintText: 'e.g. Porch pickup on Richmond St after 6pm',
+          hintText: 'e.g. Pickup from my gate in DHA after 6pm',
         ),
       ),
     ];

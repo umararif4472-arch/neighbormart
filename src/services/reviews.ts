@@ -52,11 +52,16 @@ export async function createReview(input: CreateReviewInput): Promise<ReviewMuta
   const request = findRequest(input.requestId)
   const reviewer = findUser(input.reviewerId)
 
-  // The state machine owns the rule: reviews happen once the listing is back
-  // ("returned", or "reviewed" pre-transition — the duplicate check below
-  // makes a second review impossible in practice).
-  if (request.status !== 'returned' && request.status !== 'reviewed') {
-    throw new ApiError('conflict', 'You can review once the listing has been returned.')
+  // The state machine owns the rule: reviews happen once the deal is done
+  // ("returned", "completed" for sales/arena slots, or "reviewed"
+  // pre-transition — the duplicate check below makes a second review
+  // impossible in practice).
+  if (
+    request.status !== 'returned' &&
+    request.status !== 'completed' &&
+    request.status !== 'reviewed'
+  ) {
+    throw new ApiError('conflict', 'You can review once the deal is complete.')
   }
 
   // Determine the other party from the request (lender = listing owner).

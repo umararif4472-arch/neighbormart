@@ -1,6 +1,18 @@
-import type { AppNotification, BorrowPeriod, BorrowRequest, Listing, User } from '@/types'
-import { periodsOverlap } from '@/utils/dates'
-import { assertTransition, getReviewProgress } from '@/utils/requestLifecycle'
+import type {
+  AppNotification,
+  ArenaSlot,
+  BorrowPeriod,
+  BorrowRequest,
+  Listing,
+  User,
+} from '@/types'
+import { localDateFromToday } from '@/utils/dates'
+import {
+  assertTransition,
+  getReviewProgress,
+  requestsCollide,
+  validateArenaSlot,
+} from '@/utils/requestLifecycle'
 import { validateBorrowPeriod } from '@/utils/validation'
 import { ApiError } from './errors'
 import { createNotification } from './notifications'
@@ -40,6 +52,10 @@ export interface CreateRequestInput {
   borrowerId: string
   period: BorrowPeriod
   note?: string
+  /** Sell listings: the buyer's offer (null = asking price). */
+  offerAmount?: number | null
+  /** Arena listings: the slot being booked. */
+  slot?: ArenaSlot | null
 }
 
 /** Everything a mutation might touch, so context can sync in one dispatch. */
@@ -80,18 +96,15 @@ export async function getRequestsForListing(listingId: string): Promise<BorrowRe
   return clone(list)
 }
 
+/** How long a rent period may run, per section (days). */
+const RENT_PERIOD_CAPS: Record<string, number> = { vehicles: 30, properties: 366 }
+
 export async function createRequest(input: CreateRequestInput): Promise<RequestMutationResult> {
   await simulateLatency(300, 600)
 
   const listing = findListing(input.listingId)
   const borrower = findUser(input.borrowerId)
 
-  if (listing.section !== 'items') {
-    throw new ApiError(
-      'invalid',
-      'Booking for this section arrives with its own flow — this listing cannot be requested yet.',
-    )
-  }
   if (listing.ownerId === borrower.id) {
     throw new ApiError('invalid', 'You can’t request your own listing — it’s already yours!')
   }
@@ -104,39 +117,80 @@ export async function createRequest(input: CreateRequestInput): Promise<RequestM
     )
   }
 
-  // The same pure validation the modal runs — the server double-checks.
-  const validation = validateBorrowPeriod(
-    input.period.start.slice(0, 10),
-    input.period.end.slice(0, 10),
-    listing.details.maxDurationDays,
-  )
-  if (!validation.valid) {
-    const first = Object.values(validation.errors).find(Boolean)
-    throw new ApiError('invalid', first ?? 'Those dates don’t work for this listing.')
+  const note = (input.note ?? '').trim().slice(0, 500)
+  let offerAmount: number | null = null
+  let slot: ArenaSlot | null = null
+  let period: BorrowPeriod = { ...input.period }
+
+  if (listing.section === 'arenas') {
+    // --- Arena slot booking ------------------------------------------------
+    if (!input.slot) throw new ApiError('invalid', 'Pick a slot to book.')
+    const slotError = validateArenaSlot(listing, input.slot)
+    if (slotError) throw new ApiError('invalid', slotError)
+    slot = { ...input.slot }
+    period = { start: slot.date, end: slot.date }
+  } else if (listing.listingType === 'sell') {
+    // --- Purchase offer ------------------------------------------------------
+    const offer = input.offerAmount ?? listing.price
+    if (!Number.isFinite(offer) || offer <= 0) {
+      throw new ApiError('invalid', 'Make an offer above Rs 0.')
+    }
+    if (!listing.negotiable && offer !== listing.price) {
+      throw new ApiError('invalid', 'This listing isn’t negotiable — offer the asking price.')
+    }
+    if (offer > listing.price * 2) {
+      throw new ApiError(
+        'invalid',
+        'That offer is more than double the asking price — message the owner instead.',
+      )
+    }
+    offerAmount = offer
+    const today = localDateFromToday(0)
+    period = { start: today, end: today }
+  } else {
+    // --- Borrow / rent by period ---------------------------------------------
+    const maxDays =
+      listing.section === 'items'
+        ? listing.details.maxDurationDays
+        : (RENT_PERIOD_CAPS[listing.section] ?? 30)
+    const validation = validateBorrowPeriod(
+      input.period.start.slice(0, 10),
+      input.period.end.slice(0, 10),
+      maxDays,
+    )
+    if (!validation.valid) {
+      const first = Object.values(validation.errors).find(Boolean)
+      throw new ApiError('invalid', first ?? 'Those dates don’t work for this listing.')
+    }
   }
 
-  const note = (input.note ?? '').trim().slice(0, 500)
-
-  // Overlap guard: no double-booking the same calendar days.
-  const conflict = getStore().requests.some(
-    (request) =>
-      request.listingId === listing.id &&
-      BUSY_STATUSES.includes(request.status) &&
-      periodsOverlap(request.period, input.period),
-  )
-  if (conflict) {
-    throw new ApiError(
-      'conflict',
-      'Someone already has a request for those dates — try different days.',
+  // Overlap guard: no double-booking the same days/slot. Sell offers are
+  // exempt — competing offers are the point; the owner picks one.
+  if (listing.listingType !== 'sell') {
+    const conflict = getStore().requests.some(
+      (request) =>
+        request.listingId === listing.id &&
+        BUSY_STATUSES.includes(request.status) &&
+        requestsCollide(request, { period, slot }),
     )
+    if (conflict) {
+      throw new ApiError(
+        'conflict',
+        slot
+          ? 'That slot is already booked — pick another time.'
+          : 'Someone already has a request for those dates — try different days.',
+      )
+    }
   }
 
   const request: BorrowRequest = {
     id: nextId('req'),
     listingId: listing.id,
     borrowerId: borrower.id,
-    period: { ...input.period },
+    period,
     note,
+    offerAmount,
+    slot,
     status: 'pending',
     createdAt: new Date().toISOString(),
     respondedAt: null,
@@ -169,14 +223,15 @@ export async function respondToRequest(
     throw new ApiError('conflict', transition.error)
   }
 
-  // Approving a window that collides with another reserved request fails.
-  if (decision === 'approved') {
+  // Approving a window that collides with another busy request fails
+  // (sell offers are exempt — approving one auto-declines the rest below).
+  if (decision === 'approved' && listing.listingType !== 'sell') {
     const collision = getStore().requests.some(
       (other) =>
         other.id !== request.id &&
         other.listingId === listing.id &&
         BUSY_STATUSES.includes(other.status) &&
-        periodsOverlap(other.period, request.period),
+        requestsCollide(other, request),
     )
     if (collision) {
       throw new ApiError(
@@ -190,7 +245,22 @@ export async function respondToRequest(
   request.respondedAt = new Date().toISOString()
   if (decision === 'approved') request.dueAt = request.period.end
 
-  return { request: clone(request), listing: null, users: [], notifications: [] }
+  // Sell flow: approving an offer reserves the listing and closes the
+  // door on competing offers (they are declined, not left dangling).
+  let updatedListing: Listing | null = null
+  if (decision === 'approved' && listing.listingType === 'sell') {
+    for (const other of getStore().requests) {
+      if (other.listingId === listing.id && other.id !== request.id && other.status === 'pending') {
+        other.status = 'declined'
+        other.respondedAt = request.respondedAt
+      }
+    }
+    listing.status = 'reserved'
+    listing.updatedAt = new Date().toISOString()
+    updatedListing = clone(listing)
+  }
+
+  return { request: clone(request), listing: updatedListing, users: [], notifications: [] }
 }
 
 export async function confirmPickup(
@@ -274,7 +344,7 @@ export async function markReturned(
 export function maybeCompleteReview(requestId: string): BorrowRequest | null {
   const request = findRequest(requestId)
   const listing = getStore().listings.find((l) => l.id === request.listingId)
-  if (!listing || request.status !== 'returned') return null
+  if (!listing || (request.status !== 'returned' && request.status !== 'completed')) return null
 
   const existing = getStore().reviews.filter((r) => r.requestId === requestId)
   if (!getReviewProgress(existing, listing.ownerId, request.borrowerId).allReviewed) return null
@@ -301,8 +371,67 @@ export async function cancelRequest(
     throw new ApiError('conflict', transition.error)
   }
 
+  const wasApproved = request.status === 'approved'
   request.status = 'cancelled'
-  return { request: clone(request), listing: null, users: [], notifications: [] }
+
+  // A cancelled approved offer frees the listing (reserved → active).
+  let listing: Listing | null = null
+  if (wasApproved) {
+    const found = getStore().listings.find((l) => l.id === request.listingId)
+    if (found && found.listingType === 'sell' && found.status === 'reserved') {
+      found.status = 'active'
+      found.updatedAt = new Date().toISOString()
+      listing = clone(found)
+    }
+  }
+  return { request: clone(request), listing, users: [], notifications: [] }
+}
+
+/**
+ * Close a no-return-leg deal (Phase 5): a sale handed over, or an arena
+ * slot played. Owner-only. Side effects: a sold listing leaves the
+ * market ('sold'), and the owner's deal counters move (salesCompleted
+ * for sales, rentalsHosted for arena/rent completions).
+ */
+export async function markCompleted(
+  requestId: string,
+  actorId: string,
+): Promise<RequestMutationResult> {
+  await simulateLatency(200, 450)
+
+  const request = findRequest(requestId)
+  const listing = findListing(request.listingId)
+  const owner = findUser(listing.ownerId)
+  const borrower = findUser(request.borrowerId)
+
+  if (listing.ownerId !== actorId) {
+    throw new ApiError('forbidden', 'Only the owner can complete this deal.')
+  }
+
+  const transition = assertTransition(request.status, 'completed')
+  if (!transition.ok) {
+    throw new ApiError('conflict', transition.error)
+  }
+
+  request.status = 'completed'
+  request.respondedAt = request.respondedAt ?? new Date().toISOString()
+
+  let updatedListing: Listing | null = null
+  if (listing.listingType === 'sell') {
+    listing.status = 'sold'
+    listing.updatedAt = new Date().toISOString()
+    updatedListing = clone(listing)
+    owner.stats.salesCompleted += 1
+  } else if (listing.listingType === 'rent') {
+    owner.stats.rentalsHosted += 1
+  }
+
+  return {
+    request: clone(request),
+    listing: updatedListing,
+    users: [clone(owner), clone(borrower)],
+    notifications: [],
+  }
 }
 
 /**

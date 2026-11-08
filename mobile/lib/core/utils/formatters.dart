@@ -22,6 +22,18 @@ String distanceLabel(double km) {
   return '${km.toStringAsFixed(1)} km away';
 }
 
+/// 'Rs 6,850,000' — mirrors web formatMoney (en-PK grouping, no decimals).
+String formatRs(num amount) {
+  final rounded = amount.round();
+  final digits = rounded.abs().toString();
+  final buf = StringBuffer();
+  for (var i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 == 0) buf.write(',');
+    buf.write(digits[i]);
+  }
+  return 'Rs ${rounded < 0 ? '-' : ''}$buf';
+}
+
 DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
 int dueInDays(DateTime due, [DateTime? now]) {

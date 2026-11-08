@@ -23,8 +23,21 @@ const PICKUP_LABEL: Record<PickupPreference, string> = {
   either: 'Pickup or drop-off — whatever works',
 }
 
-/** Owner card: trust via the shared hook + pure calculator. Never hardcoded. */
-export function OwnerCard({ owner, className }: { owner: User; className?: string }) {
+/**
+ * Owner card: trust via the shared hook + pure calculator. Never hardcoded.
+ * Phase 5: when the owner opted in (showPhone) and the viewer is a signed-in
+ * neighbor, direct call / WhatsApp buttons appear — in-app chat stays the
+ * default channel and opens from any request conversation.
+ */
+export function OwnerCard({
+  owner,
+  className,
+  contactable = false,
+}: {
+  owner: User
+  className?: string
+  contactable?: boolean
+}) {
   const { score } = useTrustScore(owner.id)
   const dealsCompleted =
     owner.stats.successfulLends +
@@ -82,6 +95,25 @@ export function OwnerCard({ owner, className }: { owner: User; className?: strin
           {owner.idVerified ? 'ID verified' : 'ID unverified'}
         </p>
       </div>
+
+      {contactable && owner.showPhone && owner.phone && (
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={`tel:${owner.phone.replace(/\s/g, '')}`}
+            className="inline-flex h-9 items-center rounded-full bg-moss-600 px-4 text-xs font-semibold text-white transition-colors hover:bg-moss-700 focus-visible:outline-2 focus-visible:outline-moss-600"
+          >
+            Call {owner.phone}
+          </a>
+          <a
+            href={`https://wa.me/${owner.phone.replace(/\D/g, '')}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-9 items-center rounded-full border border-moss-600 px-4 text-xs font-semibold text-moss-800 transition-colors hover:bg-moss-50 focus-visible:outline-2 focus-visible:outline-moss-600"
+          >
+            WhatsApp
+          </a>
+        </div>
+      )}
 
       <Link
         to={`/profile/${owner.id}`}

@@ -79,6 +79,14 @@ export interface User {
   neighborhood: string
   homeLocation: LatLng
   joinedAt: ISODateString
+  /** Contact number in international format (e.g. +92 300 1234567). */
+  phone: string
+  /**
+   * Owner-controlled contact visibility (Phase 5): when true, listing
+   * pages show call / WhatsApp buttons for this user. Default false —
+   * in-app chat is the always-on channel.
+   */
+  showPhone: boolean
   phoneVerified: boolean
   emailVerified: boolean
   idVerified: boolean

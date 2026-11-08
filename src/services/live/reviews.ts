@@ -64,7 +64,11 @@ export async function createReview(input: CreateReviewInput): Promise<ReviewMuta
   const reviewer = fromDoc<User>(reviewerSnap)
   if (!reviewer) throw new ApiError('not-found', 'Your profile could not be found.')
 
-  if (request.status !== 'returned' && request.status !== 'reviewed') {
+  if (
+    request.status !== 'returned' &&
+    request.status !== 'completed' &&
+    request.status !== 'reviewed'
+  ) {
     throw new ApiError('conflict', 'You can review once the listing has been returned.')
   }
 

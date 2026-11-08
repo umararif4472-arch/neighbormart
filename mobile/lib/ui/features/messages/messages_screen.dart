@@ -66,7 +66,7 @@ class _ConversationTile extends StatelessWidget {
     } else if (c.isRequestThread) {
       leading = UserAvatar(user: c.other, radius: 24);
       title = c.other.name;
-      final itemTitle = c.item?.title ?? 'Item';
+      final itemTitle = c.item?.title ?? c.listingTitle ?? 'Item';
       subtitle = last != null
           ? '$itemTitle — ${last.body}'
           : '$itemTitle — no messages yet';

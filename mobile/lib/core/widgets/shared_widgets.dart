@@ -275,6 +275,8 @@ class StatusChip extends StatelessWidget {
         return 'Active';
       case 'returned':
         return 'Returned';
+      case 'completed':
+        return 'Completed';
       case 'reviewed':
         return 'Reviewed';
       case 'declined':
@@ -296,6 +298,8 @@ class StatusChip extends StatelessWidget {
         return AppColors.terracotta;
       case 'returned':
         return AppColors.mossDark;
+      case 'completed':
+        return AppColors.moss;
       case 'reviewed':
         return AppColors.barkLight;
       case 'declined':

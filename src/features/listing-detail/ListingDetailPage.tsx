@@ -19,20 +19,24 @@ import { ReviewsList } from '@/components/reviews/ReviewsList'
 import { ChevronLeftIcon } from '@/components/icons'
 import { ListingTermsCard, OwnerCard, SectionFactsCard, STATUS_LABEL } from './ListingSubcomponents'
 import { RequestBorrowModal } from './RequestBorrowModal'
+import { RequestDealModal } from './RequestDealModal'
+import { ArenaBookingPanel } from './ArenaBookingPanel'
 import { cn } from '@/utils/cn'
 
 /**
  * /listing/:id — photo gallery, description, facts/terms, owner trust
- * card, reviews, and (items section) the request-to-borrow flow.
+ * card, reviews, and the section's deal flow (Phase 5):
+ *  - items → request-to-borrow/rent modal
+ *  - vehicles/properties → rent-period modal or sell-offer modal
+ *  - arenas → inline slot-booking panel in the sidebar
  *
  * Edge cases handled deliberately:
  *  - bad/missing id → friendly 404-style empty state, no crash
  *  - your own listing → "This is your listing" (no request button)
  *  - zero reviews → "No reviews yet" state
- *  - out-now/paused items → request flow disabled with the reason
+ *  - out-now/paused/sold listings → deal flow disabled with the reason
  *    (expected-back date when an active/approved request exists)
- *  - vehicles/properties/arenas → full facts render today; their booking
- *    flows arrive with the Phase 5 section experiences.
+ *  - contact buttons appear only when the owner opted in (showPhone)
  */
 export function ListingDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -41,6 +45,7 @@ export function ListingDetailPage() {
   const origin = currentUser?.homeLocation ?? null
 
   const [requestOpen, setRequestOpen] = useState(false)
+  const [dealOpen, setDealOpen] = useState(false)
 
   // Listing loads through the service (real async path, missing id → null).
   const listingQuery = useAsync(() => listingsApi.getListingById(id ?? ''), [id])
@@ -208,19 +213,29 @@ export function ListingDetailPage() {
           ) : (
             <SectionFactsCard listing={listing} />
           )}
-          {owner && <OwnerCard owner={owner} />}
+          {owner && <OwnerCard owner={owner} contactable={Boolean(currentUser) && !isOwnListing} />}
+
+          {/* Arena booking panel (desktop sidebar / stacks on mobile) */}
+          {listing.section === 'arenas' && owner && currentUser && cta.kind === 'arena' && (
+            <ArenaBookingPanel listing={listing} owner={owner} requests={borrowQuery.data ?? []} />
+          )}
 
           {/* CTA (desktop) */}
           <div className="hidden flex-col gap-2 lg:flex">
-            {cta.kind === 'request' ? (
+            {cta.kind === 'borrow' ? (
               <Button size="lg" onClick={() => setRequestOpen(true)}>
-                Request to borrow
+                {cta.label}
               </Button>
+            ) : cta.kind === 'deal' ? (
+              <Button size="lg" onClick={() => setDealOpen(true)}>
+                {cta.label}
+              </Button>
+            ) : cta.kind === 'arena' ? (
+              <p className="text-center text-xs text-bark-light">
+                Pick a day and slot in the booking panel above to request this arena.
+              </p>
             ) : (
               <CtaNotice cta={cta} />
-            )}
-            {cta.kind === 'notice' && cta.hint && (
-              <p className="text-center text-xs text-bark-light">{cta.hint}</p>
             )}
           </div>
         </div>
@@ -242,8 +257,17 @@ export function ListingDetailPage() {
                 : ''}
             </p>
           </div>
-          {cta.kind === 'request' ? (
-            <Button onClick={() => setRequestOpen(true)}>Request to borrow</Button>
+          {cta.kind === 'borrow' ? (
+            <Button onClick={() => setRequestOpen(true)}>{cta.label}</Button>
+          ) : cta.kind === 'deal' ? (
+            <Button onClick={() => setDealOpen(true)}>{cta.label}</Button>
+          ) : cta.kind === 'arena' ? (
+            <a
+              href="#arena-booking"
+              className="inline-flex h-10 items-center rounded-full bg-terracotta-600 px-5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-terracotta-700 focus-visible:outline-2 focus-visible:outline-terracotta-600"
+            >
+              Book a slot
+            </a>
           ) : (
             <p className="max-w-40 text-right text-xs font-semibold text-bark-light">{cta.label}</p>
           )}
@@ -258,6 +282,17 @@ export function ListingDetailPage() {
           onClose={() => setRequestOpen(false)}
         />
       )}
+      {owner &&
+        currentUser &&
+        !isOwnListing &&
+        (listing.section === 'vehicles' || listing.section === 'properties') && (
+          <RequestDealModal
+            listing={listing}
+            owner={owner}
+            open={dealOpen}
+            onClose={() => setDealOpen(false)}
+          />
+        )}
     </div>
   )
 }
@@ -265,11 +300,15 @@ export function ListingDetailPage() {
 // ---------------------------------------------------------------------------
 
 type CtaState =
-  { kind: 'request'; label: 'Request to borrow' } | { kind: 'notice'; label: string; hint?: string }
+  | { kind: 'borrow'; label: string }
+  | { kind: 'deal'; label: string }
+  | { kind: 'arena'; label: 'Book a slot' }
+  | { kind: 'notice'; label: string; hint?: string }
 
 /**
  * Pure CTA resolver — the edge cases live here, testable.
- * Out-now items show the expected-back date when the data exists.
+ * Out-now listings show the expected-back date when the data exists;
+ * Phase 5 gives every section its own deal flow.
  */
 function resolveCta(input: {
   listing: Listing
@@ -285,11 +324,21 @@ function resolveCta(input: {
       hint: 'Manage requests and deals from your dashboard.',
     }
   }
-  if (listing.section !== 'items') {
+  if (listing.status === 'sold') {
     return {
       kind: 'notice',
-      label: `${SECTION_META[listing.section].label} — booking opens soon`,
-      hint: 'This section gets its own booking flow in the next phase. Message the owner from their profile in the meantime.',
+      label: 'Sold',
+      hint: 'This one found a new home. Browse similar listings nearby.',
+    }
+  }
+  if (listing.status === 'reserved') {
+    return {
+      kind: 'notice',
+      label: 'Reserved',
+      hint:
+        listing.listingType === 'sell'
+          ? 'An offer has been accepted — the handover is being arranged.'
+          : 'A deal is being arranged for this listing right now.',
     }
   }
   if (listing.status === 'rented') {
@@ -301,7 +350,7 @@ function resolveCta(input: {
         : activeBorrow?.dueAt
           ? `Out now — expected back ${formatDate(activeBorrow.dueAt)}`
           : 'Out with a neighbor right now',
-      hint: 'Check back after it’s returned, or browse similar items nearby.',
+      hint: 'Check back after it’s returned, or browse similar listings nearby.',
     }
   }
   if (listing.status !== 'active') {
@@ -311,7 +360,19 @@ function resolveCta(input: {
       hint: 'The owner has paused requests for this listing.',
     }
   }
-  return { kind: 'request', label: 'Request to borrow' }
+  if (listing.section === 'items') {
+    return {
+      kind: 'borrow',
+      label: listing.listingType === 'rent' ? 'Request to rent' : 'Request to borrow',
+    }
+  }
+  if (listing.section === 'arenas') {
+    return { kind: 'arena', label: 'Book a slot' }
+  }
+  // vehicles / properties
+  return listing.listingType === 'sell'
+    ? { kind: 'deal', label: 'Make an offer' }
+    : { kind: 'deal', label: 'Request to rent' }
 }
 
 function CtaNotice({ cta }: { cta: CtaState & { kind: 'notice' } }) {

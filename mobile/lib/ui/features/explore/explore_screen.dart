@@ -5,12 +5,14 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
+import '../../../data/models/listing.dart';
 import '../../../state/app_state.dart';
 import '../item_detail/item_detail_screen.dart';
 import '../messages/messages_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../profile/user_profile_screen.dart';
 import 'item_map_view.dart';
+import 'listing_section_view.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -26,6 +28,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
   double? _maxDistance;
   bool _onlyAvailable = false;
   bool _showMap = false;
+
+  /// Phase 5 section switch: null keeps the original Items & Tools
+  /// explore (categories, map, grouping); a section swaps in the
+  /// unified-listing card list for vehicles / properties / arenas.
+  ListingSection? _section;
 
   @override
   void dispose() {
@@ -121,6 +128,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               onChanged: (v) => setState(() => _query = v),
             ),
           ),
+          // Phase 5: marketplace sections
           SizedBox(
             height: 48,
             child: ListView(
@@ -130,25 +138,58 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
-                    label: const Text('All'),
-                    selected: _category == null,
-                    onSelected: (_) => setState(() => _category = null),
+                    label: const Text('🧰 Items & Tools'),
+                    selected: _section == null,
+                    onSelected: (_) => setState(() => _section = null),
                   ),
                 ),
-                ...kItemCategories.map(
-                  (c) => Padding(
+                ...[
+                  ListingSection.vehicles,
+                  ListingSection.properties,
+                  ListingSection.arenas,
+                ].map(
+                  (s) => Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: ChoiceChip(
-                      label: Text(c),
-                      selected: _category == c,
-                      onSelected: (_) =>
-                          setState(() => _category = _category == c ? null : c),
+                      label: Text('${kSectionEmoji[s]} ${kSectionLabel[s]}'),
+                      selected: _section == s,
+                      onSelected: (_) => setState(() => _section = s),
                     ),
                   ),
                 ),
               ],
             ),
           ),
+          if (_section == null)
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: const Text('All'),
+                      selected: _category == null,
+                      onSelected: (_) => setState(() => _category = null),
+                    ),
+                  ),
+                  ...kItemCategories.map(
+                    (c) => Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(c),
+                        selected: _category == c,
+                        onSelected: (_) => setState(
+                          () => _category = _category == c ? null : c,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Wrap(
@@ -184,131 +225,147 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    items.length == 1
-                        ? '1 item nearby'
-                        : '${items.length} items nearby',
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment(
-                      value: false,
-                      icon: Icon(Icons.list, size: 16),
-                      label: Text('List'),
+          if (_section == null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      items.length == 1
+                          ? '1 item nearby'
+                          : '${items.length} items nearby',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    ButtonSegment(
-                      value: true,
-                      icon: Icon(Icons.map_outlined, size: 16),
-                      label: Text('Map'),
-                    ),
-                  ],
-                  selected: {_showMap},
-                  onSelectionChanged: (s) => setState(() => _showMap = s.first),
-                  style: const ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              transitionBuilder: (child, animation) =>
-                  FadeTransition(opacity: animation, child: child),
-              child: _showMap
-                  ? ItemMapView(
-                      key: const ValueKey('map'),
-                      items: items,
-                      maxDistanceKm: _maxDistance,
-                    )
-                  : items.isEmpty
-                  ? Center(
-                      key: const ValueKey('empty'),
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.search_off,
-                              size: 56,
-                              color: AppColors.barkLight.withValues(alpha: 0.6),
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Nothing matches — try widening your distance',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Or clear your search and category filters.',
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
+                  const SizedBox(width: 8),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(
+                        value: false,
+                        icon: Icon(Icons.list, size: 16),
+                        label: Text('List'),
                       ),
-                    )
-                  : Builder(
-                      key: const ValueKey('list'),
-                      builder: (context) {
-                        final grouped = groupItemsByCategory(items);
-                        return RefreshIndicator(
-                          onRefresh: () async {
-                            await Future<void>.delayed(
-                              const Duration(milliseconds: 600),
-                            );
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Listings are up to date.'),
-                              ),
-                            );
-                          },
-                          child: ListView(
-                            controller: _scrollCtrl,
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(
-                              16,
-                              8,
-                              16,
-                              kBottomListPadding,
-                            ),
-                            children: [
-                              for (final entry in grouped.entries) ...[
-                                _CategorySectionHeader(
-                                  category: entry.key,
-                                  count: entry.value.length,
-                                  isFirst: entry.key == grouped.keys.first,
-                                  onTap: () => _selectCategory(entry.key),
-                                ),
-                                for (final item in entry.value)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: _ItemCard(item: item),
-                                  ),
-                              ],
-                            ],
-                          ),
-                        );
-                      },
+                      ButtonSegment(
+                        value: true,
+                        icon: Icon(Icons.map_outlined, size: 16),
+                        label: Text('Map'),
+                      ),
+                    ],
+                    selected: {_showMap},
+                    onSelectionChanged: (s) =>
+                        setState(() => _showMap = s.first),
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
+                  ),
+                ],
+              ),
             ),
+          Expanded(
+            child: _section != null
+                ? SectionListingList(
+                    key: ValueKey('section-${_section!.name}'),
+                    state: state,
+                    section: _section!,
+                    query: _query,
+                    maxDistanceKm: _maxDistance,
+                  )
+                : AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    transitionBuilder: (child, animation) =>
+                        FadeTransition(opacity: animation, child: child),
+                    child: _showMap
+                        ? ItemMapView(
+                            key: const ValueKey('map'),
+                            items: items,
+                            maxDistanceKm: _maxDistance,
+                          )
+                        : items.isEmpty
+                        ? Center(
+                            key: const ValueKey('empty'),
+                            child: Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.search_off,
+                                    size: 56,
+                                    color: AppColors.barkLight.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Nothing matches — try widening your distance',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    'Or clear your search and category filters.',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : Builder(
+                            key: const ValueKey('list'),
+                            builder: (context) {
+                              final grouped = groupItemsByCategory(items);
+                              return RefreshIndicator(
+                                onRefresh: () async {
+                                  await Future<void>.delayed(
+                                    const Duration(milliseconds: 600),
+                                  );
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Listings are up to date.'),
+                                    ),
+                                  );
+                                },
+                                child: ListView(
+                                  controller: _scrollCtrl,
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    8,
+                                    16,
+                                    kBottomListPadding,
+                                  ),
+                                  children: [
+                                    for (final entry in grouped.entries) ...[
+                                      _CategorySectionHeader(
+                                        category: entry.key,
+                                        count: entry.value.length,
+                                        isFirst:
+                                            entry.key == grouped.keys.first,
+                                        onTap: () => _selectCategory(entry.key),
+                                      ),
+                                      for (final item in entry.value)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
+                                          child: _ItemCard(item: item),
+                                        ),
+                                    ],
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
           ),
         ],
       ),
