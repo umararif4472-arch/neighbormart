@@ -43,7 +43,13 @@ class FirebaseAuthService {
     _requireReady();
     try {
       final googleSignIn = GoogleSignIn.instance;
-      await googleSignIn.initialize();
+      // Explicit web client ID: google_sign_in otherwise reads it from
+      // the generated Android resources, which silently breaks sign-in
+      // if the google-services Gradle plugin is ever dropped.
+      await googleSignIn.initialize(
+        serverClientId:
+            '1063143466647-qr27rd21pcppuqmg5kms86m2isav15it.apps.googleusercontent.com',
+      );
       final account = await googleSignIn.authenticate();
       final credential = fb.GoogleAuthProvider.credential(
         idToken: account.authentication.idToken,
