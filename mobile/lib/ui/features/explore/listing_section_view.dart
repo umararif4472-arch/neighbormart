@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/cloudinary_config.dart';
+import '../../../core/widgets/shared_widgets.dart';
 import '../../../core/theme/section_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/listing.dart';
@@ -280,7 +281,7 @@ class SectionListingList extends StatelessWidget {
       );
     }
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, kBottomListPadding),
       itemCount: results.length,
       itemBuilder: (context, i) =>
           ListingCard(listing: results[i], state: state),

@@ -72,6 +72,87 @@ void main() {
       });
     }
 
+    test('navigation bar pairs meet text 4.5:1 / icon 3:1 thresholds', () {
+      // Built from the ACTUAL themes, so the guard pins the real
+      // navigationBarTheme tokens (indicator pill, iconTheme and
+      // labelTextStyle state colors) — the exact pairing that used
+      // to render the selected icon white-on-pale and invisible.
+      for (final entry in {
+        'light': buildAppTheme(),
+        'dark': buildDarkAppTheme(),
+      }.entries) {
+        final nav = entry.value.navigationBarTheme;
+        final barSurface = nav.backgroundColor!;
+        final indicator = nav.indicatorColor!;
+        final selectedIcon = nav.iconTheme!.resolve({
+          WidgetState.selected,
+        })!.color!;
+        final unselectedIcon = nav.iconTheme!.resolve({})!.color!;
+        final selectedLabel = nav.labelTextStyle!.resolve({
+          WidgetState.selected,
+        });
+        final unselectedLabel = nav.labelTextStyle!.resolve({});
+        expect(selectedLabel?.fontSize, 12);
+        expect(selectedLabel?.fontWeight, FontWeight.w500);
+        expect(unselectedLabel?.fontWeight, FontWeight.w500);
+
+        final textPairs = <String, (Color, Color)>{
+          'selected label/bar surface': (selectedLabel!.color!, barSurface),
+          'unselected label/bar surface': (unselectedLabel!.color!, barSurface),
+        };
+        for (final pair in textPairs.entries) {
+          expect(
+            contrastRatio(pair.value.$1, pair.value.$2),
+            greaterThanOrEqualTo(4.5),
+            reason: '${entry.key} nav ${pair.key} must meet AA for text',
+          );
+        }
+        final iconPairs = <String, (Color, Color)>{
+          'selected icon/indicator pill': (selectedIcon, indicator),
+          'unselected icon/bar surface': (unselectedIcon, barSurface),
+        };
+        for (final pair in iconPairs.entries) {
+          expect(
+            contrastRatio(pair.value.$1, pair.value.$2),
+            greaterThanOrEqualTo(3.0),
+            reason: '${entry.key} nav ${pair.key} must meet 3:1 for icons',
+          );
+        }
+        // The Activity badge label (onError) on its error fill.
+        final scheme = entry.value.colorScheme;
+        expect(
+          contrastRatio(scheme.onError, scheme.error),
+          greaterThanOrEqualTo(4.5),
+          reason: '${entry.key} badge text must meet AA',
+        );
+
+        // Drawer rows (Part 7) reuse the same tokens: the selected
+        // row sits on the nav indicator tint with primary icon +
+        // label; unselected rows are onSurface text / onSurfaceVariant
+        // icons on the drawer surface (= nav bar surface).
+        expect(
+          contrastRatio(scheme.primary, indicator),
+          greaterThanOrEqualTo(4.5),
+          reason: '${entry.key} drawer selected label/tint must meet AA',
+        );
+        expect(
+          contrastRatio(scheme.primary, indicator),
+          greaterThanOrEqualTo(3.0),
+          reason: '${entry.key} drawer selected icon/tint must meet 3:1',
+        );
+        expect(
+          contrastRatio(scheme.onSurface, barSurface),
+          greaterThanOrEqualTo(4.5),
+          reason: '${entry.key} drawer unselected label/surface must meet AA',
+        );
+        expect(
+          contrastRatio(scheme.onSurfaceVariant, barSurface),
+          greaterThanOrEqualTo(3.0),
+          reason: '${entry.key} drawer unselected icon/surface must meet 3:1',
+        );
+      }
+    });
+
     test('amber accent reaches AA on both themes, incl. its own tint', () {
       for (final brightness in Brightness.values) {
         final accent = amberAccentColor(brightness);

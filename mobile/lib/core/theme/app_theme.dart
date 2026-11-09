@@ -45,6 +45,18 @@ class AppColors {
   static const darkError = Color(0xFFF2B8B5);
 }
 
+/// The one spacing scale for screens (Part: profile/nav fix pass).
+/// Use these instead of ad-hoc gaps so section rhythm stays
+/// consistent: intra-section gaps are [sm]/[md], section gaps [xl].
+class AppSpacing {
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 24;
+  static const double xxl = 32;
+}
+
 /// Warm amber for stars, warnings and "pending" states, as a
 /// foreground (text/icon) color. The dark value is lightened and the
 /// light value deepened relative to the decorative brand amber, so
@@ -178,6 +190,13 @@ ThemeData _buildTheme(_Palette p) {
     onPrimary: p.onPrimary,
     secondary: p.trust,
     onSecondary: p.onTrust,
+    // Explicit, so M3 widgets that fall back to onSecondaryContainer
+    // (the NavigationBar selected icon did) never inherit
+    // onSecondary — white in light, near-black-green in dark — and
+    // vanish on a pale container. No other consumer reads this
+    // token (grep-verified); the nav bar also sets its iconTheme
+    // explicitly below.
+    onSecondaryContainer: p.ink,
     surface: p.surface,
     onSurface: p.ink,
     surfaceContainerHighest: p.surfaceVariant,
@@ -272,10 +291,31 @@ ThemeData _buildTheme(_Palette p) {
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: p.surface,
-      indicatorColor: p.surfaceVariant,
-      labelTextStyle: WidgetStateProperty.all(
-        const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      elevation: 0,
+      height: 68,
+      // Selected pill: terracottaDark at 12% over the bar surface,
+      // pre-composited to an opaque color so it reads as the same
+      // warm tint in both themes. The selected icon/label use the
+      // theme primary — terracottaDark in light (4.8:1 on the pill,
+      // 5.7:1 label on the surface); in dark the primary token is
+      // the lightened darkPrimary, because terracottaDark itself
+      // only reaches ~2.4:1 on the dark pill/surface.
+      indicatorColor: Color.alphaBlend(
+        AppColors.terracottaDark.withValues(alpha: 0.12),
+        p.surface,
       ),
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return IconThemeData(color: selected ? p.primary : p.inkSoft, size: 24);
+      }),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        final selected = states.contains(WidgetState.selected);
+        return TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: selected ? p.primary : p.inkSoft,
+        );
+      }),
     ),
     dividerTheme: DividerThemeData(color: p.border),
     progressIndicatorTheme: ProgressIndicatorThemeData(color: p.trust),

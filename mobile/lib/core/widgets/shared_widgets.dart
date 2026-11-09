@@ -11,7 +11,11 @@ import '../../data/models/item.dart';
 import '../../data/models/user.dart';
 
 /// Bottom inset for tab lists, so the last row always scrolls clear of
-/// the floating "List item" button and the navigation bar.
+/// the floating "List item" button and the navigation bar. Sized to
+/// cover the taller of the two: the 68dp navigation bar (theme
+/// height) and the extended FAB (~48dp + 16dp float margin + slack).
+/// Only Explore still shows the FAB; the other tab screens keep the
+/// same reserve so lists end with a consistent, bar-clear margin.
 const double kBottomListPadding = 96.0;
 
 IconData categoryIcon(String category) {
