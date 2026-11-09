@@ -8,6 +8,7 @@ import 'package:neighbor_mart/core/utils/profile_setup_validation.dart';
 import 'package:neighbor_mart/state/app_state.dart';
 import 'package:neighbor_mart/ui/features/auth/login_screen.dart';
 import 'package:neighbor_mart/ui/features/onboarding/profile_setup_screen.dart';
+import 'package:neighbor_mart/ui/features/profile/edit_profile_screen.dart';
 
 /// Phase 6 (Flutter mirror): profile-setup gating, completion,
 /// validation, persistence, and the setup screen walk-through.
@@ -206,12 +207,12 @@ void main() {
   });
 
   group('ProfileSetupScreen', () {
-    Widget harness(AppState state, {bool editMode = false}) {
+    Widget harness(AppState state) {
       return ChangeNotifierProvider<AppState>.value(
         value: state,
         child: MaterialApp(
           theme: buildAppTheme(),
-          home: ProfileSetupScreen(editMode: editMode),
+          home: const ProfileSetupScreen(),
         ),
       );
     }
@@ -278,14 +279,79 @@ void main() {
       expect(s.currentUser.interests, contains('Vehicles'));
     });
 
-    testWidgets('edit mode opens prefilled with a Back button', (tester) async {
+    testWidgets('onboarding screen has no Back button on step 1', (
+      tester,
+    ) async {
       final s = AppState(); // signed in as Maya, setup already done
-      await tester.pumpWidget(harness(s, editMode: true));
+      await tester.pumpWidget(harness(s));
       await tester.pumpAndSettle();
-      expect(find.text('Set up profile'), findsOneWidget);
-      expect(find.text('Back'), findsOneWidget);
+      expect(find.text('Finish your profile'), findsOneWidget);
+      expect(find.text('Back'), findsNothing);
       final nameField = tester.widget<TextField>(find.byType(TextField).at(0));
       expect(nameField.controller?.text, 'Maya Chen');
+    });
+  });
+
+  group('merged EditProfileScreen', () {
+    testWidgets('prefilled with every field and saves through both paths', (
+      tester,
+    ) async {
+      final s = AppState(); // Maya: name/bio/neighborhood/city seeded
+      await tester.pumpWidget(
+        ChangeNotifierProvider<AppState>.value(
+          value: s,
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: const EditProfileScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Edit profile'), findsOneWidget);
+      // All merged fields are present: the classic trio plus the
+      // setup-only phone, city and interest chips.
+      expect(find.text('Phone (optional)'), findsOneWidget);
+      expect(find.text('City *'), findsOneWidget);
+      expect(find.text('Interests'), findsOneWidget);
+      final nameField = tester.widget<TextFormField>(
+        find.byType(TextFormField).at(0),
+      );
+      expect(nameField.controller?.text, 'Maya Chen');
+
+      // Phone is the 3rd field (name, bio, phone, city, area).
+      await tester.enterText(find.byType(TextFormField).at(2), '0300 1234567');
+      await tester.tap(find.widgetWithText(FilterChip, 'Tools'));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save changes'));
+      await tester.pumpAndSettle();
+      expect(s.currentUser.phone, '0300 1234567');
+      expect(s.currentUser.city, 'Lahore');
+      expect(s.currentUser.interests, contains('Tools'));
+      expect(s.currentUser.name, 'Maya Chen');
+    });
+
+    testWidgets('saving with no interest picked is rejected in place', (
+      tester,
+    ) async {
+      final s = AppState(); // Maya has no interests seeded
+      await tester.pumpWidget(
+        ChangeNotifierProvider<AppState>.value(
+          value: s,
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: const EditProfileScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save changes'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Pick at least one interest'), findsOneWidget);
+      expect(s.currentUser.phone, '');
     });
   });
 
@@ -305,10 +371,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 700));
       expect(find.text('NeighborMart'), findsOneWidget);
-      expect(
-        find.text('Everything behind the door'),
-        findsOneWidget,
-      );
+      expect(find.text('Everything behind the door'), findsOneWidget);
       expect(find.text('Continue with Google'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/trust_score.dart';
+import '../../../core/widgets/profile_header.dart';
 import '../../../core/widgets/reviews_list.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/report.dart';
 import '../../../data/models/user.dart';
 import '../../../state/app_state.dart';
+import '../../app_drawer.dart';
 import '../item_detail/item_detail_screen.dart';
+import '../list_item/list_item_screen.dart';
 import '../messages/chat_screen.dart';
 import '../not_found/not_found_screen.dart';
-import '../onboarding/profile_setup_screen.dart';
 import '../safety/report_sheet.dart';
 import '../trust/trust_explainer_screen.dart';
 import 'edit_profile_screen.dart';
@@ -38,35 +41,20 @@ class UserProfileScreen extends StatelessWidget {
     final items = state.items.where((i) => i.ownerId == user.id).toList();
     final reviews = state.reviewsFor(user.id);
     return Scaffold(
-      appBar: AppBar(title: Text(isOwn ? 'Profile' : 'Neighbor profile')),
+      appBar: AppBar(
+        leading: const ShellMenuButton(),
+        title: Text(isOwn ? 'Profile' : 'Neighbor profile'),
+      ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, kBottomListPadding),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          kBottomListPadding,
+        ),
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              UserAvatar(user: user, radius: 34),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user.name,
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    Text(
-                      '${user.neighborhood} · Member since ${user.joinedAt.year}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 6),
-                    _VerifiedRow(user: user),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
+          ProfileHeaderCard(user: user, trust: trust),
+          const SizedBox(height: AppSpacing.md),
           Text(user.bio),
           if (isOwn && user.interests.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -173,7 +161,7 @@ class UserProfileScreen extends StatelessWidget {
               ),
             ],
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.xl),
           Card(
             child: InkWell(
               borderRadius: BorderRadius.circular(18),
@@ -254,7 +242,7 @@ class UserProfileScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md),
           Row(
             children: [
               Expanded(
@@ -280,7 +268,7 @@ class UserProfileScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.xl),
           Text('Badges', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           if (user.badges.isEmpty)
@@ -301,7 +289,7 @@ class UserProfileScreen extends StatelessWidget {
                   )
                   .toList(),
             ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.xl),
           Text(
             isOwn
                 ? 'My listings (${items.length})'
@@ -309,7 +297,18 @@ class UserProfileScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
-          if (items.isEmpty)
+          if (items.isEmpty && isOwn)
+            _EmptyStateCard(
+              icon: Icons.inventory_2_outlined,
+              message:
+                  'Nothing listed yet — share something your neighbors '
+                  'will love.',
+              actionLabel: 'List your first item',
+              onAction: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ListItemScreen())),
+            )
+          else if (items.isEmpty)
             const Text('Nothing listed yet.')
           else
             ...items.map(
@@ -339,33 +338,31 @@ class UserProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.xl),
           Text(
             'Reviews (${reviews.length})',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
-          ReviewsList(reviews: reviews, showItemTitle: true),
+          if (reviews.isEmpty && isOwn)
+            const _EmptyStateCard(
+              icon: Icons.rate_review_outlined,
+              message:
+                  'No reviews yet — your first completed deal will '
+                  'bring one in.',
+            )
+          else
+            ReviewsList(reviews: reviews, showItemTitle: true),
           if (isOwn) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.xl),
             Text('Account', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             _AccountTile(
               icon: Icons.edit_outlined,
               title: 'Edit profile',
-              subtitle: 'Name, bio, and neighborhood',
+              subtitle: 'Name, bio, phone, area & interests',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-              ),
-            ),
-            _AccountTile(
-              icon: Icons.manage_accounts_outlined,
-              title: 'Set up profile',
-              subtitle: 'Edit interests & area',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ProfileSetupScreen(editMode: true),
-                ),
               ),
             ),
             _AccountTile(
@@ -376,6 +373,9 @@ class UserProfileScreen extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const VerificationScreen()),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
+            Text('Marketplace', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
             _AccountTile(
               icon: Icons.inventory_2_outlined,
               title: 'Manage my items',
@@ -392,6 +392,9 @@ class UserProfileScreen extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const TrustExplainerScreen()),
               ),
             ),
+            const SizedBox(height: AppSpacing.md),
+            Text('App', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
             _AccountTile(
               icon: Icons.settings_outlined,
               title: 'Settings',
@@ -440,45 +443,6 @@ Future<void> _confirmBlock(BuildContext context, AppUser user) async {
       .showSnackBar(SnackBar(content: Text('$firstName blocked.')));
 }
 
-class _VerifiedRow extends StatelessWidget {
-  final AppUser user;
-  const _VerifiedRow({required this.user});
-  @override
-  Widget build(BuildContext context) {
-    Widget chip(bool ok, String label) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          ok ? Icons.check_circle : Icons.cancel,
-          size: 14,
-          color: ok
-              ? Theme.of(context).colorScheme.secondary
-              : Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-        const SizedBox(width: 4),
-        // Flexible + ellipsis: at large text scales the label
-        // shrinks into the chip's share of the Wrap instead of
-        // overflowing the row.
-        Flexible(
-          child: Text(
-            '$label ${ok ? 'verified' : 'unverified'}',
-            style: const TextStyle(fontSize: 12),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-    return Wrap(
-      spacing: 10,
-      children: [
-        chip(user.phoneVerified, 'Phone'),
-        chip(user.emailVerified, 'Email'),
-      ],
-    );
-  }
-}
-
 class _AccountTile extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -492,13 +456,60 @@ class _AccountTile extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Card(
+        child: ListTile(
+          // ListTile with a subtitle is ~72dp — comfortably over the
+          // 48dp minimum row height.
+          leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+          title: Text(title),
+          subtitle: Text(subtitle),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
+}
+
+/// Friendly empty state: icon, one warm line, and (when it makes
+/// sense) a call to action — instead of a bare "Nothing here" text.
+class _EmptyStateCard extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  const _EmptyStateCard({
+    required this.icon,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+  @override
+  Widget build(BuildContext context) {
     return Card(
-      child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              size: 36,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(message, textAlign: TextAlign.center),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              FilledButton.icon(
+                onPressed: onAction,
+                icon: const Icon(Icons.add),
+                label: Text(actionLabel!),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

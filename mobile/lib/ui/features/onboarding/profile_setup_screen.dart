@@ -7,13 +7,12 @@ import '../../../state/app_state.dart';
 /// Phase 6 profile setup — the 3-step flow shown right after a new
 /// account's first login (name + phone → city + area → interests).
 ///
-/// The same screen doubles as the Profile tab's "Set up profile"
-/// editor: with [editMode] true it is pushed as a route, prefilled
-/// with the current values, and pops on save instead of handing off
-/// to the root gate.
+/// First-run onboarding ONLY: editing an existing profile lives in
+/// EditProfileScreen (which saves through the same
+/// [AppState.completeOnboarding] path). The old editMode variant was
+/// removed when the two editors were merged.
 class ProfileSetupScreen extends StatefulWidget {
-  final bool editMode;
-  const ProfileSetupScreen({super.key, this.editMode = false});
+  const ProfileSetupScreen({super.key});
 
   @override
   State<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
@@ -70,8 +69,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         _step--;
         _error = null;
       });
-    } else if (widget.editMode) {
-      Navigator.of(context).pop();
     }
   }
 
@@ -105,11 +102,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       setState(() => _error = err);
       return;
     }
-    if (widget.editMode) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Profile setup saved.')));
-      Navigator.of(context).pop();
-    }
     // Gate mode: AppState notified, so AppRoot swaps this screen for
     // the app shell on its own — nothing to navigate here.
   }
@@ -119,8 +111,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     final reduceMotion = MediaQuery.of(context).disableAnimations;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.editMode ? 'Set up profile' : 'Finish your profile'),
-        automaticallyImplyLeading: widget.editMode,
+        title: const Text('Finish your profile'),
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         child: Column(
@@ -173,7 +165,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               // than breaking out of the button.
               child: Row(
                 children: [
-                  if (_step > 0 || widget.editMode) ...[
+                  if (_step > 0) ...[
                     OutlinedButton(
                       onPressed: _saving ? null : _back,
                       child: const Text('Back'),
@@ -189,7 +181,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           _saving
                               ? 'Saving…'
                               : _isLast
-                              ? (widget.editMode ? 'Save' : 'Finish')
+                              ? 'Finish'
                               : 'Continue',
                         ),
                       ),
