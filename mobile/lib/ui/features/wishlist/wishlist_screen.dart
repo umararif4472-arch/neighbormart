@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
 import '../../../data/models/wishlist_item.dart';
 import '../../../state/app_state.dart';
+import '../../app_drawer.dart';
 import '../item_detail/item_detail_screen.dart';
 
 class WishlistScreen extends StatelessWidget {
@@ -14,9 +16,10 @@ class WishlistScreen extends StatelessWidget {
     final state = context.watch<AppState>();
     return Scaffold(
       appBar: AppBar(
+        leading: const ShellMenuButton(),
         title: const Text(
           'Neighborhood wishlist',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
       body: ListView(
@@ -95,14 +98,14 @@ class _WishlistCard extends StatelessWidget {
     final state = context.read<AppState>();
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 CategoryTile(category: item.category, size: 48),
-                const SizedBox(width: 10),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,7 +123,7 @@ class _WishlistCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: AppSpacing.md),
             Text(item.description),
             const SizedBox(height: 12),
             ClipRRect(

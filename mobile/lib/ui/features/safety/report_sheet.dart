@@ -87,69 +87,76 @@ class _ReportSheetState extends State<ReportSheet> {
   @override
   Widget build(BuildContext context) {
     final isListing = widget.targetType == ReportTargetType.listing;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        20 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            isListing ? 'Report this listing' : 'Report ${widget.targetLabel}',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            isListing
-                ? 'Tell us what’s wrong with this listing. The owner won’t be told who reported it.'
-                : 'Tell us what’s wrong. ${widget.targetLabel} won’t be told who reported them.',
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            isExpanded: true,
-            initialValue: _reason,
-            decoration: InputDecoration(
-              labelText: 'Reason',
-              border: const OutlineInputBorder(),
-              errorText: _error,
+    // Scrollable: at landscape heights / 2.0x text the fixed
+    // column is taller than the sheet and overflowed (Part 4
+    // harness, e.g. 800x360 @ 1.3x by 33px).
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isListing
+                  ? 'Report this listing'
+                  : 'Report ${widget.targetLabel}',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-            items: kReportReasons
-                .map(
-                  (r) => DropdownMenuItem(
-                    value: r,
-                    child: Text(kReportReasonLabels[r] ?? r),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) => setState(() {
-              _reason = v;
-              _error = null;
-            }),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _details,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Details (optional)',
-              hintText: 'Anything that helps us review it',
-              border: OutlineInputBorder(),
+            const SizedBox(height: 4),
+            Text(
+              isListing
+                  ? 'Tell us what’s wrong with this listing. The owner won’t be told who reported it.'
+                  : 'Tell us what’s wrong. ${widget.targetLabel} won’t be told who reported them.',
             ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _submit,
-              icon: const Icon(Icons.flag_outlined),
-              label: const Text('Send report'),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              initialValue: _reason,
+              decoration: InputDecoration(
+                labelText: 'Reason',
+                border: const OutlineInputBorder(),
+                errorText: _error,
+              ),
+              items: kReportReasons
+                  .map(
+                    (r) => DropdownMenuItem(
+                      value: r,
+                      child: Text(kReportReasonLabels[r] ?? r),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() {
+                _reason = v;
+                _error = null;
+              }),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            TextField(
+              controller: _details,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Details (optional)',
+                hintText: 'Anything that helps us review it',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _submit,
+                icon: const Icon(Icons.flag_outlined),
+                label: const Text('Send report'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -87,8 +87,7 @@ class ListingDetailScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   listing.title,
-                  style: Theme.of(context).textTheme.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
               ),
               // Capped width: at very large text scales the chip /
@@ -141,7 +140,7 @@ class ListingDetailScreen extends StatelessWidget {
             listingPriceLabel(listing),
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.secondary,
             ),
           ),

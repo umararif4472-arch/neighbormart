@@ -45,92 +45,97 @@ class _ReviewSheetState extends State<ReviewSheet> {
         state.listingByIdOrNull(req.itemId)?.title ??
         'Listing';
     final other = state.otherPartyFor(req);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Review ${other.name}',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'For the deal: $itemTitle',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (i) {
-              final star = i + 1;
-              return IconButton(
-                onPressed: () => setState(() {
-                  _rating = star;
-                  _error = null;
-                }),
-                icon: Icon(
-                  star <= _rating ? Icons.star : Icons.star_border,
-                  size: 38,
-                  color: amberAccentOf(context),
-                ),
-              );
-            }),
-          ),
-          TextField(
-            controller: _comment,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Comment (optional)',
-              hintText: 'How did it go? Condition, communication, timing…',
+    // Scrollable: at landscape heights / large text the fixed
+    // column is taller than the sheet and overflowed (Part 4
+    // harness, e.g. 568x320 @ 1.3x by 39px).
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Review ${other.name}',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Text(
-                _error!,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+            const SizedBox(height: 4),
+            Text(
+              'For the deal: $itemTitle',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                if (_rating == 0) {
-                  setState(() => _error = 'Tap a star rating first.');
-                  return;
-                }
-                final err = state.addReview(
-                  widget.requestId,
-                  _rating,
-                  _comment.text,
-                );
-                if (err != null) {
-                  setState(() => _error = err);
-                  return;
-                }
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Review posted — trust scores updated.'),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (i) {
+                final star = i + 1;
+                return IconButton(
+                  onPressed: () => setState(() {
+                    _rating = star;
+                    _error = null;
+                  }),
+                  icon: Icon(
+                    star <= _rating ? Icons.star : Icons.star_border,
+                    size: 38,
+                    color: amberAccentOf(context),
                   ),
                 );
-              },
-              child: const Text('Post review'),
+              }),
             ),
-          ),
-        ],
+            TextField(
+              controller: _comment,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Comment (optional)',
+                hintText: 'How did it go? Condition, communication, timing…',
+              ),
+            ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  _error!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (_rating == 0) {
+                    setState(() => _error = 'Tap a star rating first.');
+                    return;
+                  }
+                  final err = state.addReview(
+                    widget.requestId,
+                    _rating,
+                    _comment.text,
+                  );
+                  if (err != null) {
+                    setState(() => _error = err);
+                    return;
+                  }
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Review posted — trust scores updated.'),
+                    ),
+                  );
+                },
+                child: const Text('Post review'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

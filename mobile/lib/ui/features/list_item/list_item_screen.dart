@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
 import '../../../data/models/listing.dart';
@@ -388,7 +389,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: active
-                                        ? FontWeight.w800
+                                        ? FontWeight.w700
                                         : FontWeight.w600,
                                   ),
                                 ),
@@ -598,7 +599,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
       const SizedBox(height: 16),
       Card(
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             children: [
               row('Title', _title.text.trim()),

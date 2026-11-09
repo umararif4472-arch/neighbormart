@@ -384,21 +384,35 @@ class _PhotoUploadFieldState extends State<PhotoUploadField> {
                   ),
                 ),
               Positioned(
-                top: 2,
-                right: 2,
+                top: 0,
+                right: 0,
+                // 48dp hit area (was a 22dp visual-only target);
+                // the dark circle visual stays 22dp at the same
+                // corner spot.
                 child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () => _remove(index),
-                  child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      color: Colors.black54,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      size: 14,
-                      color: Colors.white,
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 2, right: 2),
+                        child: Container(
+                          width: 22,
+                          height: 22,
+                          decoration: const BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),

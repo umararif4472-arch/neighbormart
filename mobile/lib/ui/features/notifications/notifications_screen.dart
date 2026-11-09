@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/app_notification.dart';
@@ -105,7 +106,7 @@ class _NotificationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final action = notification.kind == 'action';
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Card(
         color: action
             ? Theme.of(context).colorScheme.surfaceContainerHighest

@@ -1,6 +1,6 @@
 // Long sweep: many screens × many configs — give the file room.
 // ignore: unnecessary_library_name
-@Timeout(Duration(minutes: 20))
+@Timeout(Duration(minutes: 30))
 library;
 
 import 'dart:convert';
@@ -14,8 +14,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:neighbor_mart/core/theme/app_theme.dart';
 import 'package:neighbor_mart/data/models/listing.dart';
 import 'package:neighbor_mart/state/app_state.dart';
+import 'package:neighbor_mart/ui/app_drawer.dart';
 import 'package:neighbor_mart/ui/app_shell.dart';
 import 'package:neighbor_mart/ui/features/activity/activity_screen.dart';
+import 'package:neighbor_mart/ui/features/activity/review_sheet.dart';
+import 'package:neighbor_mart/ui/features/safety/report_sheet.dart';
 import 'package:neighbor_mart/ui/features/auth/forgot_password_screen.dart';
 import 'package:neighbor_mart/ui/features/auth/landing_screen.dart';
 import 'package:neighbor_mart/ui/features/auth/login_screen.dart';
@@ -44,11 +47,16 @@ import 'package:neighbor_mart/ui/features/trust/trust_explainer_screen.dart';
 import 'package:neighbor_mart/ui/features/wishlist/wishlist_screen.dart';
 
 /// Exhaustive overflow sweep: EVERY user-facing screen is pumped
-/// at a matrix of small-phone sizes and accessibility text scales:
+/// at the full matrix (Part 4):
 ///
-///   320×568 @ 1.0 / 1.6 / 2.0
-///   360×800 @ 1.0 / 1.3 / 1.6 / 2.0
-///   411×915 @ 1.3
+///   sizes: portrait 320×568, 360×800, 411×915, 600×960 and
+///          landscape 568×320, 800×360, 915×411, 960×600
+///   text scales: 1.0 / 1.3 / 2.0
+///   themes: light AND dark
+///
+/// = 48 configs per case. Form-heavy cases additionally run 4
+/// keyboard configs (360×800 portrait @ 1.0 / 1.3, both themes,
+/// viewInsets bottom = 300) — see [_keyboardConfigs].
 ///
 /// Any layout error (RenderFlex overflow, unbounded constraints,
 /// "not laid out", …) is collected per screen + config and the
@@ -60,21 +68,52 @@ import 'package:neighbor_mart/ui/features/wishlist/wishlist_screen.dart';
 class _Cfg {
   final Size size;
   final double scale;
-  const _Cfg(this.size, this.scale);
+  final ThemeMode themeMode;
+
+  /// Simulated software-keyboard inset (0 = no keyboard).
+  final double keyboardInset;
+  const _Cfg(this.size, this.scale, this.themeMode, {this.keyboardInset = 0});
   String get label =>
-      '${size.width.toInt()}x${size.height.toInt()} @ ${scale}x';
+      '${size.width.toInt()}x${size.height.toInt()} @ ${scale}x '
+      '${themeMode.name}'
+      '${keyboardInset > 0 ? ' kb${keyboardInset.toInt()}' : ''}';
 }
 
-const _configs = <_Cfg>[
-  _Cfg(Size(320, 568), 1.0),
-  _Cfg(Size(320, 568), 1.6),
-  _Cfg(Size(320, 568), 2.0),
-  _Cfg(Size(360, 800), 1.0),
-  _Cfg(Size(360, 800), 1.3),
-  _Cfg(Size(360, 800), 1.6),
-  _Cfg(Size(360, 800), 2.0),
-  _Cfg(Size(411, 915), 1.3),
+const _sizes = <Size>[
+  Size(320, 568),
+  Size(360, 800),
+  Size(411, 915),
+  Size(600, 960),
+  Size(568, 320),
+  Size(800, 360),
+  Size(915, 411),
+  Size(960, 600),
 ];
+const _scales = <double>[1.0, 1.3, 2.0];
+const _modes = <ThemeMode>[ThemeMode.light, ThemeMode.dark];
+
+final _configs = <_Cfg>[
+  for (final size in _sizes)
+    for (final scale in _scales)
+      for (final mode in _modes) _Cfg(size, scale, mode),
+];
+
+/// Extra configs for form-heavy cases: keyboard open on a
+/// mainstream portrait phone, both themes, normal + large text.
+final _keyboardConfigs = <_Cfg>[
+  for (final scale in <double>[1.0, 1.3])
+    for (final mode in _modes)
+      _Cfg(const Size(360, 800), scale, mode, keyboardInset: 300),
+];
+
+/// Coverage bookkeeping: per-config print() lines get swallowed
+/// by the test reporter when a case pumps 48 configs, so interacts
+/// record the current config label here via [_markCoverage] and
+/// main() prints one summary per mark in tearDownAll.
+final Map<String, Set<String>> _coverage = {};
+String _currentCfgLabel = '';
+void _markCoverage(String mark) =>
+    _coverage.putIfAbsent(mark, () => <String>{}).add(_currentCfgLabel);
 
 bool _isLayoutError(String text) =>
     text.contains('overflowed') ||
@@ -93,12 +132,17 @@ class _Case {
   /// Runs after the per-config prefs reset, before the pump —
   /// e.g. to seed a saved draft so a restore dialog renders.
   final Future<void> Function()? setUp;
+
+  /// Form-heavy cases also run the [_keyboardConfigs] on top of
+  /// the 48-config matrix.
+  final bool keyboardExtra;
   const _Case(
     this.name,
     this.makeState,
     this.build, {
     this.interact,
     this.setUp,
+    this.keyboardExtra = false,
   });
 }
 
@@ -156,6 +200,12 @@ void main() {
   for (final l in probe.listings) {
     listingBySection.putIfAbsent(l.section, () => l);
   }
+  // A listing owned by someone else — its detail screen shows the
+  // "More actions" menu that opens the report sheet.
+  final reportListing = probe.listings.firstWhere(
+    (l) => l.ownerId != probe.currentUser.id,
+    orElse: () => firstListing,
+  );
   final firstRequest = probe.requests.isNotEmpty ? probe.requests.first : null;
   final otherUser = probe.users.firstWhere(
     (u) => u.id != probe.currentUser.id,
@@ -163,12 +213,23 @@ void main() {
   );
 
   final cases = <_Case>[
-    _Case('LoginScreen', signedOut, (_) => const LoginScreen()),
-    _Case('SignUpScreen', signedOut, (_) => const SignUpScreen()),
+    _Case(
+      'LoginScreen',
+      signedOut,
+      (_) => const LoginScreen(),
+      keyboardExtra: true,
+    ),
+    _Case(
+      'SignUpScreen',
+      signedOut,
+      (_) => const SignUpScreen(),
+      keyboardExtra: true,
+    ),
     _Case(
       'ForgotPasswordScreen',
       signedOut,
       (_) => const ForgotPasswordScreen(),
+      keyboardExtra: true,
     ),
     _Case('LandingScreen', signedOut, (_) => const LandingScreen()),
     _Case(
@@ -186,6 +247,7 @@ void main() {
       'ProfileSetupScreen',
       signedIn,
       (_) => const ProfileSetupScreen(),
+      keyboardExtra: true,
       interact: (tester) async {
         // The form prefills from the seeded user (valid name,
         // city, area, interests), so Continue advances for real:
@@ -262,9 +324,31 @@ void main() {
       (_) => ListingDetailScreen(listingId: firstListing.id),
     ),
     _Case(
+      'ListingDetailScreen (report sheet)',
+      signedIn,
+      (_) => ListingDetailScreen(listingId: reportListing.id),
+      interact: (tester) async {
+        final menu = find.byTooltip('More actions');
+        if (menu.evaluate().isEmpty) return;
+        await tester.tap(menu.first);
+        // pumpAndSettle, not a fixed pump: tapping the item while
+        // the menu's scale animation is still running misses it
+        // and the menu closes unselected (probe-verified).
+        await tester.pumpAndSettle();
+        final item = find.text('Report this listing');
+        if (item.evaluate().isEmpty) return;
+        await tester.tap(item.first);
+        await tester.pumpAndSettle();
+        if (find.byType(ReportSheet).evaluate().isNotEmpty) {
+          _markCoverage('ReportSheet opened');
+        }
+      },
+    ),
+    _Case(
       'ListItemScreen (wizard step 1)',
       signedIn,
       (_) => const ListItemScreen(),
+      keyboardExtra: true,
     ),
     _Case(
       'ListItemScreen (resume draft dialog)',
@@ -298,6 +382,7 @@ void main() {
       'ListItemScreen (wizard all steps)',
       signedIn,
       (_) => const ListItemScreen(),
+      keyboardExtra: true,
       interact: (tester) async {
         // Continue validates each step, so fill valid values to
         // genuinely advance: step 1 needs title (>=4 chars),
@@ -344,19 +429,75 @@ void main() {
           'ListListingScreen (${section.name})',
           signedIn,
           (_) => ListListingScreen(section: section),
+          keyboardExtra: true,
         ),
     _Case('ActivityScreen', signedIn, (_) => const ActivityScreen()),
+    _Case(
+      'ActivityScreen (review sheet)',
+      signedIn,
+      (_) => const ActivityScreen(),
+      interact: (tester) async {
+        // The review button only exists on a finished, not-yet-
+        // reviewed deal card (seed has returned/completed ones).
+        // Cards live in a lazy TabBarView list. scrollUntilVisible
+        // is unreliable here (it reported success with the button
+        // still below the fold — probe-verified), so drag the
+        // visible list until the button's center is genuinely
+        // inside the viewport, then tap it.
+        Future<bool> openSheet(String label) async {
+          final finder = find.text(label);
+          for (var i = 0; i < 25; i++) {
+            if (finder.evaluate().isNotEmpty) {
+              final center = tester.getCenter(finder.first);
+              final view = tester.view.physicalSize;
+              if (center.dx > 0 &&
+                  center.dx < view.width &&
+                  center.dy > 0 &&
+                  center.dy < view.height) {
+                break;
+              }
+            }
+            if (find.byType(ListView).evaluate().isEmpty) return false;
+            await tester.drag(
+              find.byType(ListView).first,
+              const Offset(0, -300),
+            );
+            await tester.pump(const Duration(milliseconds: 300));
+          }
+          if (finder.evaluate().isEmpty) return false;
+          await tester.tap(finder.first);
+          await tester.pumpAndSettle();
+          return true;
+        }
+
+        var opened = await openSheet('Leave a review');
+        if (!opened) {
+          final tab = find.text('My requests');
+          if (tab.evaluate().isNotEmpty) {
+            await tester.tap(tab.first);
+            await tester.pump(const Duration(milliseconds: 500));
+            opened = await openSheet('Leave a review');
+          }
+        }
+        if (!opened) opened = await openSheet('Report issue');
+        if (find.byType(ReviewSheet).evaluate().isNotEmpty) {
+          _markCoverage('ReviewSheet opened');
+        }
+      },
+    ),
     _Case('MessagesScreen', signedIn, (_) => const MessagesScreen()),
     if (firstRequest != null)
       _Case(
         'ChatScreen (request)',
         signedIn,
         (_) => ChatScreen(requestId: firstRequest.id),
+        keyboardExtra: true,
       ),
     _Case(
       'ChatScreen (forUser)',
       signedIn,
       (_) => ChatScreen.forUser(otherUserId: otherUser.id),
+      keyboardExtra: true,
     ),
     _Case('NotificationsScreen', signedIn, (_) => const NotificationsScreen()),
     _Case('WishlistScreen', signedIn, (_) => const WishlistScreen()),
@@ -366,7 +507,31 @@ void main() {
       signedIn,
       (_) => UserProfileScreen(userId: otherUser.id),
     ),
-    _Case('EditProfileScreen', signedIn, (_) => const EditProfileScreen()),
+    _Case(
+      'EditProfileScreen',
+      signedIn,
+      (_) => const EditProfileScreen(),
+      keyboardExtra: true,
+    ),
+    _Case(
+      'EditProfileScreen (interests chips)',
+      signedIn,
+      (_) => const EditProfileScreen(),
+      keyboardExtra: true,
+      interact: (tester) async {
+        // Scroll the merged form down to the interests chips
+        // (phone/city/interests were folded in by Part 3).
+        final label = find.text('Interests');
+        if (label.evaluate().isNotEmpty) {
+          await tester.scrollUntilVisible(
+            label,
+            160,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.pump(const Duration(milliseconds: 400));
+        }
+      },
+    ),
     _Case('SettingsScreen', signedIn, (_) => const SettingsScreen()),
     _Case('ManageItemsScreen', signedIn, (_) => const ManageItemsScreen()),
     _Case('VerificationScreen', signedIn, (_) => const VerificationScreen()),
@@ -390,13 +555,52 @@ void main() {
         }
       },
     ),
+    _Case(
+      'AppShell (drawer open)',
+      signedIn,
+      (_) => const AppShell(),
+      interact: (tester) async {
+        // Same open path as drawer_test.dart: the shell menu
+        // button in the current tab's AppBar.
+        final btn = find.byTooltip('Menu');
+        if (btn.evaluate().isEmpty) return;
+        await tester.tap(btn.first);
+        await tester.pump(const Duration(milliseconds: 700));
+        await tester.pump(const Duration(milliseconds: 700));
+        if (find.byType(AppDrawer).evaluate().isEmpty) return;
+        _markCoverage('AppDrawer opened');
+        // Scroll the drawer list so the below-fold rows (and the
+        // sign-out row) render at least once per config.
+        try {
+          await tester.scrollUntilVisible(
+            find.byKey(const ValueKey('drawer-sign-out')),
+            120,
+            scrollable: find
+                .descendant(
+                  of: find.byType(AppDrawer),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
+          await tester.pump(const Duration(milliseconds: 400));
+        } catch (_) {
+          // Drawer content shorter than the viewport in this
+          // config — nothing to scroll; rows already rendered.
+        }
+      },
+    ),
   ];
 
   Future<void> runCase(WidgetTester tester, _Case c) async {
     final failures = <String>[];
     final noise = <String>[];
     final state = c.makeState();
-    for (final cfg in _configs) {
+    final configs = <_Cfg>[
+      ..._configs,
+      if (c.keyboardExtra) ..._keyboardConfigs,
+    ];
+    for (final cfg in configs) {
+      _currentCfgLabel = '${c.name} @ ${cfg.label}';
       // Deterministic storage for every config: without this, a
       // draft auto-saved by one config's interactions leaks into
       // the next config's first mount (changing what renders).
@@ -404,6 +608,7 @@ void main() {
       await c.setUp?.call();
       tester.view.physicalSize = cfg.size;
       tester.view.devicePixelRatio = 1.0;
+      tester.view.viewInsets = FakeViewPadding(bottom: cfg.keyboardInset);
       final previousOnError = FlutterError.onError;
       FlutterError.onError = (details) {
         final text = details.toString();
@@ -420,8 +625,16 @@ void main() {
           ChangeNotifierProvider<AppState>.value(
             value: state,
             child: MaterialApp(
+              // Cold start per config: without a changing key the
+              // element tree (Scaffold drawer state, Navigator
+              // routes incl. open sheets, tab indices) carries
+              // over from the previous config and interacts hit
+              // stale UI — the drawer case only "opened" in the
+              // first size's configs before this.
+              key: ValueKey('${c.name}-${cfg.label}'),
               theme: themed(buildAppTheme()),
               darkTheme: themed(buildDarkAppTheme()),
+              themeMode: cfg.themeMode,
               builder: (context, child) => MediaQuery(
                 data: MediaQuery.of(context)
                     .copyWith(textScaler: TextScaler.linear(cfg.scale)),
@@ -455,6 +668,7 @@ void main() {
         FlutterError.onError = previousOnError;
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
+        tester.view.resetViewInsets();
       }
     }
     if (noise.isNotEmpty) {
@@ -465,6 +679,16 @@ void main() {
     }
     expect(failures, isEmpty, reason: failures.join('\n'));
   }
+
+  tearDownAll(() {
+    for (final entry in _coverage.entries) {
+      // ignore: avoid_print
+      print(
+        'HARNESS_COVERAGE ${entry.key}: ${entry.value.length} configs\n'
+        '  ${entry.value.join('\n  ')}',
+      );
+    }
+  });
 
   for (final c in cases) {
     testWidgets('overflow sweep: ${c.name}', (tester) => runCase(tester, c));

@@ -8,6 +8,7 @@ import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/borrow_request.dart';
 import '../../../data/models/listing.dart';
 import '../../../state/app_state.dart';
+import '../../app_drawer.dart';
 import '../explore/listing_section_view.dart';
 import '../messages/chat_screen.dart';
 import '../profile/user_profile_screen.dart';
@@ -22,9 +23,10 @@ class ActivityScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
+          leading: const ShellMenuButton(),
           title: const Text(
             'Activity',
-            style: TextStyle(fontWeight: FontWeight.w800),
+            style: TextStyle(fontWeight: FontWeight.w600),
           ),
           bottom: const TabBar(
             tabs: [
@@ -110,7 +112,7 @@ void _runWithTierWatch(
             const SizedBox(height: 14),
             const Text(
               'You leveled up!',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
@@ -157,7 +159,7 @@ class _RequestCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -342,15 +344,20 @@ class _RequestCard extends StatelessWidget {
                         color: Theme.of(context).colorScheme.secondary,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        request.status == 'reviewed'
-                            ? 'Completed — both sides reviewed'
-                            : request.status == 'completed'
-                            ? 'Deal completed'
-                            : 'Completed — item returned',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.secondary,
+                      // Expanded: at 2.0x text this label alone is
+                      // ~430px wide and overflowed the card row on
+                      // portrait phones (Part 4 harness).
+                      Expanded(
+                        child: Text(
+                          request.status == 'reviewed'
+                              ? 'Completed — both sides reviewed'
+                              : request.status == 'completed'
+                              ? 'Deal completed'
+                              : 'Completed — item returned',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
                         ),
                       ),
                     ],
