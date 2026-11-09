@@ -29,7 +29,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     // Hermetic tests: a developer's .env.local (live Firebase/Cloudinary
     // values) must never leak into import.meta.env during tests — the
     // Cloudinary-only photo check in the shared validator keys off it.

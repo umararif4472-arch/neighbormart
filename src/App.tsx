@@ -96,31 +96,30 @@ export default function App() {
   // Visible tier-up/down moments fire from anywhere in the app.
   useTierWatcher()
 
-  // The Open Door intro overlays every boot branch: it watches the
-  // hydration phase itself and opens the moment the app is ready.
+  // The Open Door intro WRAPS every boot branch: the real content
+  // renders underneath its wall from the first frame (miniaturised
+  // into the doorway), and the intro watches the hydration phase
+  // itself and opens the moment the app is ready.
   if (phase === 'loading') {
     return (
-      <>
-        <DoorIntro />
+      <DoorIntro>
         <AppSplash />
-      </>
+      </DoorIntro>
     )
   }
   if (phase === 'error') {
     return (
-      <>
-        <DoorIntro />
+      <DoorIntro>
         <AppHydrationError
           message={state.hydration.message ?? 'Unknown error'}
           onRetry={retryHydration}
         />
-      </>
+      </DoorIntro>
     )
   }
 
   return (
-    <>
-      <DoorIntro />
+    <DoorIntro>
       <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route element={<Layout />}>
@@ -304,6 +303,6 @@ export default function App() {
         </Route>
       </Routes>
       </Suspense>
-    </>
+    </DoorIntro>
   )
 }

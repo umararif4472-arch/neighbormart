@@ -321,13 +321,15 @@
 /* in kit geometry). The parent supplies the 3D perspective.          */
 /* ------------------------------------------------------------------ */
 
-/* Intro field: brand terracotta in light mode, warm charcoal in dark. */
-.nm-door-bg {
-  background-color: #a44b2d;
+/* Intro wall: brand terracotta in light mode, warm charcoal in dark.
+ * Applied as the fill of the wall SVG (viewport rect with the doorway
+ * cut out, fill-rule evenodd) in DoorIntro.tsx. */
+.nm-door-wall-fill {
+  fill: #a44b2d;
 }
 
-.dark .nm-door-bg {
-  background-color: #201b16;
+.dark .nm-door-wall-fill {
+  fill: #201b16;
 }
 
 @keyframes nm-door-in {
@@ -370,6 +372,11 @@
 
 .nm-door-leaf-open {
   transform: rotateY(-102deg);
+}
+
+/* Compressed swing for the signed-in (~1.2s) intro variant. */
+.nm-door-leaf-fast {
+  transition-duration: 0.35s;
 }
 
 /* The knob's halo: a second amber circle behind the knob that swells
