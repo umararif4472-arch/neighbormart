@@ -40,9 +40,18 @@ class _ItemMapViewState extends State<ItemMapView> {
         ),
       );
     }
-    return Column(
+    // The info layer (pin preview card / hint pill) floats over
+    // the map's bottom edge instead of sitting under it in a
+    // Column. As a Column child its height was content-bound: at
+    // short landscape heights with large text (568x320 @ 2.0x in
+    // the CI overflow harness) the hint text alone was taller
+    // than the whole height the screen gave this view, the map's
+    // Expanded collapsed to zero and the Column overflowed. As an
+    // overlay, the info height no longer competes with the map,
+    // so no font metrics can overflow the layout.
+    return Stack(
       children: [
-        Expanded(
+        Positioned.fill(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: LayoutBuilder(
@@ -130,47 +139,69 @@ class _ItemMapViewState extends State<ItemMapView> {
             ),
           ),
         ),
-        if (_selected != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Card(
-              child: ListTile(
-                leading: ItemPhoto.forItem(
-                  _selected!,
-                  width: 44,
-                  height: 44,
-                  radius: 12,
-                ),
-                title: Text(
-                  _selected!.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  '${distanceLabel(distanceKm(me.homeLocation, _selected!.location))} · ${_selected!.isAvailable ? 'Available' : _selected!.availability}',
-                ),
-                trailing: ElevatedButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ItemDetailScreen(itemId: _selected!.id),
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: 12,
+          child: _selected != null
+              ? Card(
+                  child: ListTile(
+                    leading: ItemPhoto.forItem(
+                      _selected!,
+                      width: 44,
+                      height: 44,
+                      radius: 12,
+                    ),
+                    title: Text(
+                      _selected!.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${distanceLabel(distanceKm(me.homeLocation, _selected!.location))} · ${_selected!.isAvailable ? 'Available' : _selected!.availability}',
+                    ),
+                    trailing: ElevatedButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              ItemDetailScreen(itemId: _selected!.id),
+                        ),
+                      ),
+                      child: const Text('View'),
                     ),
                   ),
-                  child: const Text('View'),
+                )
+              : Center(
+                  // Pill background: the hint now sits on top of
+                  // the map instead of the page background, so it
+                  // needs its own surface to stay readable.
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.surface,
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x29000000),
+                          blurRadius: 4,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'Tap a pin to preview the item.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Tap a pin to preview the item.',
-              style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
+        ),
       ],
     );
   }

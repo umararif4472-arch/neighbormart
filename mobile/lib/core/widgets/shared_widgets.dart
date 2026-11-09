@@ -267,18 +267,32 @@ class StatusChip extends StatelessWidget {
     final color = isOverdue
         ? Theme.of(context).colorScheme.error
         : _color(status, Theme.of(context).brightness);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
+    // Width-capped with an ellipsized single-line label: the chip
+    // usually sits as a non-flex child in a card header row, where
+    // it sizes to its text. Under coarse font metrics (2.0x text
+    // scale, CI test font) a long label like "Completed" grew
+    // wide enough to overflow the row outright and to squeeze
+    // the flexible title column beside it below the width its
+    // own rows need (CI overflow harness, ActivityScreen cards
+    // @ 320dp / 2.0x). Real fonts stay far under the cap, so the
+    // chip looks identical in normal use.
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 160),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
         ),
       ),
     );

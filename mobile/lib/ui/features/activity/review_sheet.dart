@@ -70,22 +70,32 @@ class _ReviewSheetState extends State<ReviewSheet> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(5, (i) {
-                final star = i + 1;
-                return IconButton(
-                  onPressed: () => setState(() {
-                    _rating = star;
-                    _error = null;
-                  }),
-                  icon: Icon(
-                    star <= _rating ? Icons.star : Icons.star_border,
-                    size: 38,
-                    color: amberAccentOf(context),
-                  ),
-                );
-              }),
+            // Shrinkable star row: the five fixed-size star
+            // buttons total ~270dp of the sheet's 280dp content
+            // width at 320dp — a fit, but with little slack for
+            // coarser platform metrics. scaleDown keeps the row
+            // pixel-identical whenever it fits and shrinks it
+            // slightly instead of overflowing when it doesn't.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) {
+                  final star = i + 1;
+                  return IconButton(
+                    onPressed: () => setState(() {
+                      _rating = star;
+                      _error = null;
+                    }),
+                    icon: Icon(
+                      star <= _rating ? Icons.star : Icons.star_border,
+                      size: 38,
+                      color: amberAccentOf(context),
+                    ),
+                  );
+                }),
+              ),
             ),
             TextField(
               controller: _comment,
