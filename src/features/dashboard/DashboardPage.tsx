@@ -192,7 +192,7 @@ export function DashboardPage() {
       <div
         role="tablist"
         aria-label="Dashboard sections"
-        className="no-scrollbar flex w-full max-w-full gap-1 overflow-x-auto rounded-full border border-bark/10 bg-surface p-1 shadow-sm sm:w-fit"
+        className="no-scrollbar flex w-full min-w-0 max-w-full gap-1 overflow-x-auto rounded-full border border-bark/10 bg-surface p-1 shadow-sm sm:w-fit"
       >
         {TABS.map(({ id, label }) => {
           const count =
@@ -211,7 +211,7 @@ export function DashboardPage() {
               aria-selected={tab === id}
               onClick={() => setTab(id)}
               className={cn(
-                'flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-terracotta-600',
+                'flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-terracotta-600',
                 tab === id ? 'bg-terracotta-600 text-white' : 'text-bark-light hover:text-bark',
               )}
             >
