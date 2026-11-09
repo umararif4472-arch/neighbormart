@@ -7,6 +7,10 @@
 /// name or tagline.
 const String kAppName = 'NeighborMart';
 
+/// App version shown in the drawer footer (mirrors pubspec.yaml's
+/// 1.0.0+1 — keep the two in step on version bumps).
+const String kAppVersion = '1.0.0';
+
 /// The brand tagline, verbatim (sentence case) everywhere it
 /// appears: door intro, login, landing hero, About.
 const String kAppTagline = 'Everything behind the door';

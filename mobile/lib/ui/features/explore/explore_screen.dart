@@ -9,6 +9,7 @@ import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
 import '../../../data/models/listing.dart';
 import '../../../state/app_state.dart';
+import '../../app_drawer.dart';
 import '../item_detail/item_detail_screen.dart';
 import '../messages/messages_screen.dart';
 import '../notifications/notifications_screen.dart';
@@ -18,7 +19,13 @@ import 'item_map_view.dart';
 import 'listing_section_view.dart';
 
 class ExploreScreen extends StatefulWidget {
-  const ExploreScreen({super.key});
+  /// Optional external section control (Part 7 drawer): when the
+  /// app shell provides this notifier, the drawer's SECTIONS entries
+  /// and this screen's section chips read/write the same value, so
+  /// either can change the section the other shows. Standalone use
+  /// (tests, harnesses) passes nothing and keeps internal state.
+  final ValueNotifier<ListingSection?>? sectionController;
+  const ExploreScreen({super.key, this.sectionController});
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
@@ -46,7 +53,31 @@ class _ExploreScreenState extends State<ExploreScreen>
   /// Phase 5 section switch: null keeps the original Items & Tools
   /// explore (categories, map, grouping); a section swaps in the
   /// unified-listing card list for vehicles / properties / arenas.
-  ListingSection? _section;
+  ListingSection? _localSection;
+
+  /// The section currently shown: the shell's shared value when a
+  /// [ExploreScreen.sectionController] was provided, else local.
+  ListingSection? get _section =>
+      widget.sectionController?.value ?? _localSection;
+
+  void _setSection(ListingSection? section) {
+    final controller = widget.sectionController;
+    if (controller != null) {
+      controller.value = section; // the listener setStates
+    } else {
+      setState(() => _localSection = section);
+    }
+  }
+
+  void _onControllerSectionChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.sectionController?.addListener(_onControllerSectionChanged);
+  }
 
   @override
   void didChangeDependencies() {
@@ -72,6 +103,7 @@ class _ExploreScreenState extends State<ExploreScreen>
 
   @override
   void dispose() {
+    widget.sectionController?.removeListener(_onControllerSectionChanged);
     _intro?.dispose();
     _searchCtrl.dispose();
     _scrollCtrl.dispose();
@@ -154,6 +186,7 @@ class _ExploreScreenState extends State<ExploreScreen>
     final me = state.currentUser;
     return Scaffold(
       appBar: AppBar(
+        leading: const ShellMenuButton(),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -163,7 +196,7 @@ class _ExploreScreenState extends State<ExploreScreen>
               child: Text(
                 me.neighborhood,
                 style: const TextStyle(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   fontSize: 19,
                 ),
                 maxLines: 1,
@@ -250,7 +283,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                       context,
                       ListingSection.items,
                     ),
-                    onSelected: (_) => setState(() => _section = null),
+                    onSelected: (_) => _setSection(null),
                   ),
                 ),
                 ...[
@@ -264,7 +297,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                       label: Text('${kSectionEmoji[s]} ${kSectionLabel[s]}'),
                       selected: _section == s,
                       selectedColor: sectionAccentContainerOf(context, s),
-                      onSelected: (_) => setState(() => _section = s),
+                      onSelected: (_) => _setSection(s),
                     ),
                   ),
                 ),
@@ -468,8 +501,7 @@ class _CategorySectionHeader extends StatelessWidget {
               Expanded(
                 child: Text(
                   category,
-                  style: Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(context).textTheme.titleMedium,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -519,24 +551,37 @@ class _ItemCard extends StatelessWidget {
                   Positioned(
                     top: 4,
                     right: 4,
-                    child: Material(
-                      color: Colors.white,
-                      shape: const CircleBorder(),
-                      elevation: 1,
-                      child: IconButton(
-                        tooltip: isFavorite
-                            ? 'Remove from saved'
-                            : 'Save this item',
-                        iconSize: 17,
-                        padding: const EdgeInsets.all(6),
-                        constraints: const BoxConstraints(
-                          minWidth: 30,
-                          minHeight: 30,
+                    // 48dp hit area (was a 30dp button); the white
+                    // circle visual stays 30dp, drawn inside the
+                    // button's icon.
+                    child: IconButton(
+                      tooltip: isFavorite
+                          ? 'Remove from saved'
+                          : 'Save this item',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 48,
+                        minHeight: 48,
+                      ),
+                      onPressed: () =>
+                          context.read<AppState>().toggleFavorite(item.id),
+                      icon: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x29000000),
+                              blurRadius: 2,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
                         ),
-                        onPressed: () =>
-                            context.read<AppState>().toggleFavorite(item.id),
-                        icon: Icon(
+                        child: Icon(
                           isFavorite ? Icons.favorite : Icons.favorite_border,
+                          size: 17,
                           color: isFavorite
                               ? AppColors.errorRed
                               : AppColors.bark,
