@@ -115,7 +115,7 @@ export function LandingPage() {
       {/* Hero */}
       <section className="grid items-center gap-8 lg:grid-cols-[1.2fr_1fr]">
         <div className="flex flex-col gap-5">
-          <p className="inline-flex w-fit items-center gap-2 rounded-full border border-moss-300 dark:border-moss-800 bg-moss-50 dark:bg-moss-900/50 px-3 py-1 text-xs font-semibold text-moss-800 dark:text-moss-200">
+          <p className="inline-flex w-fit items-center gap-2 rounded-full border border-moss-300 dark:border-moss-800 bg-moss-50 dark:bg-moss-900/80 px-3 py-1 text-xs font-semibold text-moss-800 dark:text-moss-100">
             <span aria-hidden>📍</span>
             {currentUser ? `${currentUser.neighborhood} & nearby` : 'Your neighborhood'}
             {listings.length > 0 && ` · ${listings.length} listings near you`}
@@ -127,7 +127,7 @@ export function LandingPage() {
             </span>{' '}
             already owns one?
           </h1>
-          <p className="max-w-xl text-base leading-relaxed text-bark-light sm:text-lg">
+          <p className="max-w-xl text-base leading-relaxed text-bark-mid sm:text-lg">
             NeighborMart is your neighborhood marketplace: tools, gear, vehicles, homes, and sports
             grounds from people nearby — borrow them free, rent them, or buy them outright. No
             strangers, just neighbors building trust.

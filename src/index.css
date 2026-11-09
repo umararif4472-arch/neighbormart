@@ -46,6 +46,10 @@
   --color-parchment: var(--nm-surface-2);
   --color-bark: var(--nm-ink);
   --color-bark-light: var(--nm-ink-soft);
+  /* Mid ink: identical to ink-soft in light mode; one step stronger in
+   * dark mode for hero body copy, where ink-soft reads washed out on
+   * the near-black canvas (WCAG pair guarded in colorGuard.test.ts). */
+  --color-bark-mid: var(--nm-ink-mid);
 
   /* Card/panel surface (was hard-coded bg-white across components) */
   --color-surface: var(--nm-surface);
@@ -89,6 +93,7 @@
   --nm-surface-2: #f4ede1;
   --nm-ink: #3a2218;
   --nm-ink-soft: #71604e;
+  --nm-ink-mid: #71604e;
   /* Text shades of the kit section hues, deepened until they reach
    * WCAG AA on the cream canvas (kit hexes are kept for graphics in
    * the --color-brand-* tokens above). Properties' kit hex passes as
@@ -105,6 +110,7 @@
   --nm-surface-2: #38312a;
   --nm-ink: #f3ede4;
   --nm-ink-soft: #c9bba9;
+  --nm-ink-mid: #ddd2c0;
   /* Items uses the exact kit amber (7.00:1 on the dark canvas); the
    * other kit hexes fall short of AA as dark-mode text, so they keep
    * lightened shades of the same hues. */

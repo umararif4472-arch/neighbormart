@@ -121,6 +121,14 @@ const PAIRS: Array<[string, string, string, number]> = [
   ['dark muted on canvas', dark['--nm-ink-soft']!, dark['--nm-canvas']!, AA],
   ['dark muted on surface', dark['--nm-ink-soft']!, dark['--nm-surface']!, AA],
   ['dark muted on surface-2', dark['--nm-ink-soft']!, dark['--nm-surface-2']!, AA],
+  // Hero body copy uses ink-mid: same as muted in light mode, one step
+  // stronger in dark mode where ink-soft read washed out (Defect 2 fix).
+  ['light ink-mid on canvas', light['--nm-ink-mid']!, light['--nm-canvas']!, AA],
+  ['light ink-mid on surface', light['--nm-ink-mid']!, light['--nm-surface']!, AA],
+  ['dark ink-mid on canvas', dark['--nm-ink-mid']!, dark['--nm-canvas']!, AA],
+  ['dark ink-mid on surface', dark['--nm-ink-mid']!, dark['--nm-surface']!, AA],
+  // Landing hero location pill (dark): moss-100 text on moss-900 field.
+  ['moss-100 on moss-900 (dark hero pill)', '#e3eedd', '#1f311c', AA],
   ['white on terracotta-600 (primary button)', '#ffffff', '#a44b2d', AA],
   ['white on moss-600 (success button)', '#ffffff', '#4a7040', AA],
   ['terracotta-600 links on light canvas', '#a44b2d', light['--nm-canvas']!, AA],
