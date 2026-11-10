@@ -20,6 +20,29 @@ rules_version = '2';
 // user profiles (e.g. "successfulBorrows may only increase by 1") are
 // not verified here — the service layer computes them, and a future
 // Cloud Functions pass (Phase 8 hardening) can lock them down.
+//
+// Privacy split (Workstream C): the sensitive fields of a profile —
+// phone, email, blockedUserIds and the precise homeLocation — live in
+// a private subcollection doc, users/{uid}/private/data, readable only
+// by the owner (and admins, for moderation/support) and writable only
+// by the owner. Everything else on users/{uid} — name, city/area,
+// verification flags, stats, badges — stays public exactly as before:
+// the deal-stat fan-out branch below diffs only the public doc, and
+// subcollection writes never touch it. The subcollection shape was
+// chosen over a top-level privateProfiles/{uid} collection because
+// ownership is structural (the {uid} segment of the parent match binds
+// every rule below) and all of a user's data stays under one root for
+// account-deletion and cleanup sweeps.
+//
+// Transition: until the migration (scripts/migrate-user-privacy.mjs)
+// has run AND the updated clients have rolled out, the SAME fields may
+// still be present on the public users/{uid} doc, and the public-doc
+// rules below deliberately keep allowing them — nothing here locks the
+// public doc down. Updated clients read the private doc first and fall
+// back to the legacy public fields when it is absent (or a field is
+// missing from it), then write private fields only to the private doc.
+// A later hardening pass — after migration + rollout are confirmed —
+// will strip the legacy fields' allowances from the public doc.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -59,6 +82,21 @@ service cloud.firestore {
 
     function isUser(uid) {
       return signedIn() && request.auth.uid == uid;
+    }
+
+    // Privacy split: shape check for users/{uid}/private/data. Loose on
+    // purpose (mirrors the profile rules' style — the service layer
+    // validates content): only the four private fields may exist, each
+    // with its expected type, and every field is optional so partial /
+    // merge writes pass. homeLocation, when present, needs numeric
+    // lat/lng.
+    function privateDataValid(data) {
+      return data.keys().hasOnly(['phone', 'email', 'blockedUserIds', 'homeLocation'])
+        && data.get('phone', '') is string
+        && data.get('email', '') is string
+        && data.get('blockedUserIds', []) is list
+        && data.get('homeLocation', {'lat': 0, 'lng': 0}).get('lat', 0) is number
+        && data.get('homeLocation', {'lat': 0, 'lng': 0}).get('lng', 0) is number;
     }
 
     // Phase 8 moderation: an account is an admin when its profile doc
@@ -196,6 +234,22 @@ service cloud.firestore {
       // Account deletion (Phase 8): owners may delete their own profile.
       // Admin user management (Phase 9): admins may also delete a profile.
       allow delete: if isUser(uid) || isAdmin();
+
+      // --- Private profile data (privacy split) -------------------------
+      // users/{uid}/private/data holds phone, email, blockedUserIds and
+      // the precise homeLocation — nothing else (privateDataValid). The
+      // fixed doc id `data` means exactly one private doc per user; no
+      // other doc may exist under private/. Reads: the owner, or an
+      // admin (moderation/support). Writes: the owner ONLY — admins can
+      // read but never edit someone's private data, and anonymous /
+      // other signed-in users get nothing. Owners delete it with the
+      // delete rule here; admin-initiated account removal must sweep
+      // it via the Admin SDK (which bypasses rules).
+      match /private/data {
+        allow read: if isUser(uid) || isAdmin();
+        allow create, update: if isUser(uid) && privateDataValid(request.resource.data);
+        allow delete: if isUser(uid);
+      }
     }
 
     // --- Listings ----------------------------------------------------------

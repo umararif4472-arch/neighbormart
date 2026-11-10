@@ -8,7 +8,9 @@
  *
  * Verifies the rules that matter most: public reads, owner-only listing
  * edits, valid status transitions, no self-booking, participant-only
- * request/message access, and one-review-per-deal.
+ * request/message access, one-review-per-deal, and the privacy split
+ * (users/{uid}/private/data is owner read/write, admin read-only, and
+ * invisible to everyone else).
  */
 import { readFileSync } from 'node:fs'
 import {
@@ -55,11 +57,21 @@ await setDoc(doc(admin, 'requests/r1'), {
   ownerId: 'u-maya',
   status: 'pending',
 })
+// Privacy split fixtures: an admin profile (isAdmin() reads the
+// caller's own users doc for role == 'admin') and Maya's private doc.
+await setDoc(doc(admin, 'users/u-admin'), { name: 'Admin', role: 'admin' })
+await setDoc(doc(admin, 'users/u-maya/private/data'), {
+  phone: '+92 300 0000000',
+  email: 'maya@example.com',
+  blockedUserIds: ['u-leo'],
+  homeLocation: { lat: 31.4624, lng: 74.442 },
+})
 
 const anon = testEnv.unauthenticatedContext().firestore()
 const mayaDb = testEnv.authenticatedContext('u-maya').firestore()
 const tomDb = testEnv.authenticatedContext('u-tom').firestore()
 const leoDb = testEnv.authenticatedContext('u-leo').firestore()
+const adminDb = testEnv.authenticatedContext('u-admin').firestore()
 
 console.log('listings')
 await check('guest can read a listing', getDoc(doc(anon, 'listings/l1')), true)
@@ -187,6 +199,38 @@ await check(
 await check(
   'another user cannot read that notification',
   getDoc(doc(tomDb, 'notifications/n1')),
+  false,
+)
+
+console.log('private profile data (privacy split)')
+const mayaPrivate = (db) => doc(db, 'users/u-maya/private/data')
+await check('anonymous cannot read a private doc', getDoc(mayaPrivate(anon)), false)
+await check('another signed-in user cannot read it', getDoc(mayaPrivate(tomDb)), false)
+await check('owner can read their own private doc', getDoc(mayaPrivate(mayaDb)), true)
+await check(
+  'owner can write their own private doc',
+  updateDoc(mayaPrivate(mayaDb), { phone: '+92 300 1111111' }),
+  true,
+)
+await check(
+  'another signed-in user cannot write it',
+  updateDoc(mayaPrivate(tomDb), { phone: '+92 300 9999999' }),
+  false,
+)
+await check('admin can read a private doc', getDoc(mayaPrivate(adminDb)), true)
+await check(
+  'admin cannot write a private doc (owner-only writes)',
+  updateDoc(mayaPrivate(adminDb), { phone: '+92 300 9999999' }),
+  false,
+)
+await check(
+  'owner cannot smuggle a non-private field into the private doc',
+  setDoc(mayaPrivate(mayaDb), { phone: '+92 300 1111111', role: 'admin' }),
+  false,
+)
+await check(
+  'no doc other than `data` may exist under private/',
+  getDoc(doc(mayaDb, 'users/u-maya/private/other')),
   false,
 )
 

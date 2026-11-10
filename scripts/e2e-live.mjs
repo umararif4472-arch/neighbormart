@@ -6,6 +6,10 @@
  * mirroring the live service layer (src/services/live/*) call-for-call:
  * rate-limit counter bumps before listing/message creates, the request
  * lifecycle batches, deterministic review ids, the safety report shape.
+ * Temp users are created in the privacy-split shape: public fields on
+ * users/{uid}, private fields (phone, email, blockedUserIds,
+ * homeLocation) on users/{uid}/private/data — and both docs (plus the
+ * block step, which now targets the private doc) are cleaned up.
  *
  * Everything created is cleaned up: client-side deletions where the
  * rules allow them (listings, notifications, profiles, Auth users),
@@ -159,7 +163,13 @@ async function createNotification(db, userId, type, title, body, refs = {}) {
   return ref.id
 }
 
-/** Mirror of services/live/auth.ts ensureUserProfile() profile body. */
+/**
+ * Mirror of services/live/auth.ts ensureUserProfile() profile body,
+ * in the privacy-split shape: the PUBLIC users/{uid} doc carries
+ * everything except the private fields, which live in
+ * users/{uid}/private/data (see privateBody). showPhone is only a
+ * visibility flag, so it stays public with the rest of the profile.
+ */
 function profileBody(fbUser, name) {
   return stripUndefined({
     name,
@@ -167,7 +177,6 @@ function profileBody(fbUser, name) {
     bio: '',
     city: '',
     neighborhood: '',
-    homeLocation: { lat: 31.5204, lng: 74.3587 },
     joinedAt: new Date().toISOString(),
     phoneVerified: false,
     emailVerified: fbUser.emailVerified,
@@ -183,11 +192,18 @@ function profileBody(fbUser, name) {
       lateReturns: 0,
     },
     badges: [],
-    phone: '',
     showPhone: false,
     onboardingCompleted: false,
     interests: [],
+  })
+}
+
+/** Private half of the split profile (users/{uid}/private/data). */
+function privateBody(fbUser) {
+  return stripUndefined({
+    phone: '',
     email: fbUser.email ?? '',
+    homeLocation: { lat: 31.5204, lng: 74.3587 },
   })
 }
 
@@ -270,6 +286,9 @@ async function signUp(auth, db, email, password, name) {
   const cred = await createUserWithEmailAndPassword(auth, email, password)
   await updateProfile(cred.user, { displayName: name })
   await setDoc(doc(db, 'users', cred.user.uid), profileBody(cred.user, name))
+  // Privacy split: private fields go to the private doc, never the
+  // public one (owner-only rules — this session IS the owner).
+  await setDoc(doc(db, 'users', cred.user.uid, 'private', 'data'), privateBody(cred.user))
   track.users.add(cred.user.uid)
   // Mirror onboarding completion (profile update by the owner).
   await updateDoc(doc(db, 'users', cred.user.uid), {
@@ -287,13 +306,34 @@ async function stepSignUps() {
   const snapA = await getDoc(doc(dbA, 'users', uidA))
   const snapB = await getDoc(doc(dbB, 'users', uidB))
   if (!snapA.exists() || !snapB.exists()) throw new Error('profile doc missing after sign-up')
-  pass(`uids ${uidA.slice(0, 8)}… / ${uidB.slice(0, 8)}…`)
+  // Privacy split assertions: no private field may sit on the public
+  // doc, and the private doc must carry them for the owner to read.
+  for (const [snap, db, uid, label] of [
+    [snapA, dbA, uidA, 'A'],
+    [snapB, dbB, uidB, 'B'],
+  ]) {
+    const pub = snap.data()
+    for (const field of ['phone', 'email', 'blockedUserIds', 'homeLocation']) {
+      if (field in pub)
+        throw new Error(`public profile ${label} still carries private field ${field}`)
+    }
+    const priv = await getDoc(doc(db, 'users', uid, 'private', 'data'))
+    if (!priv.exists()) throw new Error(`private doc missing for ${label}`)
+    if (typeof priv.data().email !== 'string' || !priv.data().homeLocation) {
+      throw new Error(`private doc for ${label} is missing email/homeLocation`)
+    }
+  }
+  pass(`uids ${uidA.slice(0, 8)}… / ${uidB.slice(0, 8)}… (split shape verified)`)
 }
 
 async function stepCreateListing() {
   begin("2. A creates a listing (quota bump, then setDoc; section 'items', rent, PKR)")
   const ownerSnap = await getDoc(doc(dbA, 'users', uidA))
   const owner = ownerSnap.data()
+  // Privacy split: the precise homeLocation now lives in the owner's
+  // private doc (A reads its own — the rules allow owner reads).
+  const ownerPrivateSnap = await getDoc(doc(dbA, 'users', uidA, 'private', 'data'))
+  const ownerPrivate = ownerPrivateSnap.data()
   const now = new Date().toISOString()
   const ref = doc(collection(dbA, 'listings'))
   listingId = ref.id
@@ -311,7 +351,7 @@ async function stepCreateListing() {
       priceUnit: 'day',
       negotiable: false,
       photos: [photoUrl],
-      location: { ...owner.homeLocation, city: owner.city, area: owner.neighborhood },
+      location: { ...ownerPrivate.homeLocation, city: owner.city, area: owner.neighborhood },
       status: 'active',
       createdAt: now,
       updatedAt: now,
@@ -525,14 +565,17 @@ async function stepReport() {
 }
 
 async function stepBlock() {
-  begin("11. B blocks A (own profile blockedUserIds), then unblocks")
-  await updateDoc(doc(dbB, 'users', uidB), { blockedUserIds: [uidA] })
-  let snap = await getDoc(doc(dbB, 'users', uidB))
+  begin("11. B blocks A (own private doc blockedUserIds), then unblocks")
+  // Privacy split: the block list lives in users/{uid}/private/data —
+  // B writes/reads its OWN private doc (owner-only rules).
+  const privRef = doc(dbB, 'users', uidB, 'private', 'data')
+  await updateDoc(privRef, { blockedUserIds: [uidA] })
+  let snap = await getDoc(privRef)
   if (!(snap.data().blockedUserIds ?? []).includes(uidA)) throw new Error('block did not persist')
-  await updateDoc(doc(dbB, 'users', uidB), { blockedUserIds: [] })
-  snap = await getDoc(doc(dbB, 'users', uidB))
+  await updateDoc(privRef, { blockedUserIds: [] })
+  snap = await getDoc(privRef)
   if ((snap.data().blockedUserIds ?? []).length !== 0) throw new Error('unblock did not persist')
-  pass('block + unblock verified')
+  pass('block + unblock verified (private doc)')
 }
 
 // -------------------------------------------------------------- cleanup
@@ -562,12 +605,19 @@ async function clientCleanup() {
       console.log(`  cleanup note: listing delete — ${errText(e)}`)
     }
   }
-  // Profile docs: owners may delete their own.
+  // Profile docs: owners may delete their own — the private doc too
+  // (privacy split: private delete is owner-only in the rules).
   for (const [db, auth, uid] of [
     [dbA, authA, uidA],
     [dbB, authB, uidB],
   ]) {
     if (!uid || !auth.currentUser) continue
+    try {
+      await deleteDoc(doc(db, 'users', uid, 'private', 'data'))
+      clientDeleted += 1
+    } catch (e) {
+      console.log(`  cleanup note: private doc delete — ${errText(e)}`)
+    }
     try {
       await deleteDoc(doc(db, 'users', uid))
       clientDeleted += 1
@@ -620,6 +670,13 @@ async function adminSweepAndVerify() {
       adminDeleted += await deleteQuery('notifications', 'userId', uid)
       adminDeleted += await deleteQuery('listings', 'ownerId', uid)
       adminDeleted += await deleteDocById('rateLimits', uid)
+      // Privacy split: the private doc is a subcollection doc — the
+      // users/{uid} delete above/below does NOT cascade to it.
+      const privRef = adb.doc(`users/${uid}/private/data`)
+      if ((await privRef.get()).exists) {
+        await privRef.delete()
+        adminDeleted += 1
+      }
       adminDeleted += await deleteDocById('users', uid)
     }
     adminDeleted += await deleteQuery('messages', 'requestId', requestId)
@@ -656,6 +713,8 @@ async function adminSweepAndVerify() {
       counts.notifications += await countQuery('notifications', 'userId', uid)
       counts.rateLimits = (counts.rateLimits ?? 0) + ((await adb.collection('rateLimits').doc(uid).get()).exists ? 1 : 0)
       counts.users = (counts.users ?? 0) + ((await adb.collection('users').doc(uid).get()).exists ? 1 : 0)
+      counts.privateDocs =
+        (counts.privateDocs ?? 0) + ((await adb.doc(`users/${uid}/private/data`).get()).exists ? 1 : 0)
     }
     counts.messages = await countQuery('messages', 'requestId', requestId)
     counts.reviews = await countQuery('reviews', 'requestId', requestId)

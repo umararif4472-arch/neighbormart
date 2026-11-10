@@ -12,6 +12,14 @@
  * Auth uids are pinned to the seed ids (u-maya, u-joan, …) so every
  * cross-reference in the dataset lines up with the profile docs.
  *
+ * Privacy split: each profile is written in two parts — the public
+ * fields to users/{id}, and the private fields (phone, email,
+ * blockedUserIds, homeLocation) to users/{id}/private/data, matching
+ * the shape scripts/migrate-user-privacy.mjs produces for real users.
+ * Demo sign-in only needs Auth + the public doc, so nothing else in
+ * the seed flow changes; the in-memory seed objects keep the full
+ * User shape (listings still read the owner's homeLocation from them).
+ *
  * Usage:
  *   1. Firebase Console → Project settings → Service accounts →
  *      "Generate new private key" — save the JSON somewhere private.
@@ -129,9 +137,16 @@ async function main(): Promise<void> {
       }
     }
     const { id: _id, ...profile } = user
-    // The profile spread carries the seeded phone + showPhone (Phase 5);
-    // email is the only extra field the app model doesn't hold.
-    await db.doc(`users/${user.id}`).set(stripUndefined({ ...profile, email }))
+    // Privacy split: phone, the precise homeLocation and any block list
+    // go to the private doc; the auth email (demoEmail) is private too
+    // and overrides the seed model's own email copy. showPhone (Phase 5)
+    // is only a visibility flag, so it stays on the public doc with the
+    // rest of the profile.
+    const { phone, homeLocation, blockedUserIds, email: _seedEmail, ...publicProfile } = profile
+    await db.doc(`users/${user.id}`).set(stripUndefined(publicProfile))
+    await db
+      .doc(`users/${user.id}/private/data`)
+      .set(stripUndefined({ phone, email, blockedUserIds, homeLocation }))
   }
 
   // 2) Listings.
