@@ -17,9 +17,41 @@ import '../safety/report_sheet.dart';
 /// Phase 5 generic listing detail for every section. Items forward to
 /// the original borrow flow; vehicles/properties get rent-period and
 /// offer sheets; arenas get the inline slot picker.
-class ListingDetailScreen extends StatelessWidget {
+///
+/// In live mode the listing may sit outside the loaded browse window
+/// (deep link / older page): opening this screen fetches that one
+/// listing, its owner's profile, and the owner's reviews on demand.
+/// Local/demo mode holds the whole seed catalog, so nothing loads.
+class ListingDetailScreen extends StatefulWidget {
   final String listingId;
   const ListingDetailScreen({super.key, required this.listingId});
+
+  @override
+  State<ListingDetailScreen> createState() => _ListingDetailScreenState();
+}
+
+class _ListingDetailScreenState extends State<ListingDetailScreen> {
+  bool _loadDone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    final state = context.read<AppState>();
+    await state.ensureListingLoaded(widget.listingId);
+    final listing = state.listingByIdOrNull(widget.listingId);
+    if (listing != null) {
+      await state.ensureUserLoaded(listing.ownerId);
+      // Trust on the owner card computes from their fetched reviews.
+      await state.ensureReviewsForUser(listing.ownerId);
+    }
+    if (mounted) setState(() => _loadDone = true);
+  }
+
+  String get listingId => widget.listingId;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +60,11 @@ class ListingDetailScreen extends StatelessWidget {
     if (listing == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Listing')),
-        body: const Center(child: Text('This listing is no longer available.')),
+        body: Center(
+          child: !_loadDone && state.liveMode
+              ? const CircularProgressIndicator()
+              : const Text('This listing is no longer available.'),
+        ),
       );
     }
     final owner = state.userByIdOrNull(listing.ownerId);

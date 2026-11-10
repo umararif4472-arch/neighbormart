@@ -21,6 +21,7 @@ import '../data/mock/seed_listings.dart';
 import '../data/models/firestore_maps.dart';
 import '../data/services/auth_service.dart';
 import '../data/services/live_sync.dart';
+import '../data/services/paged_window.dart';
 import '../data/services/safety_service.dart';
 
 /// Groups [items] by category for the sectioned Explore list. Sections
@@ -86,17 +87,45 @@ class AppState extends ChangeNotifier {
   //
   // In live mode the seed catalog is replaced by Firestore data:
   // [enableLiveMode] (called from main when Firebase initialized)
-  // clears every collection and starts the public listeners; signing
-  // in starts the per-user listeners. Mutations keep working on the
-  // local lists (instant UI) and mirror to Firestore through
-  // LiveSync — the snapshot echo then reconciles. Local/demo mode
-  // (tests, no google-services.json) never sets this flag and behaves
-  // exactly as before.
+  // clears every collection and loads the first PAGED browse window
+  // of listings (24 active listings per section, newest first — the
+  // canonical query in live_sync.dart); Explore/section views page
+  // further via [loadMoreListings]. There are NO whole-collection
+  // listeners: user profiles live in an on-demand cache
+  // ([ensureUserLoaded]), reviews are fetched per user / per listing
+  // ([ensureReviewsForUser] / [ensureReviewsForListing]), and only
+  // the signed-in user's own profile doc, their requests, their
+  // (capped) message threads and their latest 50 notifications keep
+  // live listeners. Mutations keep working on the local lists
+  // (instant UI) and mirror to Firestore through LiveSync.
+  // Local/demo mode (tests, no google-services.json) never sets this
+  // flag and behaves exactly as before: the full seed catalog, seed
+  // users and seed reviews are in memory and every paging/fetch
+  // method below is a no-op over them.
   bool liveMode = false;
   LiveSession? _publicLive;
   LiveSession? _userLive;
   AppUser? _adoptedUser;
   List<NotificationDoc> _remoteNotifications = [];
+
+  /// Per-section loaded browse windows (live mode only). [_listings]
+  /// is the union of these windows plus any locally created / locally
+  /// mutated listings; the windows provide dedup + has-more
+  /// bookkeeping for [loadMoreListings].
+  final Map<ListingSection, PagedWindow<Listing>> _listingWindows = {
+    for (final s in ListingSection.values)
+      s: PagedWindow<Listing>(pageSize: kListingPageSize, idOf: (l) => l.id),
+  };
+  final Set<ListingSection> _listingPagesInFlight = {};
+
+  /// In-flight profile fetches, so concurrent [ensureUserLoaded]
+  /// calls for the same id share one document read.
+  final Map<String, Future<AppUser?>> _userFetches = {};
+
+  /// Review sets already fetched in live mode: `user:<id>` /
+  /// `listing:<id>` keys, plus the in-flight futures by the same key.
+  final Set<String> _reviewSetsFetched = {};
+  final Map<String, Future<void>> _reviewFetches = {};
 
   void _mirror(Future<void> future) {
     future.catchError((_) {});
@@ -129,9 +158,13 @@ class AppState extends ChangeNotifier {
     if (firebaseReady) {
       final session = LiveSession();
       _publicLive = session;
-      session.listenListings(_applyRemoteListings);
-      session.listenUsers(_applyRemoteUsers);
-      session.listenReviews(_applyRemoteReviews);
+      // First page per section (signed-out browse works — listings
+      // are publicly readable). No listeners on listings/users/
+      // reviews: further pages load via [loadMoreListings], profiles
+      // and reviews on demand.
+      session.loadListingFirstPages(
+        (section, page) => applyListingPage(section, page),
+      );
     }
     notifyListeners();
   }
@@ -140,41 +173,172 @@ class AppState extends ChangeNotifier {
     _items = _listings.whereType<ItemListing>().map(itemFromListing).toList();
   }
 
-  /// Remote listings replace the catalog; a listing I created seconds
-  /// ago whose echo hasn't landed yet is kept so it never flickers.
-  void _applyRemoteListings(List<Listing> remote) {
+  /// Merge one fetched browse page for [section] into the catalog.
+  ///
+  /// Public because the live layer delivers pages through it — and
+  /// because tests drive it directly to verify paging behavior
+  /// without a backend. Rows are deduplicated by id across pages (an
+  /// already-loaded listing is refreshed in place, never duplicated);
+  /// locally created listings that no page has returned yet are kept.
+  /// The legacy item list is rebuilt from the loaded window only.
+  void applyListingPage(ListingSection section, List<Listing> page) {
     if (!liveMode) return;
-    final remoteIds = remote.map((l) => l.id).toSet();
-    final pending = _listings
-        .where(
-          (l) =>
-              !remoteIds.contains(l.id) &&
-              l.ownerId == _currentUserId &&
-              DateTime.now().difference(l.createdAt) <
-                  const Duration(seconds: 30),
-        )
-        .toList();
-    _listings = [...pending, ...remote];
+    _listingWindows[section]!.appendPage(page);
+    for (final listing in page) {
+      final idx = _listings.indexWhere((l) => l.id == listing.id);
+      if (idx >= 0) {
+        _listings[idx] = listing;
+      } else {
+        _listings.add(listing);
+      }
+    }
+    _listings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _rebuildItemsFromListings();
     notifyListeners();
-  }
-
-  void _applyRemoteUsers(List<AppUser> remote) {
-    if (!liveMode) return;
-    _users = List.of(remote);
-    final adopted = _adoptedUser;
-    if (adopted != null &&
-        isLoggedIn &&
-        _users.every((u) => u.id != adopted.id)) {
-      _users.add(adopted);
+    // Owner cards/counters read profiles from the cache — warm it
+    // for this page's owners (one document read per NEW owner).
+    for (final ownerId in page.map((l) => l.ownerId).toSet()) {
+      ensureUserLoaded(ownerId);
     }
-    notifyListeners();
   }
 
-  void _applyRemoteReviews(List<Review> remote) {
-    if (!liveMode) return;
-    _reviews = List.of(remote);
+  /// Whether another browse page likely exists for [section].
+  /// Always false in local/demo mode (the whole seed catalog is
+  /// already loaded, so paging is a no-op there).
+  bool hasMoreListingsFor(ListingSection section) =>
+      liveMode && _listingWindows[section]!.hasMore;
+
+  bool isLoadingListingsFor(ListingSection section) =>
+      _listingPagesInFlight.contains(section);
+
+  /// Load the next browse page for [section] (Explore / section
+  /// views call this on scroll-to-end). No-op in local mode, when
+  /// the section is exhausted, or while a page is in flight.
+  Future<void> loadMoreListings({required ListingSection section}) async {
+    if (!liveMode || !firebaseReady) return;
+    final session = _publicLive;
+    if (session == null || !hasMoreListingsFor(section)) return;
+    if (!_listingPagesInFlight.add(section)) return;
+    try {
+      await session.loadMoreListings(
+        section,
+        (s, page) => applyListingPage(s, page),
+      );
+    } finally {
+      _listingPagesInFlight.remove(section);
+    }
+  }
+
+  /// Load a single listing by id when it sits outside the loaded
+  /// browse window (deep link, request thread, own paused listing).
+  /// No-op when already loaded or in local mode.
+  Future<void> ensureListingLoaded(String listingId) async {
+    if (!liveMode || listingId.isEmpty) return;
+    if (listingByIdOrNull(listingId) != null) return;
+    final listing = await LiveSync.instance
+        .fetchListingById(listingId)
+        .catchError((_) => null);
+    if (listing == null || listingByIdOrNull(listingId) != null) return;
+    _listings.add(listing);
+    _rebuildItemsFromListings();
     notifyListeners();
+    ensureUserLoaded(listing.ownerId);
+  }
+
+  // ---------------- On-demand profiles (live mode) ----------------
+
+  /// Upsert [user] into the profile cache ([_users] in live mode is
+  /// a cache of profiles actually needed, NOT the whole users
+  /// collection). The signed-in user's own entry is never clobbered
+  /// by a stale fetch — the own-profile listener owns it.
+  void cacheUser(AppUser user) {
+    final idx = _users.indexWhere((u) => u.id == user.id);
+    if (idx >= 0) {
+      _users[idx] = user;
+    } else {
+      _users.add(user);
+    }
+  }
+
+  /// Make sure [userId]'s profile is in the cache, fetching its one
+  /// document in live mode when missing. Returns the profile (or null
+  /// when it does not exist). Screens call this for the profiles they
+  /// show — owner cards, chat counterparts, profile screens — and
+  /// rebuild from the placeholder/loading state when it lands.
+  /// In local mode every seed user is already present, so this just
+  /// reads the cache and never touches the network.
+  Future<AppUser?> ensureUserLoaded(String userId) async {
+    if (userId.isEmpty) return null;
+    final cached = userByIdOrNull(userId);
+    if (cached != null) return cached;
+    if (!liveMode) return null;
+    final inFlight = _userFetches[userId];
+    if (inFlight != null) return inFlight;
+    final future = LiveSync.instance
+        .fetchUserById(userId)
+        .catchError((_) => null)
+        .then((user) {
+          _userFetches.remove(userId);
+          if (user != null && liveMode) {
+            cacheUser(user);
+            notifyListeners();
+          }
+          return user;
+        });
+    _userFetches[userId] = future;
+    return future;
+  }
+
+  // ---------------- On-demand reviews (live mode) ----------------
+
+  /// Fetch (once) the reviews [userId] received, for profile/trust
+  /// screens. Local mode already holds every seed review.
+  Future<void> ensureReviewsForUser(String userId) =>
+      _ensureReviews('user:$userId', () async {
+        final fetched = await LiveSync.instance.fetchReviewsForUser(userId);
+        _mergeReviews(fetched);
+      });
+
+  /// Fetch (once) the reviews written about [listingId], for detail
+  /// screens. Local mode already holds every seed review.
+  Future<void> ensureReviewsForListing(String listingId) => _ensureReviews(
+    'listing:$listingId',
+    () async {
+      final fetched = await LiveSync.instance.fetchReviewsForListing(listingId);
+      _mergeReviews(fetched);
+    },
+  );
+
+  Future<void> _ensureReviews(String key, Future<void> Function() fetch) async {
+    if (!liveMode || key.endsWith(':')) return;
+    if (_reviewSetsFetched.contains(key)) return;
+    final inFlight = _reviewFetches[key];
+    if (inFlight != null) return inFlight;
+    final future =
+        () async {
+          await fetch();
+          // Only a completed fetch marks the set — including an
+          // empty result, so empty profiles don't refetch on every
+          // rebuild — while a failure stays retryable.
+          _reviewSetsFetched.add(key);
+        }().catchError((_) {}).whenComplete(() {
+          _reviewFetches.remove(key);
+        });
+    _reviewFetches[key] = future;
+    await future;
+  }
+
+  void _mergeReviews(List<Review> fetched) {
+    if (fetched.isEmpty) return;
+    final known = _reviews.map((r) => r.id).toSet();
+    final fresh = fetched.where((r) => !known.contains(r.id)).toList();
+    if (fresh.isEmpty) return;
+    _reviews = [...fresh, ..._reviews];
+    notifyListeners();
+    // Review rows display reviewer names — warm those profiles.
+    for (final reviewerId in fresh.map((r) => r.reviewerId).toSet()) {
+      ensureUserLoaded(reviewerId);
+    }
   }
 
   void _applyRemoteRequests(List<BorrowRequest> remote) {
@@ -191,6 +355,19 @@ class AppState extends ChangeNotifier {
         .toList();
     _requests = [...pending, ...remote];
     notifyListeners();
+    // Activity / Messages / chat resolve both parties by id — warm
+    // the profile cache for everyone these requests involve (listings
+    // referenced by requests outside the browse window are fetched
+    // too, so owner resolution works for them).
+    for (final r in remote) {
+      ensureUserLoaded(r.borrowerId);
+      final ownerId = ownerIdFor(r);
+      if (ownerId.isNotEmpty) {
+        ensureUserLoaded(ownerId);
+      } else {
+        ensureListingLoaded(r.itemId);
+      }
+    }
   }
 
   void _applyRemoteMessages(List<Message> remote) {
@@ -199,14 +376,55 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Whether [requestId]'s chat thread likely has messages older
+  /// than the loaded latest page (live mode only).
+  bool hasOlderMessages(String requestId) =>
+      liveMode && (_userLive?.threadHasOlder(requestId) ?? false);
+
+  /// Page the next older chunk of [requestId]'s thread into memory
+  /// (chat screen's "load older" affordance). No-op in local mode —
+  /// the whole seed thread is already loaded — and at the start of
+  /// the thread.
+  Future<void> loadOlderMessages(String requestId) async {
+    if (!liveMode) return;
+    await _userLive?.loadOlderMessages(requestId);
+  }
+
   void _applyRemoteNotifications(List<NotificationDoc> remote) {
     if (!liveMode) return;
     _remoteNotifications = List.of(remote);
     notifyListeners();
   }
 
-  void _applyOwnProfile(Map<String, dynamic> data) {
+  void _applyOwnProfile(String uid, Map<String, dynamic> data) {
     if (!liveMode) return;
+    // The signed-in user's OWN doc keeps its live listener: keep the
+    // cached copy of their profile in step with it (this is the only
+    // profile that is ever mirrored live).
+    if (data.isNotEmpty) {
+      final fresh = FirebaseAuthService.instance.userFromDocData(uid, data);
+      final existing = userByIdOrNull(uid);
+      if (existing == null) {
+        cacheUser(_adoptedUser ?? fresh);
+        notifyListeners();
+      } else if (existing.name != fresh.name ||
+          existing.bio != fresh.bio ||
+          existing.neighborhood != fresh.neighborhood ||
+          existing.city != fresh.city ||
+          existing.phoneVerified != fresh.phoneVerified ||
+          existing.emailVerified != fresh.emailVerified ||
+          existing.stats.completedDeals != fresh.stats.completedDeals) {
+        // Keep any device-local block list when the doc predates it.
+        cacheUser(
+          fresh.copyWith(
+            blockedUserIds: fresh.blockedUserIds.isNotEmpty
+                ? fresh.blockedUserIds
+                : existing.blockedUserIds,
+          ),
+        );
+        notifyListeners();
+      }
+    }
     final favs = (data['favoriteItemIds'] as List<dynamic>? ?? const [])
         .map((e) => e.toString())
         .toSet();
@@ -229,7 +447,7 @@ class AppState extends ChangeNotifier {
       onRequests: _applyRemoteRequests,
       onMessages: _applyRemoteMessages,
       onNotifications: _applyRemoteNotifications,
-      onOwnProfile: _applyOwnProfile,
+      onOwnProfile: (data) => _applyOwnProfile(uid, data),
     );
   }
 

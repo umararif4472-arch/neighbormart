@@ -17,9 +17,34 @@ import '../profile/user_profile_screen.dart';
 import '../safety/report_sheet.dart';
 import 'photo_gallery_screen.dart';
 
-class ItemDetailScreen extends StatelessWidget {
+class ItemDetailScreen extends StatefulWidget {
   final String itemId;
   const ItemDetailScreen({super.key, required this.itemId});
+
+  @override
+  State<ItemDetailScreen> createState() => _ItemDetailScreenState();
+}
+
+class _ItemDetailScreenState extends State<ItemDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  /// Live mode: the item may sit outside the loaded browse window —
+  /// fetch that one listing, its owner's profile, and this listing's
+  /// reviews on demand. Local/demo mode already holds them all.
+  Future<void> _load() async {
+    final state = context.read<AppState>();
+    await state.ensureListingLoaded(widget.itemId);
+    final item = state.itemByIdOrNull(widget.itemId);
+    if (item == null) return;
+    await state.ensureUserLoaded(item.ownerId);
+    await state.ensureReviewsForListing(item.id);
+  }
+
+  String get itemId => widget.itemId;
 
   Future<void> _share(BuildContext context, Item item) async {
     final text =

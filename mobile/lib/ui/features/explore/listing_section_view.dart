@@ -194,7 +194,11 @@ class ListingCard extends StatelessWidget {
 /// The Explore body for a non-items section: visible listings filtered
 /// by the search query and the Explore [filter] (types, distance,
 /// max price, availability), ordered per the filter's sort.
-class SectionListingList extends StatelessWidget {
+///
+/// Listings arrive in bounded pages (24 per section): scrolling to
+/// the end asks AppState for the next page — in local/demo mode the
+/// whole seed catalog is already loaded and that call is a no-op.
+class SectionListingList extends StatefulWidget {
   final AppState state;
   final ListingSection section;
   final String query;
@@ -208,6 +212,40 @@ class SectionListingList extends StatelessWidget {
     required this.filter,
     this.onClearFilters,
   });
+
+  @override
+  State<SectionListingList> createState() => _SectionListingListState();
+}
+
+class _SectionListingListState extends State<SectionListingList> {
+  final _scrollCtrl = ScrollController();
+
+  AppState get state => widget.state;
+  ListingSection get section => widget.section;
+  String get query => widget.query;
+  ExploreFilter get filter => widget.filter;
+  VoidCallback? get onClearFilters => widget.onClearFilters;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    final pos = _scrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - 400) {
+      // Fire and forget — AppState dedups in-flight/exhausted calls.
+      state.loadMoreListings(section: section);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -275,16 +313,43 @@ class SectionListingList extends StatelessWidget {
                   child: const Text('Clear filters'),
                 ),
               ],
+              // Filters/search apply to the LOADED window — when more
+              // pages exist, offer to widen the window before giving up.
+              if (state.hasMoreListingsFor(section)) ...[
+                const SizedBox(height: 14),
+                OutlinedButton(
+                  onPressed: () => state.loadMoreListings(section: section),
+                  child: const Text('Load more listings'),
+                ),
+              ],
             ],
           ),
         ),
       );
     }
+    final hasMore = state.hasMoreListingsFor(section);
     return ListView.builder(
+      controller: _scrollCtrl,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, kBottomListPadding),
-      itemCount: results.length,
-      itemBuilder: (context, i) =>
-          ListingCard(listing: results[i], state: state),
+      itemCount: results.length + (hasMore ? 1 : 0),
+      itemBuilder: (context, i) {
+        if (i == results.length) {
+          // Footer: auto-loads on scroll (see _onScroll); the button
+          // is the accessible fallback for the same next page.
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: state.isLoadingListingsFor(section)
+                  ? const CircularProgressIndicator()
+                  : OutlinedButton(
+                      onPressed: () => state.loadMoreListings(section: section),
+                      child: const Text('Load more listings'),
+                    ),
+            ),
+          );
+        }
+        return ListingCard(listing: results[i], state: state);
+      },
     );
   }
 }

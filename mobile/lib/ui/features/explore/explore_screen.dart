@@ -77,6 +77,18 @@ class _ExploreScreenState extends State<ExploreScreen>
   void initState() {
     super.initState();
     widget.sectionController?.addListener(_onControllerSectionChanged);
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  /// Items browse is paged like every section (24 active listings per
+  /// page in live mode): near the end of the list, ask for the next
+  /// page. No-op in local/demo mode, where the seed catalog is whole.
+  void _onScroll() {
+    if (!_scrollCtrl.hasClients) return;
+    final pos = _scrollCtrl.position;
+    if (pos.pixels >= pos.maxScrollExtent - 400) {
+      context.read<AppState>().loadMoreListings(section: ListingSection.items);
+    }
   }
 
   @override
@@ -454,6 +466,32 @@ class _ExploreScreenState extends State<ExploreScreen>
                                           child: _ItemCard(item: item),
                                         ),
                                     ],
+                                    if (state.hasMoreListingsFor(
+                                      ListingSection.items,
+                                    ))
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4,
+                                          bottom: 8,
+                                        ),
+                                        child: Center(
+                                          child:
+                                              state.isLoadingListingsFor(
+                                                ListingSection.items,
+                                              )
+                                              ? const CircularProgressIndicator()
+                                              : OutlinedButton(
+                                                  onPressed: () =>
+                                                      state.loadMoreListings(
+                                                        section: ListingSection
+                                                            .items,
+                                                      ),
+                                                  child: const Text(
+                                                    'Load more listings',
+                                                  ),
+                                                ),
+                                        ),
+                                      ),
                                   ],
                                 ),
                               );

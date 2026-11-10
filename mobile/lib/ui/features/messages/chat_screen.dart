@@ -47,6 +47,34 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scroll = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCounterpart());
+  }
+
+  /// Profiles are fetched on demand in live mode — warm the cache
+  /// for this thread's other party so the header shows the real
+  /// neighbor instead of the placeholder. (Request threads also warm
+  /// both parties when the requests land; this covers direct entry.)
+  Future<void> _loadCounterpart() async {
+    final state = context.read<AppState>();
+    if (widget.otherUserId != null) {
+      await state.ensureUserLoaded(widget.otherUserId!);
+      return;
+    }
+    if (widget.requestId != null) {
+      final req = state.requests
+          .where((r) => r.id == widget.requestId)
+          .firstOrNull;
+      if (req == null) return;
+      final otherId = req.borrowerId == state.currentUser.id
+          ? state.ownerIdFor(req)
+          : req.borrowerId;
+      if (otherId.isNotEmpty) await state.ensureUserLoaded(otherId);
+    }
+  }
+
+  @override
   void dispose() {
     _ctrl.dispose();
     _scroll.dispose();
@@ -153,14 +181,40 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: Text(emptyText, textAlign: TextAlign.center),
                     ),
                   )
-                : ListView.builder(
-                    controller: _scroll,
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                    itemCount: msgs.length,
-                    itemBuilder: (context, i) => _Bubble(
-                      message: msgs[i],
-                      mine: msgs[i].senderId == me.id,
-                    ),
+                : Builder(
+                    builder: (context) {
+                      // Request threads page backwards in live mode:
+                      // only the latest 100 messages are resident
+                      // until the user asks for older ones.
+                      final canLoadOlder =
+                          _isRequestThread &&
+                          state.hasOlderMessages(widget.requestId!);
+                      return ListView.builder(
+                        controller: _scroll,
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                        itemCount: msgs.length + (canLoadOlder ? 1 : 0),
+                        itemBuilder: (context, i) {
+                          if (canLoadOlder && i == 0) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Center(
+                                child: OutlinedButton(
+                                  onPressed: () => state.loadOlderMessages(
+                                    widget.requestId!,
+                                  ),
+                                  child: const Text('Load older messages'),
+                                ),
+                              ),
+                            );
+                          }
+                          final msg = msgs[i - (canLoadOlder ? 1 : 0)];
+                          return _Bubble(
+                            message: msg,
+                            mine: msg.senderId == me.id,
+                          );
+                        },
+                      );
+                    },
                   ),
           ),
           if (state.liveMode && widget.requestId == null)

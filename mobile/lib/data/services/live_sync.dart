@@ -33,6 +33,46 @@ const Duration kListingRateWindow = Duration(hours: 24);
 const int kMessageRateLimit = 30;
 const Duration kMessageRateWindow = Duration(minutes: 1);
 
+// ---------------------------------------------------------------------------
+// Bounded reads — the canonical browse contract shared with the web
+// client. Listings are fetched ONE PAGE at a time (never a
+// whole-collection listener): status == 'active', optionally
+// section / listingType / location.city, newest first. Notifications
+// and per-thread messages are likewise capped.
+
+const int kListingPageSize = 24;
+const int kNotificationLimit = 50;
+const int kMessageThreadPageSize = 100;
+
+/// The canonical browse query for one page of listings. [section],
+/// [listingType] and [city] are the optional facets; [startAfter] is
+/// the previous page's last document snapshot.
+Query<Map<String, dynamic>> browseListingsQuery(
+  FirebaseFirestore db, {
+  ListingSection? section,
+  ListingType? listingType,
+  String? city,
+  DocumentSnapshot<Map<String, dynamic>>? startAfter,
+}) {
+  Query<Map<String, dynamic>> query = db
+      .collection('listings')
+      .where('status', isEqualTo: ListingStatus.active.name);
+  if (section != null) {
+    query = query.where('section', isEqualTo: section.name);
+  }
+  if (listingType != null) {
+    query = query.where('listingType', isEqualTo: listingType.name);
+  }
+  if (city != null) {
+    query = query.where('location.city', isEqualTo: city);
+  }
+  query = query.orderBy('createdAt', descending: true).limit(kListingPageSize);
+  if (startAfter != null) {
+    query = query.startAfterDocument(startAfter);
+  }
+  return query;
+}
+
 class RateWindowDecision {
   final bool allowed;
   final DateTime windowStart;
@@ -341,6 +381,55 @@ class LiveSync {
     if (!active) return;
     await _db.collection('users').doc(uid).update(fields);
   }
+
+  // --- Bounded one-shot reads (no whole-collection mirroring) --------------
+  //
+  // Profiles, reviews and single listings are fetched ON DEMAND and
+  // cached by AppState — the users/reviews collections are never
+  // listened to or downloaded wholesale.
+
+  /// One user profile by id, or null when it does not exist.
+  Future<AppUser?> fetchUserById(String uid) async {
+    if (!active || uid.isEmpty) return null;
+    final snap = await _db.collection('users').doc(uid).get();
+    if (!snap.exists || snap.data() == null) return null;
+    return FirebaseAuthService.instance.userFromDocData(uid, snap.data()!);
+  }
+
+  /// One listing by id (detail screens deep-linked past the loaded
+  /// browse window), or null when it does not exist.
+  Future<Listing?> fetchListingById(String id) async {
+    if (!active || id.isEmpty) return null;
+    final snap = await _db.collection('listings').doc(id).get();
+    if (!snap.exists || snap.data() == null) return null;
+    return ListingFirestoreMap.fromMap(snap.id, snap.data()!);
+  }
+
+  /// Reviews for one reviewee, newest first (profile / trust screens).
+  Future<List<Review>> fetchReviewsForUser(String userId) async {
+    if (!active || userId.isEmpty) return const [];
+    final snap = await _db
+        .collection('reviews')
+        .where('revieweeId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .get();
+    return snap.docs
+        .map((d) => ReviewFirestoreMap.fromMap(d.id, d.data()))
+        .toList();
+  }
+
+  /// Reviews for one listing, newest first (detail screens).
+  Future<List<Review>> fetchReviewsForListing(String listingId) async {
+    if (!active || listingId.isEmpty) return const [];
+    final snap = await _db
+        .collection('reviews')
+        .where('listingId', isEqualTo: listingId)
+        .orderBy('createdAt', descending: true)
+        .get();
+    return snap.docs
+        .map((d) => ReviewFirestoreMap.fromMap(d.id, d.data()))
+        .toList();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -348,9 +437,9 @@ class LiveSync {
 
 /// Owns a set of Firestore listeners and fans merged snapshots out to
 /// AppState. Two instances exist in live mode: one for the public
-/// catalog (listings / users / reviews, readable signed-out) and one
-/// per signed-in user (their requests, messages, notifications,
-/// favorites), cancelled on sign-out.
+/// catalog (PAGED listing reads — no listeners on listings, users or
+/// reviews at all) and one per signed-in user (their requests,
+/// messages, notifications, favorites), cancelled on sign-out.
 class LiveSession {
   final List<StreamSubscription<dynamic>> _subs = [];
   bool _cancelled = false;
@@ -373,58 +462,140 @@ class LiveSession {
 
   FirebaseFirestore get _db => FirebaseFirestore.instance;
 
-  void listenListings(void Function(List<Listing>) onData) {
-    _add(
-      _db
-          .collection('listings')
+  // --- Paged listing browse -------------------------------------------------
+  //
+  // One cursor per section: the last document snapshot of the page
+  // most recently fetched for it. A short page (< [kListingPageSize])
+  // marks the section exhausted; [loadMoreListings] is then a no-op.
+
+  final Map<ListingSection, DocumentSnapshot<Map<String, dynamic>>?>
+  _listingCursors = {};
+  final Set<ListingSection> _listingExhausted = {};
+  final Set<ListingSection> _listingInFlight = {};
+
+  bool hasMoreListings(ListingSection section) =>
+      !_listingExhausted.contains(section);
+
+  /// Fetch the first page (24, newest first, active only) for EVERY
+  /// section, so signed-out browse works for the whole catalog.
+  /// [onPage] fires once per section as its page lands.
+  Future<void> loadListingFirstPages(
+    void Function(ListingSection section, List<Listing> page) onPage,
+  ) async {
+    await Future.wait([
+      for (final section in ListingSection.values)
+        _fetchListingPage(section, onPage, firstPage: true),
+    ]);
+  }
+
+  /// Fetch the next page for [section] and deliver it through
+  /// [onPage]. A no-op once the section is exhausted or while a page
+  /// for it is already in flight.
+  Future<void> loadMoreListings(
+    ListingSection section,
+    void Function(ListingSection section, List<Listing> page) onPage,
+  ) => _fetchListingPage(section, onPage, firstPage: false);
+
+  Future<void> _fetchListingPage(
+    ListingSection section,
+    void Function(ListingSection section, List<Listing> page) onPage, {
+    required bool firstPage,
+  }) async {
+    if (_cancelled || !firebaseReady) return;
+    if (!firstPage && _listingExhausted.contains(section)) return;
+    if (!_listingInFlight.add(section)) return;
+    try {
+      final snap = await browseListingsQuery(
+        _db,
+        section: section,
+        startAfter: firstPage ? null : _listingCursors[section],
+      ).get();
+      if (_cancelled) return;
+      if (snap.docs.isNotEmpty) {
+        _listingCursors[section] = snap.docs.last;
+      }
+      if (snap.docs.length < kListingPageSize) {
+        _listingExhausted.add(section);
+      }
+      onPage(
+        section,
+        snap.docs
+            .map((d) => ListingFirestoreMap.fromMap(d.id, d.data()))
+            .toList(),
+      );
+    } catch (_) {
+      // A failed page leaves the cursor untouched — the next
+      // loadMore retries the same page.
+    } finally {
+      _listingInFlight.remove(section);
+    }
+  }
+
+  // --- Per-thread messages: latest page + load-older ------------------------
+  //
+  // Thread state lives on the session (not in the listenUserActivity
+  // closure) so [loadOlderMessages] can page backwards later. Each
+  // thread listens to its LATEST [kMessageThreadPageSize] messages
+  // (newest-first query, reversed for display); older pages are
+  // one-shot gets merged in front.
+
+  final Map<String, List<Message>> _threadMessages = {};
+  final Map<String, DocumentSnapshot<Map<String, dynamic>>?> _threadOldestDoc =
+      {};
+  final Set<String> _threadHasOlder = {};
+  void Function(List<Message>)? _emitMessages;
+
+  /// True when [requestId]'s thread returned a full latest page, so
+  /// an older page likely exists.
+  bool threadHasOlder(String requestId) => _threadHasOlder.contains(requestId);
+
+  void _emitAllMessages() {
+    final emit = _emitMessages;
+    if (emit == null || _cancelled) return;
+    final all = _threadMessages.values.expand((l) => l).toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    emit(all);
+  }
+
+  /// Fetch the next OLDER page (up to [kMessageThreadPageSize]) for a
+  /// thread and merge it in. Returns true when a page was fetched;
+  /// false at the start of the thread (or while signed out).
+  Future<bool> loadOlderMessages(String requestId) async {
+    if (_cancelled || !firebaseReady) return false;
+    if (!_threadHasOlder.contains(requestId)) return false;
+    final cursor = _threadOldestDoc[requestId];
+    if (cursor == null) return false;
+    try {
+      final snap = await _db
+          .collection('messages')
+          .where('requestId', isEqualTo: requestId)
           .orderBy('createdAt', descending: true)
-          .snapshots()
-          .listen(
-            (snap) => onData(
-              snap.docs
-                  .map((d) => ListingFirestoreMap.fromMap(d.id, d.data()))
-                  .toList(),
-            ),
-            onError: (_) {},
-          ),
-    );
-  }
-
-  void listenUsers(void Function(List<AppUser>) onData) {
-    _add(
-      _db
-          .collection('users')
-          .snapshots()
-          .listen(
-            (snap) => onData(
-              snap.docs
-                  .map(
-                    (d) => FirebaseAuthService.instance.userFromDocData(
-                      d.id,
-                      d.data(),
-                    ),
-                  )
-                  .toList(),
-            ),
-            onError: (_) {},
-          ),
-    );
-  }
-
-  void listenReviews(void Function(List<Review>) onData) {
-    _add(
-      _db
-          .collection('reviews')
-          .snapshots()
-          .listen(
-            (snap) => onData(
-              snap.docs
-                  .map((d) => ReviewFirestoreMap.fromMap(d.id, d.data()))
-                  .toList(),
-            ),
-            onError: (_) {},
-          ),
-    );
+          .limit(kMessageThreadPageSize)
+          .startAfterDocument(cursor)
+          .get();
+      if (_cancelled) return false;
+      if (snap.docs.isNotEmpty) {
+        _threadOldestDoc[requestId] = snap.docs.last;
+        final older = snap.docs
+            .map((d) => MessageFirestoreMap.fromMap(d.id, d.data()))
+            .toList()
+            .reversed
+            .toList();
+        final existing = _threadMessages[requestId] ?? const <Message>[];
+        final known = existing.map((m) => m.id).toSet();
+        _threadMessages[requestId] = [
+          ...older.where((m) => !known.contains(m.id)),
+          ...existing,
+        ];
+      }
+      if (snap.docs.length < kMessageThreadPageSize) {
+        _threadHasOlder.remove(requestId);
+      }
+      _emitAllMessages();
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Requests where the user is borrower OR owner (two queries merged
@@ -438,8 +609,8 @@ class LiveSession {
   }) {
     final byBorrower = <String, BorrowRequest>{};
     final byOwner = <String, BorrowRequest>{};
-    final threadMessages = <String, List<Message>>{};
     final threadSubs = <String, StreamSubscription<dynamic>>{};
+    _emitMessages = onMessages;
 
     void emitRequests() {
       final merged = <String, BorrowRequest>{
@@ -448,21 +619,46 @@ class LiveSession {
       }.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       onRequests(merged);
       // Keep one message listener per known request (bounded: the
-      // 60 most recent threads — far beyond real usage).
+      // 60 most recent threads — far beyond real usage). Each thread
+      // listener is capped at the latest [kMessageThreadPageSize]
+      // messages; older history pages in via [loadOlderMessages].
       final ids = merged.take(60).map((r) => r.id).toSet();
       for (final id in ids) {
         if (threadSubs.containsKey(id)) continue;
         final sub = _db
             .collection('messages')
             .where('requestId', isEqualTo: id)
+            .orderBy('createdAt', descending: true)
+            .limit(kMessageThreadPageSize)
             .snapshots()
             .listen((snap) {
-              threadMessages[id] = snap.docs
+              if (snap.docs.isNotEmpty) {
+                _threadOldestDoc[id] = snap.docs.last;
+              }
+              if (snap.docs.length >= kMessageThreadPageSize) {
+                _threadHasOlder.add(id);
+              }
+              // The listener owns the LATEST page; any older pages
+              // already merged in front of it stay in front. The two
+              // sets are disjoint by construction (older pages start
+              // strictly after the latest page's oldest document);
+              // dedup by id guards the boundary anyway.
+              final latest = snap.docs
                   .map((d) => MessageFirestoreMap.fromMap(d.id, d.data()))
+                  .toList()
+                  .reversed
                   .toList();
-              final all = threadMessages.values.expand((l) => l).toList()
-                ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-              onMessages(all);
+              final latestIds = latest.map((m) => m.id).toSet();
+              final older = (_threadMessages[id] ?? const <Message>[])
+                  .where((m) => !latestIds.contains(m.id))
+                  .toList();
+              // Note: if the thread grows past one page, the oldest
+              // message of the previous latest page drops out of the
+              // listener window — it remains reachable again through
+              // loadOlderMessages, whose cursor tracks the live
+              // window's oldest document.
+              _threadMessages[id] = [...older, ...latest];
+              _emitAllMessages();
             }, onError: (_) {});
         threadSubs[id] = sub;
         _subs.add(sub);
@@ -470,7 +666,9 @@ class LiveSession {
       for (final id in threadSubs.keys.toList()) {
         if (!ids.contains(id)) {
           threadSubs.remove(id)?.cancel();
-          threadMessages.remove(id);
+          _threadMessages.remove(id);
+          _threadOldestDoc.remove(id);
+          _threadHasOlder.remove(id);
         }
       }
     }
@@ -517,6 +715,8 @@ class LiveSession {
       _db
           .collection('notifications')
           .where('userId', isEqualTo: uid)
+          .orderBy('createdAt', descending: true)
+          .limit(kNotificationLimit)
           .snapshots()
           .listen(
             (snap) => onNotifications(

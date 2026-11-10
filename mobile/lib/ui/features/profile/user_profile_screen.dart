@@ -23,15 +23,52 @@ import 'verification_screen.dart';
 
 /// Profile for any user. The Profile tab renders this for the current
 /// user, which adds the account-management entries at the bottom.
-class UserProfileScreen extends StatelessWidget {
+///
+/// Profiles are NOT mirrored wholesale in live mode: opening this
+/// screen fetches just this user's profile document and their
+/// reviews (one bounded query each) into AppState's caches, with a
+/// loading state until the profile lands. Local/demo mode already
+/// holds every seed user, so nothing loads and nothing changes.
+class UserProfileScreen extends StatefulWidget {
   final String userId;
   const UserProfileScreen({super.key, required this.userId});
+
+  @override
+  State<UserProfileScreen> createState() => _UserProfileScreenState();
+}
+
+class _UserProfileScreenState extends State<UserProfileScreen> {
+  bool _loadDone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    final state = context.read<AppState>();
+    await state.ensureUserLoaded(widget.userId);
+    await state.ensureReviewsForUser(widget.userId);
+    if (mounted) setState(() => _loadDone = true);
+  }
+
+  String get userId => widget.userId;
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final user = state.userByIdOrNull(userId);
     if (user == null) {
+      if (!_loadDone && state.liveMode) {
+        return Scaffold(
+          appBar: AppBar(
+            leading: const ShellMenuButton(),
+            title: const Text('Neighbor profile'),
+          ),
+          body: const Center(child: CircularProgressIndicator()),
+        );
+      }
       return const NotFoundScreen(
         message: 'That neighbor is not on the block anymore.',
       );
