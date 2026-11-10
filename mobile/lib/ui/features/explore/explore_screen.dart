@@ -427,6 +427,24 @@ class _ExploreScreenState extends State<ExploreScreen>
                             key: const ValueKey('list'),
                             builder: (context) {
                               final grouped = groupItemsByCategory(items);
+                              // Wave 2 (G): LAZY rows. Previously one
+                              // ListView(children:) built every category
+                              // group + card eagerly; now the groups are
+                              // flattened into cheap row descriptors and
+                              // ListView.builder materializes only the
+                              // rows near the viewport. Visuals, order,
+                              // padding and the load-more footer are
+                              // unchanged.
+                              final rows = <Object>[
+                                for (final entry in grouped.entries) ...[
+                                  entry,
+                                  ...entry.value,
+                                ],
+                                if (state.hasMoreListingsFor(
+                                  ListingSection.items,
+                                ))
+                                  const _LoadMoreRow(),
+                              ];
                               return RefreshIndicator(
                                 onRefresh: () async {
                                   await Future<void>.delayed(
@@ -439,7 +457,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     ),
                                   );
                                 },
-                                child: ListView(
+                                child: ListView.builder(
                                   controller: _scrollCtrl,
                                   physics:
                                       const AlwaysScrollableScrollPhysics(),
@@ -449,50 +467,50 @@ class _ExploreScreenState extends State<ExploreScreen>
                                     16,
                                     kBottomListPadding,
                                   ),
-                                  children: [
-                                    for (final entry in grouped.entries) ...[
-                                      _CategorySectionHeader(
-                                        category: entry.key,
-                                        count: entry.value.length,
-                                        isFirst:
-                                            entry.key == grouped.keys.first,
-                                        onTap: () => _selectCategory(entry.key),
-                                      ),
-                                      for (final item in entry.value)
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 12,
-                                          ),
-                                          child: _ItemCard(item: item),
-                                        ),
-                                    ],
-                                    if (state.hasMoreListingsFor(
-                                      ListingSection.items,
-                                    ))
-                                      Padding(
+                                  itemCount: rows.length,
+                                  itemBuilder: (context, index) {
+                                    final row = rows[index];
+                                    if (row is MapEntry<String, List<Item>>) {
+                                      return _CategorySectionHeader(
+                                        category: row.key,
+                                        count: row.value.length,
+                                        isFirst: row.key == grouped.keys.first,
+                                        onTap: () => _selectCategory(row.key),
+                                      );
+                                    }
+                                    if (row is Item) {
+                                      return Padding(
                                         padding: const EdgeInsets.only(
-                                          top: 4,
-                                          bottom: 8,
+                                          bottom: 12,
                                         ),
-                                        child: Center(
-                                          child:
-                                              state.isLoadingListingsFor(
-                                                ListingSection.items,
-                                              )
-                                              ? const CircularProgressIndicator()
-                                              : OutlinedButton(
-                                                  onPressed: () =>
-                                                      state.loadMoreListings(
-                                                        section: ListingSection
-                                                            .items,
-                                                      ),
-                                                  child: const Text(
-                                                    'Load more listings',
-                                                  ),
-                                                ),
-                                        ),
+                                        child: _ItemCard(item: row),
+                                      );
+                                    }
+                                    // _LoadMoreRow footer (unchanged UI).
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: 4,
+                                        bottom: 8,
                                       ),
-                                  ],
+                                      child: Center(
+                                        child:
+                                            state.isLoadingListingsFor(
+                                              ListingSection.items,
+                                            )
+                                            ? const CircularProgressIndicator()
+                                            : OutlinedButton(
+                                                onPressed: () =>
+                                                    state.loadMoreListings(
+                                                      section:
+                                                          ListingSection.items,
+                                                    ),
+                                                child: const Text(
+                                                  'Load more listings',
+                                                ),
+                                              ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               );
                             },
@@ -503,6 +521,12 @@ class _ExploreScreenState extends State<ExploreScreen>
       ),
     );
   }
+}
+
+/// Marker row for the Explore list's load-more footer, used by the
+/// flattened lazy row list in [ExploreScreen].
+class _LoadMoreRow {
+  const _LoadMoreRow();
 }
 
 /// Section header for one category group on Explore — the "separate

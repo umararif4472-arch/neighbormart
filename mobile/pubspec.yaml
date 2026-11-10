@@ -1,7 +1,7 @@
 name: neighbor_mart
 description: "NeighborMart - local marketplace to borrow, rent, buy and sell near you"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.13.7
@@ -20,6 +20,9 @@ dependencies:
   cloud_firestore: ^7.1.0
   google_sign_in: ^7.2.0
   flutter_svg: ^2.2.3
+  firebase_crashlytics: ^6.0.1
+  firebase_analytics: ^13.0.1
+  cached_network_image: ^4.0.6
 
 dev_dependencies:
   flutter_test:

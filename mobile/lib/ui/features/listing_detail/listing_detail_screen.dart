@@ -1,7 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/cloudinary_config.dart';
+import '../../../core/observability.dart';
 import '../../../core/theme/section_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/shared_widgets.dart';
@@ -103,16 +105,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: listing.photos.isNotEmpty
-                ? Image.network(
-                    detailImageUrl(listing.photos.first),
+                ? CachedNetworkImage(
+                    imageUrl: detailImageUrl(listing.photos.first),
                     height: 220,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    loadingBuilder: (context, child, progress) =>
-                        progress == null
-                        ? child
-                        : _emojiBanner(context, listing),
-                    errorBuilder: (_, _, _) => _emojiBanner(context, listing),
+                    placeholder: (context, _) => _emojiBanner(context, listing),
+                    errorWidget: (_, _, _) => _emojiBanner(context, listing),
                   )
                 : _emojiBanner(context, listing),
           ),
@@ -306,7 +305,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         content: Text(err ?? 'Request sent — the owner will respond soon.'),
       ),
     );
-    if (err == null) Navigator.of(context).pop();
+    if (err == null) {
+      logRequestCreated(section: listing.section.name);
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _showOfferSheet(
@@ -384,7 +386,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         content: Text(err ?? 'Offer sent — chat opens once it’s accepted.'),
       ),
     );
-    if (err == null) Navigator.of(context).pop();
+    if (err == null) {
+      logRequestCreated(section: listing.section.name);
+      Navigator.of(context).pop();
+    }
   }
 }
 
@@ -629,7 +634,10 @@ class _ArenaBookingState extends State<_ArenaBooking> {
                             ),
                           ),
                         );
-                        if (err == null) Navigator.of(context).pop();
+                        if (err == null) {
+                          logRequestCreated(section: listing.section.name);
+                          Navigator.of(context).pop();
+                        }
                       },
                 child: const Text('Request this slot'),
               ),

@@ -13,7 +13,11 @@ let installed = false
 
 function report(kind: string, error: unknown) {
   console.error(`[NeighborMart] ${kind}:`, error)
-  // TODO(Phase 8+): forward to Sentry here when a DSN is configured.
+  // Sentry is deliberately NOT wired (Wave 2, F): it needs a new paid
+  // account/DSN. Crash-free monitoring via Firebase Analytics is also
+  // out of scope for the web build — Analytics (services/analytics.ts)
+  // carries funnel events only, not error reporting — so uncaught
+  // errors stay console-only here by decision, not by omission.
   window.dispatchEvent(
     new CustomEvent<string>(GLOBAL_ERROR_EVENT, {
       detail: 'Something went wrong — please try again.',

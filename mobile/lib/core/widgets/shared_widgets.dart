@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -87,23 +88,24 @@ Widget itemPhotoImage(
   double? height,
 }) {
   if (isNetworkPhotoSource(source) || kIsWeb) {
-    return Image.network(
+    return CachedNetworkImage(
       // Phase 4: Cloudinary photos are served with the card transform
       // (smaller, auto-format); foreign URLs pass through unchanged.
-      cardImageUrl(source),
+      // Wave 2 (G): disk-cached so re-scrolling a list no longer
+      // re-downloads every photo; placeholder/error keep the exact
+      // category fallback Image.network showed while loading/failed.
+      imageUrl: cardImageUrl(source),
       fit: fit,
       width: width,
       height: height,
-      loadingBuilder: (context, child, progress) => progress == null
-          ? child
-          : _photoFallback(
-              context,
-              category,
-              iconSize: fallbackSize * 0.5,
-              width: width,
-              height: height,
-            ),
-      errorBuilder: (context, _, _) => _photoFallback(
+      placeholder: (context, _) => _photoFallback(
+        context,
+        category,
+        iconSize: fallbackSize * 0.5,
+        width: width,
+        height: height,
+      ),
+      errorWidget: (context, _, _) => _photoFallback(
         context,
         category,
         iconSize: fallbackSize * 0.5,

@@ -24,6 +24,10 @@ plugins {
     // Processes google-services.json into Android resources (default_web_client_id
     // etc.). Without it Google Sign-In has no client ID at runtime and fails.
     id("com.google.gms.google-services") version "4.4.3" apply false
+    // Crashlytics Gradle plugin (Wave 2, Workstream F): processes the
+    // Crashlytics mapping/symbol metadata for firebase_crashlytics.
+    // Version per the current Firebase Crashlytics Android docs.
+    id("com.google.firebase.crashlytics") version "3.0.8" apply false
 }
 
 include(":app")

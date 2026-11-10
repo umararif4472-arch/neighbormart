@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { authApi, isFirebaseConfigured, toErrorMessage } from '@/services'
+import { logSignIn } from '@/services/analytics'
 import type { User } from '@/types'
 import { needsOnboarding, onboardingSkippedThisSession } from '@/utils/onboarding'
 import { Button } from '@/components/ui/Button'
@@ -169,6 +170,7 @@ export function SignInPage() {
     setError(null)
     try {
       const user = await authApi.signInWithGoogle()
+      logSignIn('google')
       finish(user)
     } catch (err) {
       fail(err)
@@ -184,6 +186,7 @@ export function SignInPage() {
         mode === 'signup'
           ? await authApi.signUpWithEmail(name, email, password)
           : await authApi.signInWithEmail(email, password)
+      if (mode !== 'signup') logSignIn('email')
       finish(user)
     } catch (err) {
       fail(err)

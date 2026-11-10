@@ -1,4 +1,5 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app'
+import { getAnalytics, isSupported, type Analytics } from 'firebase/analytics'
 import { getAuth, type Auth } from 'firebase/auth'
 import { getFirestore, type Firestore } from 'firebase/firestore/lite'
 import { getStorage, type FirebaseStorage } from 'firebase/storage'
@@ -31,6 +32,8 @@ let app: FirebaseApp | null = null
 let auth: Auth | null = null
 let db: Firestore | null = null
 let storage: FirebaseStorage | null = null
+let analytics: Analytics | null = null
+let analyticsInit: Promise<Analytics | null> | null = null
 
 function requireApp(): FirebaseApp {
   if (!isFirebaseConfigured) {
@@ -56,4 +59,27 @@ export function getDb(): Firestore {
 export function getFirebaseStorage(): FirebaseStorage {
   storage ??= getStorage(requireApp())
   return storage
+}
+
+/**
+ * Analytics (Wave 2, Workstream F — free tier). Lazily initialized on
+ * first use and ONLY when a measurement id is configured AND the
+ * browser supports it (`isSupported()` is false in some privacy
+ * browsers / SSR-like contexts). Resolves to null in mock mode and
+ * everywhere Analytics cannot run, so callers simply no-op. Never
+ * throws.
+ */
+export function getFirebaseAnalytics(): Promise<Analytics | null> {
+  if (!isFirebaseConfigured || !firebaseConfig.measurementId) {
+    return Promise.resolve(null)
+  }
+  if (analytics) return Promise.resolve(analytics)
+  analyticsInit ??= isSupported()
+    .then((supported) => {
+      if (!supported) return null
+      analytics = getAnalytics(requireApp())
+      return analytics
+    })
+    .catch(() => null)
+  return analyticsInit
 }

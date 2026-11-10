@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/observability.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/item.dart';
@@ -299,6 +300,7 @@ class _ListItemScreenState extends State<ListItemScreen> {
         photos: _uploadedPhotoUrls,
       );
       ListItemDraft.clear();
+      logListingCreated(section: 'items');
       await showSuccessDialog(
         context,
         title: 'Listing published',

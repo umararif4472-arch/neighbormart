@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/observability.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/trust_score.dart';
@@ -340,6 +341,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       builder: (_) => _BorrowSheet(itemId: itemId),
     );
     if (sent == true && context.mounted) {
+      logRequestCreated(section: 'items');
       await showSuccessDialog(
         context,
         title: 'Request sent',

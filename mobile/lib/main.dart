@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'core/config.dart';
 import 'core/firebase/firebase_init.dart';
+import 'core/observability.dart';
 import 'core/theme/app_theme.dart';
 import 'data/services/auth_service.dart';
 import 'state/app_state.dart';
@@ -13,7 +14,11 @@ import 'ui/app_root.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final state = AppState();
+  // Wave 2 (G): the demo seed is deferred — a live cold start must not
+  // pay to build a catalog it only discards in enableLiveMode(). The
+  // bootstrap below builds it via loadLocalDemoData() when this build
+  // turns out to run on local data instead.
+  final state = AppState(seedDemoData: false);
 
   // The bootstrap runs UNDER the door intro (the native splash
   // covers the first frames): the intro's readiness signal is
@@ -33,6 +38,9 @@ Future<void> main() async {
     // Firebase Auth persists its own session, so a returning user is
     // re-adopted here with a fresh copy of their profile doc.
     if (await initFirebase()) {
+      // Wave 2 (F): Crashlytics handlers — only once Firebase is up,
+      // so mock/test builds keep the default error handling.
+      installCrashReporting();
       // Phase 10: a build carrying google-services.json runs on the
       // live backend — swap the seed catalog for Firestore data (an
       // empty database just means empty screens).
@@ -50,6 +58,11 @@ Future<void> main() async {
           // next sign-in.
         }
       }
+    } else {
+      // No Firebase config in this build: local/demo mode — build the
+      // deferred seed catalog now (applies any prefs stashed by
+      // restoreFromPrefs while the seed was deferred).
+      state.loadLocalDemoData();
     }
   }
 

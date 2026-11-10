@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/cloudinary_config.dart';
@@ -85,14 +86,13 @@ class ListingCard extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: listing.photos.isNotEmpty
-                    ? Image.network(
-                        cardImageUrl(listing.photos.first),
+                    ? CachedNetworkImage(
+                        imageUrl: cardImageUrl(listing.photos.first),
                         width: 72,
                         height: 72,
                         fit: BoxFit.cover,
-                        loadingBuilder: (context, child, progress) =>
-                            progress == null ? child : _emojiTile(context),
-                        errorBuilder: (_, _, _) => _emojiTile(context),
+                        placeholder: (context, _) => _emojiTile(context),
+                        errorWidget: (_, _, _) => _emojiTile(context),
                       )
                     : _emojiTile(context),
               ),

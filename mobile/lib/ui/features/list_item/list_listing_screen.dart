@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/cloudinary_config.dart';
+import '../../../core/observability.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../../data/models/listing.dart';
 import '../../../data/services/photo_upload_service.dart';
@@ -266,6 +267,7 @@ class _ListListingScreenState extends State<ListListingScreen> {
     }
 
     state.addListing(listing);
+    logListingCreated(section: widget.section.name);
     await showSuccessDialog(
       context,
       title: 'Listing published',

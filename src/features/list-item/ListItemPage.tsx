@@ -5,6 +5,7 @@ import { ITEM_CATEGORIES, LISTING_SECTIONS, PROPERTY_TYPES } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { useListItemDraft } from './useListItemDraft'
 import { listingsApi, toErrorMessage } from '@/services'
+import { logListingCreated } from '@/services/analytics'
 import { SECTION_META } from '@/utils/categoryMeta'
 import { formatMoney } from '@/utils/money'
 import { cn } from '@/utils/cn'
@@ -70,6 +71,7 @@ export function ListItemPage() {
     setPublishError(null)
     try {
       const listing = await listingsApi.createListing(built.input)
+      logListingCreated(listing.section)
       dispatch({ type: 'LISTINGS_UPSERTED', listings: [listing] })
       publishSucceeded()
       setPublished(listing)

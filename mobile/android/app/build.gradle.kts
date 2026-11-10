@@ -3,6 +3,8 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
+    // Must come after google-services (per Firebase Crashlytics docs).
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -47,6 +49,17 @@ android {
             // APK installs directly and keeps the registered SHA-1.
             // Add a real release keystore before any store release.
             signingConfig = signingConfigs.getByName("debug")
+            // Crashlytics (Wave 2, F): these builds are not obfuscated
+            // and CI has no reason to upload mapping/native symbols —
+            // the upload tasks require a network round-trip to
+            // Firebase and would fail (or stall) the build when they
+            // cannot complete. Crash REPORTING is unaffected: reports
+            // still upload from the device at runtime. Re-enable for a
+            // real store release built with --obfuscate.
+            extensions.configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+                mappingFileUploadEnabled = false
+                nativeSymbolUploadEnabled = false
+            }
         }
     }
 }

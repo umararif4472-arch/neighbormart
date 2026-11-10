@@ -11,6 +11,7 @@ import {
   type ReportIssueInput,
   type RequestMutationResult,
 } from '@/services'
+import { logRequestCreated } from '@/services/analytics'
 import { findById } from '@/utils/collections'
 import {
   effectiveStatus,
@@ -139,10 +140,17 @@ export function useMyRequests() {
   const sendRequest = useCallback(
     async (input: CreateRequestInput) => {
       const result = await requestsApi.createRequest(input)
+      // Analytics (Wave 2, F): wired HERE at the feature/hook level,
+      // not in services/live/requests.ts, so the event survives either
+      // backend and the live requests module stays untouched. Both
+      // backends return listing: null on create, so the section is
+      // resolved from the context catalog by the input's listingId.
+      const section = findById(state.listings, input.listingId)?.section
+      if (section) logRequestCreated(section)
       applyResult(result)
       return result.request
     },
-    [applyResult],
+    [applyResult, state.listings],
   )
 
   const respondToRequest = useCallback(

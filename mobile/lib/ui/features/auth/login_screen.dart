@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/config.dart';
 import '../../../core/firebase/firebase_init.dart';
+import '../../../core/observability.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/brand_mark.dart';
 import '../../../core/widgets/shared_widgets.dart';
@@ -98,6 +99,9 @@ class _LoginScreenState extends State<LoginScreen>
   /// Success path: back to the root gate (which swaps to onboarding
   /// or the app shell).
   void _leave() {
+    // Every caller of _leave() is a completed sign-in (Google, email,
+    // or a demo profile pick) — the one funnel point for sign_in.
+    logSignIn();
     if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
