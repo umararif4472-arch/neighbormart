@@ -1,6 +1,8 @@
 import type { AdminStats, AuditAction, AuditEntry, ListingStatus, User } from '@/types'
 import { ApiError } from './errors'
 import { clone, getStore, nextId, simulateLatency } from './store'
+import { invalidateListingsCache } from './listings'
+import { invalidateUsersCache } from './users'
 
 /**
  * Admin service (Phase 9) — MOCK implementation over the shared store.
@@ -140,6 +142,8 @@ export async function deleteUser(actorId: string, userId: string): Promise<void>
     (r) => r.borrowerId !== userId && !ownedListingIds.has(r.listingId),
   )
   store.users = store.users.filter((u) => u.id !== userId)
+  invalidateListingsCache()
+  invalidateUsersCache([userId])
   audit(store, actorId, 'user-deleted', 'user', userId, `${user.name} and their data deleted.`)
 }
 
@@ -155,6 +159,7 @@ export async function setListingStatusAdmin(
   if (!listing) throw new ApiError('not-found', 'That listing no longer exists.')
   listing.status = status
   listing.updatedAt = new Date().toISOString()
+  invalidateListingsCache()
   audit(store, actorId, 'listing-status', 'listing', listingId, `Status → ${status}.`)
 }
 
@@ -169,6 +174,7 @@ export async function setFeatured(
   const listing = store.listings.find((l) => l.id === listingId)
   if (!listing) throw new ApiError('not-found', 'That listing no longer exists.')
   listing.featured = featured
+  invalidateListingsCache()
   audit(
     store,
     actorId,

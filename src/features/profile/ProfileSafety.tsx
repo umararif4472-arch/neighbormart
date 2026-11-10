@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { User } from '@/types'
 import { useApp } from '@/context/AppContext'
+import { useUsersByIds } from '@/hooks/useUsersByIds'
 import { authApi, safetyApi, toErrorMessage, usersApi } from '@/services'
 import { findById } from '@/utils/collections'
 import { Button } from '@/components/ui/Button'
@@ -82,6 +83,8 @@ export function AccountSafetyCard({ user }: { user: User }) {
   const [confirmText, setConfirmText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Blocked profiles are fetched scoped (they're not in global state).
+  useUsersByIds(user.blockedUserIds ?? [])
   const blockedUsers = (user.blockedUserIds ?? [])
     .map((id) => findById(state.users, id))
     .filter((u): u is User => Boolean(u))

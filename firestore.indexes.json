@@ -4,6 +4,42 @@
     {
       "collectionGroup": "listings",
       "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ],
+      "queryScope": "COLLECTION"
+    },
+    {
+      "collectionGroup": "listings",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "section", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ],
+      "queryScope": "COLLECTION"
+    },
+    {
+      "collectionGroup": "listings",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "section", "order": "ASCENDING" },
+        { "fieldPath": "listingType", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ],
+      "queryScope": "COLLECTION"
+    },
+    {
+      "collectionGroup": "listings",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "location.city", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ],
+      "queryScope": "COLLECTION"
+    },
+    {
+      "collectionGroup": "listings",
+      "fields": [
         { "fieldPath": "section", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ],

@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   getDocs,
+  limit,
   orderBy,
   query,
   updateDoc,
@@ -19,11 +20,13 @@ import { COLLECTIONS, fromDocs, stripUndefined } from './firestoreData'
  * reviews) — the same role it plays in the mock layer.
  */
 
+/** Latest 50 notifications for one user (userId + createdAt index exists). */
 export async function getNotifications(userId: string): Promise<AppNotification[]> {
   const q = query(
     collection(getDb(), COLLECTIONS.notifications),
     where('userId', '==', userId),
     orderBy('createdAt', 'desc'),
+    limit(50),
   )
   const snap = await getDocs(q)
   return fromDocs<AppNotification>(snap.docs)

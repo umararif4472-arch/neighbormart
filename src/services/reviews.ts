@@ -25,15 +25,30 @@ export interface ReviewMutationResult {
   notifications: AppNotification[]
 }
 
+/**
+ * @deprecated Whole-collection read kept ONLY for the admin panel.
+ * Profiles/details/trust use the scoped fetches below — global review
+ * hydration was removed in Workstream A.
+ */
 export async function getReviews(): Promise<Review[]> {
   await simulateLatency()
   return clone(getStore().reviews)
 }
 
+/** Reviews ABOUT a user (revieweeId == userId), newest first. */
 export async function getReviewsForUser(userId: string): Promise<Review[]> {
   await simulateLatency(80, 250)
   const list = getStore()
     .reviews.filter((r) => r.revieweeId === userId)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+  return clone(list)
+}
+
+/** Reviews WRITTEN by a user (reviewerId == userId), newest first. */
+export async function getReviewsByUser(userId: string): Promise<Review[]> {
+  await simulateLatency(80, 250)
+  const list = getStore()
+    .reviews.filter((r) => r.reviewerId === userId)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
   return clone(list)
 }

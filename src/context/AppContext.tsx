@@ -26,6 +26,14 @@ import {
  * current user, users, listings, requests, reviews, notifications, and
  * per-request message threads. Trust scores are NEVER stored — they are
  * derived on demand from users + reviews via the pure calculator.
+ *
+ * Workstream A: state is populated with SCOPED reads only. Hydration
+ * loads the session user's own world (their requests, their listings,
+ * the listings/profiles those requests touch, reviews they gave or
+ * received, their latest 50 notifications). Browse/landing listings
+ * arrive paged through useListings; profiles/reviews for other screens
+ * arrive through useUsersByIds / useReviews — nothing downloads a whole
+ * collection on a hot path anymore.
  */
 
 // ---------------------------------------------------------------------------
@@ -62,6 +70,7 @@ type Action =
   | { type: 'REQUESTS_UPSERTED'; requests: BorrowRequest[] }
   | { type: 'USERS_UPSERTED'; users: User[] }
   | { type: 'REVIEWS_APPENDED'; reviews: Review[] }
+  | { type: 'REVIEWS_UPSERTED'; reviews: Review[] }
   | { type: 'NOTIFICATIONS_SET'; notifications: AppNotification[] }
   | { type: 'NOTIFICATIONS_APPENDED'; notifications: AppNotification[] }
   | { type: 'NOTIFICATION_READ'; id: string }
@@ -114,6 +123,8 @@ function appReducer(state: AppState, action: Action): AppState {
     }
     case 'REVIEWS_APPENDED':
       return { ...state, reviews: [...state.reviews, ...action.reviews] }
+    case 'REVIEWS_UPSERTED':
+      return { ...state, reviews: upsertById(state.reviews, action.reviews) }
     case 'NOTIFICATIONS_SET':
       return { ...state, notifications: action.notifications }
     case 'NOTIFICATIONS_APPENDED':
@@ -174,13 +185,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         const currentUser = await authApi.getSessionUser()
-        const [users, listings, requests, reviews, notifications] = await Promise.all([
-          usersApi.getUsers(),
-          listingsApi.getListings(),
-          requestsApi.getRequestsForUser(currentUser.id),
-          reviewsApi.getReviews(),
-          notificationsApi.getNotifications(currentUser.id),
-        ])
+
+        // Scoped hydration: only the signed-in user's own world.
+        const [requests, notifications, myListings, reviewsAbout, reviewsBy] =
+          await Promise.all([
+            requestsApi.getRequestsForUser(currentUser.id),
+            notificationsApi.getNotifications(currentUser.id),
+            listingsApi.getListingsByOwner(currentUser.id),
+            reviewsApi.getReviewsForUser(currentUser.id),
+            reviewsApi.getReviewsByUser(currentUser.id),
+          ])
+
+        // Listings the user's requests point at (dashboard cards,
+        // message-thread headers) — fetched by id, never by collection.
+        const ownListingIds = new Set(myListings.map((l) => l.id))
+        const requestListingIds = [
+          ...new Set(requests.map((r) => r.listingId).filter((id) => !ownListingIds.has(id))),
+        ]
+        const requestListings = (
+          await Promise.all(requestListingIds.map((id) => listingsApi.getListingById(id)))
+        ).filter((l): l is Listing => l != null)
+        const listings = [...myListings, ...requestListings]
+
+        // Profiles for exactly the people in this world: me, the
+        // borrowers on my requests, and the owners of those listings.
+        const userIds = [
+          currentUser.id,
+          ...requests.map((r) => r.borrowerId),
+          ...listings.map((l) => l.ownerId),
+        ]
+        const fetchedUsers = await usersApi.getUsersByIds(userIds)
+        const users = fetchedUsers.some((u) => u.id === currentUser.id)
+          ? fetchedUsers
+          : [currentUser, ...fetchedUsers]
+
+        // Every review on my own requests is either written by me or
+        // about me, so these two scoped sets cover dashboard review
+        // progress and my trust score completely.
+        const reviews = [...reviewsAbout, ...reviewsBy]
+
         if (alive) {
           dispatch({
             type: 'HYDRATE_SUCCESS',
@@ -188,33 +231,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
           })
         }
       } catch (error) {
-        // Live backend + no session = guest browsing: public data only,
-        // no account-bound requests/notifications. Posting, messaging,
-        // and the dashboard sit behind RequireAuth in this mode.
+        // Live backend + no session = guest browsing: NO account-bound
+        // data at all. Browse/landing fetch their paged listings on
+        // demand; posting, messaging, and the dashboard sit behind
+        // RequireAuth in this mode.
         if (isFirebaseConfigured && isApiError(error) && error.code === 'forbidden') {
-          try {
-            const [users, listings, reviews] = await Promise.all([
-              usersApi.getUsers(),
-              listingsApi.getListings(),
-              reviewsApi.getReviews(),
-            ])
-            if (alive) {
-              dispatch({
-                type: 'HYDRATE_SUCCESS',
-                payload: {
-                  currentUser: null,
-                  users,
-                  listings,
-                  requests: [],
-                  reviews,
-                  notifications: [],
-                },
-              })
-            }
-            return
-          } catch {
-            // Fall through to the error screen below.
+          if (alive) {
+            dispatch({
+              type: 'HYDRATE_SUCCESS',
+              payload: {
+                currentUser: null,
+                users: [],
+                listings: [],
+                requests: [],
+                reviews: [],
+                notifications: [],
+              },
+            })
           }
+          return
         }
         if (alive) {
           dispatch({ type: 'HYDRATE_ERROR', message: toErrorMessage(error) })

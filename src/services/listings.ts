@@ -23,7 +23,70 @@ import { validateCreateItemListingInput, validateCreateListingInput } from './li
 import { canTransitionListingStatus } from '@/utils/listingStatus'
 import type { ListingStatus } from '@/types'
 
-/** Optional server-side filtering — mirrors the pure client util exactly. */
+export type { BrowseListingsQuery, ListingsCursor, ListingsPage } from './pagination'
+export { LISTINGS_PAGE_SIZE } from './pagination'
+import {
+  compareListingsNewestFirst,
+  listingsPageCacheKey,
+  paginateSortedListings,
+  type BrowseListingsQuery,
+  type ListingsPage,
+} from './pagination'
+
+// ---------------------------------------------------------------------------
+// Per-session page cache (Workstream A). Browse/landing read through
+// getListingsPage ONLY; the cache makes remounts and the landing→browse
+// hop free, and every mutation in this module invalidates it explicitly.
+// ---------------------------------------------------------------------------
+const pageCache = new Map<string, ListingsPage>()
+
+export function invalidateListingsCache(): void {
+  pageCache.clear()
+}
+
+/**
+ * Paged browse fetch — the canonical query (see services/pagination.ts):
+ * status == 'active' [+ section] [+ listingType] [+ location.city],
+ * newest first, one page of LISTINGS_PAGE_SIZE. Price range, free-text
+ * search and distance are applied CLIENT-side over fetched pages (the
+ * browse hook does this) — Firestore cannot combine a price range with
+ * createdAt ordering, so no backend may promise them server-side.
+ */
+export async function getListingsPage(
+  pageQuery: BrowseListingsQuery = {},
+): Promise<ListingsPage> {
+  const key = listingsPageCacheKey(pageQuery)
+  const cached = pageCache.get(key)
+  if (cached) return clone(cached)
+  await simulateLatency()
+  const { section, listingType, city } = pageQuery
+  const matching = getStore().listings.filter(
+    (l) =>
+      l.status === 'active' &&
+      (section == null || section === 'all' || l.section === section) &&
+      (listingType == null || listingType === 'all' || l.listingType === listingType) &&
+      (!city || l.location.city === city),
+  )
+  const page = paginateSortedListings([...matching].sort(compareListingsNewestFirst), pageQuery)
+  pageCache.set(key, clone(page))
+  return clone(page)
+}
+
+/** All of one owner's listings, any status, newest first (dashboard/profile). */
+export async function getListingsByOwner(ownerId: string): Promise<Listing[]> {
+  await simulateLatency()
+  const mine = getStore().listings.filter((l) => l.ownerId === ownerId)
+  return clone([...mine].sort(compareListingsNewestFirst))
+}
+
+/**
+ * @deprecated Whole-collection read kept ONLY for the admin panel
+ * (moderation needs the full catalog incl. non-active listings).
+ * Browse, landing and hydration must use getListingsPage /
+ * getListingsByOwner — never this.
+ *
+ * Optional filtering mirrors the pure client util exactly.
+ */
 export async function getListings(
   filters?: Partial<ListingFilters>,
   origin?: LatLng | null,
@@ -94,6 +157,7 @@ export async function createItemListing(input: CreateItemListingInput): Promise<
   }
 
   getStore().listings.push(listing)
+  invalidateListingsCache()
   return clone(listing)
 }
 
@@ -154,6 +218,7 @@ export async function createListing(input: CreateListingInput): Promise<Listing>
 
   const listing = { ...base, section: input.section, details: input.details } as Listing
   getStore().listings.push(listing)
+  invalidateListingsCache()
   return clone(listing)
 }
 
@@ -196,6 +261,7 @@ export async function updateListingBasics(
     listing.negotiable = patch.negotiable
   }
   listing.updatedAt = new Date().toISOString()
+  invalidateListingsCache()
   return clone(listing)
 }
 
@@ -219,5 +285,6 @@ export async function updateListingStatus(
   }
   listing.status = status
   listing.updatedAt = new Date().toISOString()
+  invalidateListingsCache()
   return clone(listing)
 }

@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Report } from '@/types'
 import { useApp } from '@/context/AppContext'
-import { safetyApi, toErrorMessage } from '@/services'
+import { listingsApi, safetyApi, toErrorMessage } from '@/services'
 import { usePageMeta } from '@/hooks/usePageMeta'
+import { useUsersByIds } from '@/hooks/useUsersByIds'
 import { findById } from '@/utils/collections'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -17,7 +18,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
  */
 export function ModerationPage() {
   usePageMeta({ title: 'Moderation', description: 'Review reports from the community.' })
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
   const actor = state.currentUser
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,6 +41,33 @@ export function ModerationPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  // Scoped target resolution (Workstream A): reporters + reported
+  // users by id, and reported listings by id — no collection scans.
+  useUsersByIds([
+    ...reports.map((r) => r.reportedBy),
+    ...reports.filter((r) => r.kind === 'user').map((r) => r.targetId),
+    ...reports.map((r) => r.targetOwnerId ?? ''),
+  ])
+  useEffect(() => {
+    const listingIds = reports
+      .filter((r) => r.kind === 'listing')
+      .map((r) => r.targetId)
+      .filter((id) => !state.listings.some((l) => l.id === id))
+    if (listingIds.length === 0) return
+    let alive = true
+    void Promise.all(listingIds.map((id) => listingsApi.getListingById(id))).then((found) => {
+      if (!alive) return
+      const listings = found.filter((l) => l != null)
+      if (listings.length > 0) dispatch({ type: 'LISTINGS_UPSERTED', listings })
+    })
+    return () => {
+      alive = false
+    }
+    // state.listings intentionally excluded: fetched ids upsert once,
+    // and the filter above makes repeat runs no-ops in practice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reports, dispatch])
 
   async function act(report: Report, action: 'dismiss' | 'remove-listing') {
     if (!actor) return

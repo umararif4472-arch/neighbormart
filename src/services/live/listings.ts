@@ -5,9 +5,14 @@ import {
   getDoc,
   getDocs,
   increment,
+  limit,
   orderBy,
   query,
+  startAfter,
   updateDoc,
+  where,
+  type QueryConstraint,
+  type QueryDocumentSnapshot,
 } from 'firebase/firestore/lite'
 import type { ItemListing, LatLng, Listing, ListingFilters, ListingStatus, User } from '@/types'
 import { EMPTY_LISTING_FILTERS } from '@/types'
@@ -35,14 +40,107 @@ export type {
 } from '../listingValidation'
 export { validateCreateItemListingInput, validateCreateListingInput } from '../listingValidation'
 
+export type { BrowseListingsQuery, ListingsCursor, ListingsPage } from '../pagination'
+export { LISTINGS_PAGE_SIZE } from '../pagination'
+import {
+  cursorForListing,
+  listingsPageCacheKey,
+  type BrowseListingsQuery,
+  type ListingsPage,
+} from '../pagination'
+
 /**
- * Live listing service (Firestore). Reads fetch the collection ordered by
- * createdAt and apply the SAME pure `filterListings` the mock uses and
- * the browse UI uses, so filtering behavior cannot drift between
- * backends. firestore.indexes.json carries the composite indexes for
- * moving these filters server-side as the catalog grows.
+ * Live listing service (Firestore) — Workstream A paged reads.
+ *
+ * Browse reads run the CANONICAL QUERY (see services/pagination.ts,
+ * identical on Flutter): status == 'active' [+ section] [+ listingType]
+ * [+ location.city], orderBy(createdAt, desc), limit(24), startAfter
+ * cursor. firestore.indexes.json carries the four composite indexes
+ * that serve its filter combinations.
+ *
+ * Price range, free-text search and distance are NOT in the query —
+ * Firestore cannot combine a price range with createdAt ordering — the
+ * browse UI applies them client-side over the fetched pages.
  */
 
+// Per-session page cache + cursor snapshots. A page is read from
+// Firestore at most once per session; every mutation below invalidates
+// the cache explicitly, so a created/edited/paused listing can never
+// hide behind a stale page.
+const pageCache = new Map<string, ListingsPage>()
+const snapshotCache = new Map<string, QueryDocumentSnapshot>()
+
+export function invalidateListingsCache(): void {
+  pageCache.clear()
+  snapshotCache.clear()
+}
+
+function snapshotKey(cursor: { createdAt: string; id: string }): string {
+  return `${cursor.createdAt}|${cursor.id}`
+}
+
+export async function getListingsPage(
+  pageQuery: BrowseListingsQuery = {},
+): Promise<ListingsPage> {
+  const key = listingsPageCacheKey(pageQuery)
+  const cached = pageCache.get(key)
+  if (cached) return cached
+
+  const pageSize = pageQuery.pageSize ?? 24
+  const constraints: QueryConstraint[] = [where('status', '==', 'active')]
+  if (pageQuery.section && pageQuery.section !== 'all') {
+    constraints.push(where('section', '==', pageQuery.section))
+  }
+  if (pageQuery.listingType && pageQuery.listingType !== 'all') {
+    constraints.push(where('listingType', '==', pageQuery.listingType))
+  }
+  if (pageQuery.city) {
+    constraints.push(where('location.city', '==', pageQuery.city))
+  }
+  constraints.push(orderBy('createdAt', 'desc'))
+  if (pageQuery.cursor) {
+    // Prefer the exact document snapshot (correct under createdAt
+    // ties); fall back to the raw createdAt value if the snapshot was
+    // lost (e.g. a fresh session deep-linking to a later page).
+    const snap = snapshotCache.get(snapshotKey(pageQuery.cursor))
+    constraints.push(snap ? startAfter(snap) : startAfter(pageQuery.cursor.createdAt))
+  }
+  constraints.push(limit(pageSize))
+
+  const snap = await getDocs(query(collection(getDb(), COLLECTIONS.listings), ...constraints))
+  const items = fromDocs<Listing>(snap.docs)
+  const lastDoc = snap.docs[snap.docs.length - 1]
+  if (lastDoc) {
+    const last = items[items.length - 1]
+    snapshotCache.set(snapshotKey({ createdAt: last.createdAt, id: last.id }), lastDoc)
+  }
+  const hasMore = snap.docs.length === pageSize
+  const page: ListingsPage = {
+    items,
+    nextCursor: hasMore && items.length > 0 ? cursorForListing(items[items.length - 1]) : null,
+    hasMore,
+  }
+  pageCache.set(key, page)
+  return page
+}
+
+/** All of one owner's listings, any status, newest first (dashboard/profile). */
+export async function getListingsByOwner(ownerId: string): Promise<Listing[]> {
+  const q = query(
+    collection(getDb(), COLLECTIONS.listings),
+    where('ownerId', '==', ownerId),
+    orderBy('createdAt', 'desc'),
+  )
+  const snap = await getDocs(q)
+  return fromDocs<Listing>(snap.docs)
+}
+
+/**
+ * @deprecated Whole-collection read kept ONLY for the admin panel
+ * (moderation needs the full catalog incl. non-active listings).
+ * Browse, landing and hydration must use getListingsPage /
+ * getListingsByOwner — never this.
+ */
 export async function getListings(
   filters?: Partial<ListingFilters>,
   origin?: LatLng | null,
@@ -122,6 +220,7 @@ export async function createItemListing(input: CreateItemListingInput): Promise<
   const ref = doc(collection(getDb(), COLLECTIONS.listings))
   await bumpListingQuota(input.ownerId, ref.id)
   await setDoc(ref, stripUndefined(listing))
+  invalidateListingsCache()
   return { id: ref.id, ...listing }
 }
 
@@ -162,6 +261,7 @@ export async function createListing(input: CreateListingInput): Promise<Listing>
   const ref = doc(collection(getDb(), COLLECTIONS.listings))
   await bumpListingQuota(input.ownerId, ref.id)
   await setDoc(ref, stripUndefined(listing))
+  invalidateListingsCache()
   return { id: ref.id, ...listing } as Listing
 }
 
@@ -205,6 +305,7 @@ export async function updateListingBasics(
     updates.negotiable = patch.negotiable
   }
   await updateDoc(ref, updates)
+  invalidateListingsCache()
   return { ...listing, ...updates } as Listing
 }
 
@@ -225,5 +326,6 @@ export async function updateListingStatus(
   }
   const updatedAt = new Date().toISOString()
   await updateDoc(ref, { status, updatedAt })
+  invalidateListingsCache()
   return { ...listing, status, updatedAt }
 }

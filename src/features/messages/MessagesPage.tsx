@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { useMessages } from '@/hooks/useMessages'
+import { useUsersByIds } from '@/hooks/useUsersByIds'
 import { useNow } from '@/hooks/useNow'
 import { findById } from '@/utils/collections'
 import { formatDate, relativeTime } from '@/utils/dates'
@@ -25,6 +26,16 @@ import { cn } from '@/utils/cn'
 export function MessagesPage() {
   const { requestId } = useParams<{ requestId?: string }>()
   const { state } = useApp()
+
+  // Counterpart profiles for my threads (scoped, cached).
+  useUsersByIds(
+    state.requests.map((request) => {
+      const listing = findById(state.listings, request.listingId)
+      return request.borrowerId === state.currentUser?.id
+        ? (listing?.ownerId ?? '')
+        : request.borrowerId
+    }),
+  )
 
   if (requestId) {
     return <ThreadView requestId={requestId} />
@@ -107,6 +118,12 @@ function ThreadView({ requestId }: { requestId: string }) {
     request?.borrowerId === state.currentUser?.id ? listing?.ownerId : request?.borrowerId
   const counterpart = findById(state.users, counterpartId)
   const me = state.currentUser
+
+  // Sender + counterpart profiles for this thread (scoped, cached).
+  useUsersByIds([
+    ...(counterpartId ? [counterpartId] : []),
+    ...messages.map((m) => m.senderId),
+  ])
 
   // Keep the newest message in view as the thread loads or grows.
   useEffect(() => {

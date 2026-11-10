@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { usePageMeta } from '@/hooks/usePageMeta'
+import { useReviewsForListing, useReviewsForUser } from '@/hooks/useReviews'
+import { useUsersByIds } from '@/hooks/useUsersByIds'
 import { ReportModal } from '@/components/safety/ReportModal'
 import { useAsync } from '@/hooks/useAsync'
 import { listingsApi, requestsApi } from '@/services'
@@ -80,6 +82,16 @@ export function ListingDetailPage() {
             .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
         : [],
     [state.reviews, listing],
+  )
+
+  // Scoped loading (Workstream A): this listing's reviews, the owner's
+  // reviews (their trust card), and the profiles of owner + reviewers.
+  useReviewsForListing(id)
+  useReviewsForUser(listing?.ownerId)
+  useUsersByIds(
+    listing
+      ? [listing.ownerId, ...listingReviews.map((r) => r.reviewerId)]
+      : [],
   )
 
   // --- Loading -------------------------------------------------------------

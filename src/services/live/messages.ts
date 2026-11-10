@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   orderBy,
   query,
   where,
@@ -25,13 +26,18 @@ export interface SendMessageResult {
 }
 
 export async function getMessagesForRequest(requestId: string): Promise<Message[]> {
+  // Latest-100 window: query newest-first with a limit, then reverse
+  // client-side into chronological order. The existing
+  // (requestId, createdAt ASC) composite index serves desc scans too,
+  // so no new index is needed.
   const q = query(
     collection(getDb(), COLLECTIONS.messages),
     where('requestId', '==', requestId),
-    orderBy('createdAt', 'asc'),
+    orderBy('createdAt', 'desc'),
+    limit(100),
   )
   const snap = await getDocs(q)
-  return fromDocs<Message>(snap.docs)
+  return fromDocs<Message>(snap.docs).reverse()
 }
 
 export async function sendMessage(

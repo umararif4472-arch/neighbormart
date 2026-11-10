@@ -2,6 +2,8 @@ import type { Report, ReportReason, ReportTargetType } from '@/types'
 import { ApiError } from './errors'
 import { clone, getStore, nextId, simulateLatency } from './store'
 import { sanitizeMultiline } from '@/utils/sanitize'
+import { invalidateListingsCache } from './listings'
+import { invalidateUsersCache } from './users'
 
 /**
  * Safety service (Phase 8, mock backend): reports, moderation, and
@@ -108,6 +110,7 @@ export async function resolveReport(
     }
     const listing = store.listings.find((l) => l.id === report.targetId)
     if (listing) listing.status = 'removed'
+    invalidateListingsCache()
     report.status = 'actioned'
   } else {
     report.status = 'dismissed'
@@ -138,4 +141,6 @@ export async function deleteMyAccount(actorId: string): Promise<void> {
   store.notifications = store.notifications.filter((n) => n.userId !== actorId)
   store.reports = store.reports.filter((r) => r.reportedBy !== actorId)
   store.users = store.users.filter((u) => u.id !== actorId)
+  invalidateListingsCache()
+  invalidateUsersCache([actorId])
 }

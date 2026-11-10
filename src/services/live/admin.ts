@@ -17,6 +17,8 @@ import { ApiError } from '../errors'
 import { getDb } from '../firebase'
 import { COLLECTIONS, fromDoc, fromDocs } from './firestoreData'
 import { createNotification } from './notifications'
+import { invalidateListingsCache } from './listings'
+import { invalidateUsersCache } from './users'
 
 /**
  * Admin service (Phase 9) — LIVE Firestore implementation. Mirrors the
@@ -144,6 +146,8 @@ export async function deleteUser(actorId: string, userId: string): Promise<void>
   owned.docs.forEach((d) => batch.delete(d.ref))
   batch.delete(doc(getDb(), COLLECTIONS.users, userId))
   await batch.commit()
+  invalidateListingsCache()
+  invalidateUsersCache([userId])
   await audit(actorId, 'user-deleted', 'user', userId, `${user.name} and their listings deleted.`)
 }
 
@@ -157,6 +161,7 @@ export async function setListingStatusAdmin(
     status,
     updatedAt: new Date().toISOString(),
   })
+  invalidateListingsCache()
   await audit(actorId, 'listing-status', 'listing', listingId, `Status → ${status}.`)
 }
 
@@ -167,6 +172,7 @@ export async function setFeatured(
 ): Promise<void> {
   await requireAdmin(actorId)
   await updateDoc(doc(getDb(), COLLECTIONS.listings, listingId), { featured })
+  invalidateListingsCache()
   await audit(
     actorId,
     featured ? 'listing-featured' : 'listing-unfeatured',

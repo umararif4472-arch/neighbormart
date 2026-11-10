@@ -5,10 +5,10 @@ import { LISTING_SECTIONS } from '@/types'
 import { SECTION_META } from '@/utils/categoryMeta'
 import { useApp } from '@/context/AppContext'
 import { useListings } from '@/hooks/useListings'
+import { useUsersByIds } from '@/hooks/useUsersByIds'
 import { useFilteredListings, type SortMode } from '@/hooks/useFilteredListings'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useTrustTiers } from '@/hooks/useTrustTiers'
-import { findById } from '@/utils/collections'
 import { haversineKm } from '@/utils/distance'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/Button'
@@ -45,7 +45,6 @@ export function BrowsePage({ routeSection }: { routeSection?: ListingSection } =
     (LISTING_SECTIONS.includes(sectionParam as ListingSection)
       ? (sectionParam as ListingSection)
       : 'items')
-  const { listings, loading, error, reload } = useListings()
   const currentUser = state.currentUser
   const origin = currentUser?.homeLocation ?? null
 
@@ -56,6 +55,20 @@ export function BrowsePage({ routeSection }: { routeSection?: ListingSection } =
   }))
   const [sort, setSort] = useState<SortMode>('distance')
   const [view, setView] = useState<'list' | 'map'>('list')
+
+  // Paged fetch (Workstream A): section, deal type and city are the
+  // canonical query's server-side filters, so changing any of them
+  // starts a fresh first page. Everything else (search text, price,
+  // distance, categories, section specifics) filters client-side over
+  // the loaded pages — Firestore cannot combine a price range with
+  // createdAt ordering. Browse is active-only by design now: owners
+  // manage paused/rented listings from their dashboard, so the status
+  // select below only ever matches 'active'/'all' here.
+  const { listings, loading, loadingMore, error, reload, loadMore, hasMore } = useListings({
+    section,
+    listingType: filters.listingType,
+    city: filters.city || undefined,
+  })
 
   // Debounce the raw query — no re-filter on every keystroke.
   const debouncedQuery = useDebouncedValue(filters.query, 250)
@@ -95,34 +108,31 @@ export function BrowsePage({ routeSection }: { routeSection?: ListingSection } =
     () => excludeBlockedOwners(filteredVisible, currentUser?.blockedUserIds),
     [filteredVisible, currentUser?.blockedUserIds],
   )
-  const sectionCount = useMemo(
-    () => listings.filter((l) => l.section === section).length,
-    [listings, section],
-  )
-  const sectionListings = useMemo(
-    () => listings.filter((l) => l.section === section),
-    [listings, section],
-  )
+  // `listings` is already section-scoped (server-side) — these are the
+  // LOADED pages, not the whole catalog: counts grow with Load more.
+  const sectionCount = listings.length
+  const sectionListings = listings
   const cities = useMemo(
-    () => [...new Set(listings.map((l) => l.location.city))].sort(),
-    [listings],
-  )
-  const areas = useMemo(
     () =>
-      [
-        ...new Set(
-          listings
-            .filter((l) => !filters.city || l.location.city === filters.city)
-            .map((l) => l.location.area),
-        ),
-      ].sort(),
+      [...new Set([...listings.map((l) => l.location.city), ...(filters.city ? [filters.city] : [])])].sort(),
     [listings, filters.city],
   )
+  const areas = useMemo(
+    () => [...new Set(listings.map((l) => l.location.area))].sort(),
+    [listings],
+  )
 
-  // Precompute owner tiers in one batch for the whole grid.
-  const owners = useMemo(() => state.users, [state.users])
-  const ownerTiers = useTrustTiers(owners)
-  const usersById = (id: string) => findById(state.users, id)
+  // Owner profiles for exactly what's on screen (scoped, cached) —
+  // never the whole users collection.
+  const ownerIds = useMemo(
+    () => [...new Set(visible.map((l) => l.ownerId))],
+    [visible],
+  )
+  const { users: ownerUsers, usersById } = useUsersByIds(ownerIds)
+  // Precompute owner tiers in one batch for the whole grid. Tiers are
+  // computed from the reviews loaded into context so far (scoped
+  // fetches); the full review history loads on the profile itself.
+  const ownerTiers = useTrustTiers(ownerUsers)
 
   const patchFilters = (patch: Partial<BrowseFilterState>) =>
     setFilters((prev) => ({ ...prev, ...patch }))
@@ -288,6 +298,17 @@ export function BrowsePage({ routeSection }: { routeSection?: ListingSection } =
               </li>
             ))}
           </ul>
+          {hasMore && (
+            <div className="flex flex-col items-center gap-2 pt-2">
+              <Button variant="secondary" onClick={() => void loadMore()} loading={loadingMore}>
+                Load more listings
+              </Button>
+              <p className="text-xs text-bark-light">
+                Showing {visible.length} of {sectionCount} loaded — more are waiting behind the
+                door.
+              </p>
+            </div>
+          )}
         </>
       )}
     </div>

@@ -1,12 +1,52 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { execSync } from 'node:child_process'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
+
+/**
+ * Service-worker version stamping (Workstream A): public/sw.js ships
+ * with a `__SW_VERSION__` placeholder; after the build has copied it
+ * to dist/, replace the token with `neighbormart-<git short hash>`
+ * (timestamp fallback outside a git checkout). Every deploy therefore
+ * gets a fresh cache namespace automatically — the old manual
+ * "bump SW_VERSION" discipline is gone. The activate handler in sw.js
+ * still purges every cache that doesn't start with the new version.
+ */
+function swVersionStamp(): Plugin {
+  return {
+    name: 'sw-version-stamp',
+    apply: 'build',
+    closeBundle() {
+      let stamp: string
+      try {
+        stamp = execSync('git rev-parse --short HEAD', {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore'],
+        }).trim()
+      } catch {
+        stamp = ''
+      }
+      if (!stamp) stamp = `t${Date.now().toString(36)}`
+      const version = `neighbormart-${stamp}`
+      const swPath = join(process.cwd(), 'dist', 'sw.js')
+      const source = readFileSync(swPath, 'utf8')
+      if (!source.includes('__SW_VERSION__')) {
+        throw new Error(`sw-version-stamp: placeholder not found in ${swPath}`)
+      }
+      writeFileSync(swPath, source.replaceAll('__SW_VERSION__', version))
+      // eslint-disable-next-line no-console
+      console.log(`[sw-version-stamp] dist/sw.js stamped with ${version}`)
+    },
+  }
+}
 
 // Vite + Vitest share this config. The '@' alias mirrors tsconfig paths.
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), swVersionStamp()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

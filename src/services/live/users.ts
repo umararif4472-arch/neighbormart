@@ -1,4 +1,13 @@
-import { collection, doc, getDoc, getDocs, updateDoc } from 'firebase/firestore/lite'
+import {
+  collection,
+  doc,
+  documentId,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+} from 'firebase/firestore/lite'
 import type { User } from '@/types'
 import { ApiError } from '../errors'
 import { getDb } from '../firebase'
@@ -9,14 +18,60 @@ export type CompleteOnboardingInput = OnboardingDraft
 
 /** Live user service — public profile documents at users/{uid}. */
 
+// ---------------------------------------------------------------------------
+// Per-session user cache (Workstream A) — same contract as the mock
+// backend. Hot paths fetch ONLY the ids on screen via getUsersByIds
+// (documentId `in` queries chunked at Firestore's 30-value limit);
+// repeat renders never re-read a profile document.
+// ---------------------------------------------------------------------------
+const userCache = new Map<string, User>()
+
+export function primeUsersCache(users: readonly User[]): void {
+  for (const user of users) userCache.set(user.id, user)
+}
+
+export function invalidateUsersCache(ids?: readonly string[]): void {
+  if (!ids) {
+    userCache.clear()
+    return
+  }
+  for (const id of ids) userCache.delete(id)
+}
+
+/**
+ * @deprecated Whole-collection read kept ONLY for the admin panel.
+ * Everything else uses getUsersByIds / getUserById (cached, scoped).
+ */
 export async function getUsers(): Promise<User[]> {
   const snap = await getDocs(collection(getDb(), COLLECTIONS.users))
-  return fromDocs<User>(snap.docs)
+  const users = fromDocs<User>(snap.docs)
+  primeUsersCache(users)
+  return users
 }
 
 export async function getUserById(userId: string): Promise<User | null> {
+  const cached = userCache.get(userId)
+  if (cached) return cached
   const snap = await getDoc(doc(getDb(), COLLECTIONS.users, userId))
-  return fromDoc<User>(snap)
+  const user = fromDoc<User>(snap)
+  if (user) userCache.set(userId, user)
+  return user
+}
+
+/** Fetch exactly the users for `ids` (deduped, order preserved). */
+export async function getUsersByIds(ids: readonly string[]): Promise<User[]> {
+  const unique = [...new Set(ids.filter(Boolean))]
+  const missing = unique.filter((id) => !userCache.has(id))
+  for (let i = 0; i < missing.length; i += 30) {
+    const chunk = missing.slice(i, i + 30)
+    const snap = await getDocs(
+      query(collection(getDb(), COLLECTIONS.users), where(documentId(), 'in', chunk)),
+    )
+    for (const user of fromDocs<User>(snap.docs)) userCache.set(user.id, user)
+  }
+  return unique
+    .map((id) => userCache.get(id))
+    .filter((u): u is User => u != null)
 }
 
 /** Contact preferences (Phase 5) — owner-only, enforced here and by rules. */
@@ -37,6 +92,7 @@ export async function updateContactPrefs(
   const snap = await getDoc(ref)
   const user = fromDoc<User>(snap)
   if (!user) throw new ApiError('not-found', 'User not found.')
+  userCache.set(user.id, user)
   return user
 }
 
@@ -65,6 +121,7 @@ export async function completeOnboarding(
   const snap = await getDoc(ref)
   const user = fromDoc<User>(snap)
   if (!user) throw new ApiError('not-found', 'User not found.')
+  userCache.set(user.id, user)
   return user
 }
 
@@ -88,7 +145,9 @@ export async function setBlocked(
   if (blocked) current.add(targetId)
   else current.delete(targetId)
   await updateDoc(ref, { blockedUserIds: [...current] })
-  return { ...user, blockedUserIds: [...current] }
+  const updated = { ...user, blockedUserIds: [...current] }
+  userCache.set(user.id, updated)
+  return updated
 }
 
 /** Phase 9: suspended accounts cannot post, message or book (live). */

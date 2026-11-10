@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '@/context/AppContext'
 import { useListings } from '@/hooks/useListings'
+import { useUsersByIds } from '@/hooks/useUsersByIds'
 import { LISTING_SECTIONS } from '@/types'
 import { SECTION_META } from '@/utils/categoryMeta'
 import { useTrustTiers } from '@/hooks/useTrustTiers'
@@ -73,10 +74,11 @@ export function LandingPage() {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState('')
   const [openFaq, setOpenFaq] = useState<number | null>(0)
-  const { listings, loading } = useListings()
+  // First page only (Workstream A): the landing rows need the newest
+  // 24 active listings, not the whole catalog.
+  const { listings, loading, hasMore } = useListings()
   const currentUser = state.currentUser
   const origin = currentUser?.homeLocation ?? null
-  const ownerTiers = useTrustTiers(state.users)
 
   // "Fresh on the block" — the 3 newest listings across all sections;
   // nearest-first ordering is Browse's job, here we just show what's new.
@@ -88,6 +90,9 @@ export function LandingPage() {
       ).slice(0, 3),
     [listings, currentUser?.blockedUserIds],
   )
+  // Counts cover the loaded first page (a "at least this many" signal),
+  // not a whole-catalog census — counting everything would need the
+  // whole-collection read Workstream A removed.
   const sectionCounts = useMemo(() => {
     const counts = new Map<string, number>()
     for (const l of listings) counts.set(l.section, (counts.get(l.section) ?? 0) + 1)
@@ -110,6 +115,16 @@ export function LandingPage() {
     [listings, currentUser?.blockedUserIds],
   )
 
+  // Owner profiles + tiers for just the cards on screen (scoped).
+  const landingOwnerIds = useMemo(
+    () => [
+      ...new Set([...freshListings, ...featuredListings].map((l) => l.ownerId)),
+    ],
+    [freshListings, featuredListings],
+  )
+  const { users: landingOwners } = useUsersByIds(landingOwnerIds)
+  const ownerTiers = useTrustTiers(landingOwners)
+
   return (
     <div className="flex flex-col gap-16">
       {/* Hero */}
@@ -118,7 +133,8 @@ export function LandingPage() {
           <p className="inline-flex w-fit items-center gap-2 rounded-full border border-moss-300 dark:border-moss-800 bg-moss-50 dark:bg-moss-900/80 px-3 py-1 text-xs font-semibold text-moss-800 dark:text-moss-100">
             <span aria-hidden>📍</span>
             {currentUser ? `${currentUser.neighborhood} & nearby` : 'Your neighborhood'}
-            {listings.length > 0 && ` · ${listings.length} listings near you`}
+            {listings.length > 0 &&
+              ` · ${listings.length}${hasMore ? '+' : ''} listings near you`}
           </p>
           <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight text-bark sm:text-5xl">
             Why buy it when your{' '}

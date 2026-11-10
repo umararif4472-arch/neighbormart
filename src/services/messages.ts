@@ -17,9 +17,13 @@ export interface SendMessageResult {
 
 export async function getMessagesForRequest(requestId: string): Promise<Message[]> {
   await simulateLatency(80, 250)
+  // Latest-100 window, mirroring the live query (createdAt desc +
+  // limit(100), reversed client-side into chronological order).
   const thread = getStore()
     .messages.filter((m) => m.requestId === requestId)
-    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, 100)
+    .reverse()
   return clone(thread)
 }
 

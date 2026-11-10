@@ -7,15 +7,68 @@ export type CompleteOnboardingInput = OnboardingDraft
 
 /** User service. Mock now; each function maps 1:1 to a future HTTP route. */
 
+// ---------------------------------------------------------------------------
+// Per-session user cache (Workstream A). Hot paths never download the
+// whole users collection: they ask for the IDs actually on screen via
+// getUsersByIds, and repeat renders are served from this Map. Mutations
+// in this module refresh their own entry; invalidateUsersCache is the
+// explicit escape hatch (profile updates, admin actions).
+// ---------------------------------------------------------------------------
+const userCache = new Map<string, User>()
+
+export function primeUsersCache(users: readonly User[]): void {
+  for (const user of users) userCache.set(user.id, clone(user))
+}
+
+export function invalidateUsersCache(ids?: readonly string[]): void {
+  if (!ids) {
+    userCache.clear()
+    return
+  }
+  for (const id of ids) userCache.delete(id)
+}
+
+/**
+ * @deprecated Whole-collection read kept ONLY for the admin panel.
+ * Everything else uses getUsersByIds / getUserById (cached, scoped).
+ */
 export async function getUsers(): Promise<User[]> {
   await simulateLatency()
-  return clone(getStore().users)
+  const users = clone(getStore().users)
+  primeUsersCache(users)
+  return users
 }
 
 export async function getUserById(userId: string): Promise<User | null> {
+  const cached = userCache.get(userId)
+  if (cached) return clone(cached)
   await simulateLatency()
   const user = getStore().users.find((u) => u.id === userId)
-  return user ? clone(user) : null
+  if (!user) return null
+  userCache.set(userId, clone(user))
+  return clone(user)
+}
+
+/**
+ * Fetch exactly the users for `ids` (deduped, order preserved, missing
+ * ids omitted). Cached ids cost no fetch; the rest resolve in one pass
+ * over the store — the live backend chunks this into documentId `in`
+ * queries of ≤30.
+ */
+export async function getUsersByIds(ids: readonly string[]): Promise<User[]> {
+  const unique = [...new Set(ids.filter(Boolean))]
+  const missing = unique.filter((id) => !userCache.has(id))
+  if (missing.length > 0) {
+    await simulateLatency(60, 150)
+    for (const id of missing) {
+      const user = getStore().users.find((u) => u.id === id)
+      if (user) userCache.set(id, clone(user))
+    }
+  }
+  return unique
+    .map((id) => userCache.get(id))
+    .filter((u): u is User => u != null)
+    .map((u) => clone(u))
 }
 
 /**
@@ -40,6 +93,7 @@ export async function updateContactPrefs(
   }
   user.phone = phone
   user.showPhone = prefs.showPhone
+  userCache.set(user.id, clone(user))
   return clone(user)
 }
 
@@ -69,6 +123,7 @@ export async function completeOnboarding(
   user.neighborhood = input.neighborhood.trim()
   user.interests = [...input.interests]
   user.onboardingCompleted = true
+  userCache.set(user.id, clone(user))
   return clone(user)
 }
 
@@ -95,5 +150,6 @@ export async function setBlocked(
   if (blocked) current.add(targetId)
   else current.delete(targetId)
   user.blockedUserIds = [...current]
+  userCache.set(user.id, clone(user))
   return clone(user)
 }

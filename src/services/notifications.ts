@@ -7,11 +7,13 @@ import { clone, nextId, getStore, simulateLatency } from './store'
  * would fan these out the same way.
  */
 
+/** Latest 50 notifications for one user (scoped query — see live twin). */
 export async function getNotifications(userId: string): Promise<AppNotification[]> {
   await simulateLatency()
   const list = getStore()
     .notifications.filter((n) => n.userId === userId)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, 50)
   return clone(list)
 }
 

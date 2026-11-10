@@ -1,10 +1,12 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import type { User } from '@/types'
+import type { Listing, User } from '@/types'
 import { useApp } from '@/context/AppContext'
 import { useTrustScore } from '@/hooks/useTrustScore'
 import { useTrustTiers } from '@/hooks/useTrustTiers'
-import { usersApi, toErrorMessage } from '@/services'
+import { useReviewsForUser } from '@/hooks/useReviews'
+import { useUsersByIds } from '@/hooks/useUsersByIds'
+import { listingsApi, usersApi, toErrorMessage } from '@/services'
 import { findById } from '@/utils/collections'
 import { formatMonthYear } from '@/utils/dates'
 import { haversineKm } from '@/utils/distance'
@@ -115,16 +117,42 @@ function ContactPrefsCard({ user }: { user: User }) {
 
 export function ProfilePage() {
   const { id } = useParams<{ id: string }>()
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
+
+  // Scoped loading (Workstream A): this profile, its reviews (about +
+  // by), and its listings are fetched for THIS user only.
+  const { loading: userLoading } = useUsersByIds(id ? [id] : [])
+  useReviewsForUser(id)
+  const [fetchedListings, setFetchedListings] = useState<Listing[] | null>(null)
+  useEffect(() => {
+    if (!id) return
+    let alive = true
+    listingsApi
+      .getListingsByOwner(id)
+      .then((listings) => {
+        if (!alive) return
+        setFetchedListings(listings)
+        if (listings.length > 0) dispatch({ type: 'LISTINGS_UPSERTED', listings })
+      })
+      .catch(() => {
+        if (alive) setFetchedListings([])
+      })
+    return () => {
+      alive = false
+    }
+  }, [id, dispatch])
+
   const user = findById(state.users, id)
   const { score } = useTrustScore(user?.id)
   const origin = state.currentUser?.homeLocation ?? null
 
   const userListings = useMemo(
-    () => state.listings.filter((listing) => listing.ownerId === user?.id),
-    [state.listings, user],
+    () =>
+      fetchedListings ??
+      state.listings.filter((listing) => listing.ownerId === user?.id),
+    [fetchedListings, state.listings, user],
   )
-  const ownerTiers = useTrustTiers(state.users)
+  const ownerTiers = useTrustTiers(user ? [user] : [])
   const reviewsAboutUser = useMemo(
     () =>
       user
@@ -144,9 +172,22 @@ export function ProfilePage() {
         : [],
     [state.reviews, user],
   )
+  // Profiles for the people named in those reviews (reviewers/reviewees).
+  useUsersByIds([
+    ...reviewsAboutUser.map((r) => r.reviewerId),
+    ...reviewsByUser.map((r) => r.revieweeId),
+  ])
   const totalReturns = user ? user.stats.onTimeReturns + user.stats.lateReturns : 0
   const returnRate =
     user && totalReturns > 0 ? Math.round((user.stats.onTimeReturns / totalReturns) * 100) : null
+
+  if (!user && userLoading) {
+    return (
+      <p role="status" className="py-10 text-center text-sm text-bark-light">
+        Loading this neighbor's profile…
+      </p>
+    )
+  }
 
   if (!user) {
     return (

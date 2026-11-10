@@ -36,12 +36,30 @@ export interface ReviewMutationResult {
   notifications: AppNotification[]
 }
 
+/**
+ * @deprecated Whole-collection read kept ONLY for the admin panel.
+ * Profiles/details/trust use the scoped fetches below — global review
+ * hydration was removed in Workstream A.
+ */
 export async function getReviews(): Promise<Review[]> {
   const q = query(collection(getDb(), COLLECTIONS.reviews), orderBy('createdAt', 'desc'))
   const snap = await getDocs(q)
   return fromDocs<Review>(snap.docs)
 }
 
+/** Reviews WRITTEN by a user (reviewerId == userId), newest first. */
+export async function getReviewsByUser(userId: string): Promise<Review[]> {
+  // Single-field equality only (no composite index exists for
+  // reviewerId + createdAt, and Workstream A adds none) — the sort
+  // runs client-side over this one user's reviews.
+  const q = query(collection(getDb(), COLLECTIONS.reviews), where('reviewerId', '==', userId))
+  const snap = await getDocs(q)
+  return fromDocs<Review>(snap.docs).sort(
+    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+  )
+}
+
+/** Reviews ABOUT a user (revieweeId == userId), newest first. */
 export async function getReviewsForUser(userId: string): Promise<Review[]> {
   const q = query(
     collection(getDb(), COLLECTIONS.reviews),

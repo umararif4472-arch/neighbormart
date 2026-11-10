@@ -6,9 +6,11 @@
  * - Same-origin static assets (hashed JS/CSS, icons): cache-first.
  * - Cross-origin (Firebase, Cloudinary): network only — live data is
  *   never served stale from here.
- * Bump SW_VERSION to invalidate old caches on deploy.
+ * SW_VERSION is stamped at build time by the sw-version-stamp plugin
+ * in vite.config.ts (git short hash, timestamp fallback) — the token
+ * below is a placeholder, never edit it by hand.
  */
-const SW_VERSION = 'neighbormart-v3'
+const SW_VERSION = '__SW_VERSION__'
 const SHELL_CACHE = `${SW_VERSION}-shell`
 const SHELL_URLS = ['/', '/offline.html', '/manifest.webmanifest', '/icon-192.png', '/favicon.svg']
 

@@ -64,6 +64,8 @@ export const adminApi: typeof mockAdmin = isFirebaseConfigured
   : mockAdmin
 
 export { ApiError, isApiError, toErrorMessage } from './errors'
+export type { BrowseListingsQuery, ListingsCursor, ListingsPage } from './pagination'
+export { LISTINGS_PAGE_SIZE } from './pagination'
 export type { CreateRequestInput, ReportIssueInput, RequestMutationResult } from './requests'
 export type { CreateReviewInput, ReviewMutationResult } from './reviews'
 export type { SendMessageResult } from './messages'
