@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   query,
   where,
   writeBatch,
@@ -25,9 +26,10 @@ import {
 } from '@/utils/requestLifecycle'
 import { validateBorrowPeriod } from '@/utils/validation'
 import { ApiError } from '../errors'
-import { getDb } from '../firebase'
+import { getDb, getFirebaseAuth } from '../firebase'
 import { assertNotSuspendedLive } from './users'
 import { COLLECTIONS, fromDoc, fromDocs, stripUndefined } from './firestoreData'
+import { fetchPrivateProfile, mergePrivateProfile, normalizePublicUser } from './privateProfile'
 import { createNotification } from './notifications'
 
 /**
@@ -96,10 +98,25 @@ async function fetchListing(listingId: string): Promise<Listing> {
 }
 
 async function fetchUser(userId: string): Promise<User> {
-  const snap = await getDoc(doc(getDb(), COLLECTIONS.users, userId))
-  const user = fromDoc<User>(snap)
-  if (!user) throw new ApiError('not-found', 'That neighbor no longer has an account.')
-  return user
+  const db = getDb()
+  const snap = await getDoc(doc(db, COLLECTIONS.users, userId))
+  if (!snap.exists()) throw new ApiError('not-found', 'That neighbor no longer has an account.')
+  const publicUser = normalizePublicUser({
+    id: userId,
+    ...(snap.data() as Record<string, unknown>),
+  })
+  // Privacy split: other participants come from the public doc only.
+  // The signed-in user's own copy merges the private doc — mutation
+  // results are upserted into app state, and a public-only copy would
+  // wipe their phone / block list / precise location from the UI.
+  let ownUid: string | null = null
+  try {
+    ownUid = getFirebaseAuth().currentUser?.uid ?? null
+  } catch {
+    ownUid = null
+  }
+  if (ownUid !== userId) return publicUser
+  return mergePrivateProfile(publicUser, await fetchPrivateProfile(db, userId))
 }
 
 export async function getRequestsForUser(userId: string): Promise<BorrowRequest[]> {
@@ -354,22 +371,44 @@ export async function markReturned(
   const now = new Date().toISOString()
   const onTime = request.dueAt ? Date.parse(now) <= Date.parse(request.dueAt) + 86_399_000 : true
 
-  const borrowerStats = {
-    ...borrower.stats,
-    successfulBorrows: borrower.stats.successfulBorrows + 1,
+  // Workstream D: stats move by FieldValue.increment on the dotted
+  // counter paths — never a read-modify-write of the whole stats
+  // object (two deals finishing together used to lose one update).
+  // Only the counters this deal actually bumps are written; the
+  // rules' stats-delta branch (diff limited to stats, each counter
+  // old-or-old+1) is satisfied by construction.
+  const borrowerIncrements: Record<string, ReturnType<typeof increment>> = {
+    'stats.successfulBorrows': increment(1),
+    ...(onTime
+      ? { 'stats.onTimeReturns': increment(1) }
+      : { 'stats.lateReturns': increment(1) }),
   }
-  if (onTime) borrowerStats.onTimeReturns += 1
-  else borrowerStats.lateReturns += 1
-  const ownerStats = { ...owner.stats, successfulLends: owner.stats.successfulLends + 1 }
-  if (listing.listingType === 'rent') ownerStats.rentalsHosted += 1
+  const ownerIncrements: Record<string, ReturnType<typeof increment>> = {
+    'stats.successfulLends': increment(1),
+    ...(listing.listingType === 'rent' ? { 'stats.rentalsHosted': increment(1) } : {}),
+  }
 
   const db = getDb()
   const batch = writeBatch(db)
   batch.update(doc(db, COLLECTIONS.requests, requestId), { status: 'returned', returnedAt: now })
   batch.update(doc(db, COLLECTIONS.listings, listing.id), { status: 'active', updatedAt: now })
-  batch.update(doc(db, COLLECTIONS.users, borrower.id), { stats: borrowerStats })
-  batch.update(doc(db, COLLECTIONS.users, owner.id), { stats: ownerStats })
+  batch.update(doc(db, COLLECTIONS.users, borrower.id), borrowerIncrements)
+  batch.update(doc(db, COLLECTIONS.users, owner.id), ownerIncrements)
   await batch.commit()
+
+  // The returned copies are the UI's optimistic view (the write above
+  // used increments, so these are computed locally for display only).
+  const borrowerStats = {
+    ...borrower.stats,
+    successfulBorrows: borrower.stats.successfulBorrows + 1,
+    onTimeReturns: borrower.stats.onTimeReturns + (onTime ? 1 : 0),
+    lateReturns: borrower.stats.lateReturns + (onTime ? 0 : 1),
+  }
+  const ownerStats = {
+    ...owner.stats,
+    successfulLends: owner.stats.successfulLends + 1,
+    rentalsHosted: owner.stats.rentalsHosted + (listing.listingType === 'rent' ? 1 : 0),
+  }
 
   return {
     request: toRequest({ ...request, status: 'returned', returnedAt: now }),
@@ -441,13 +480,23 @@ export async function markCompleted(
   if (listing.listingType === 'sell') {
     batch.update(doc(db, COLLECTIONS.listings, listing.id), { status: 'sold', updatedAt: now })
     updatedListing = { ...listing, status: 'sold', updatedAt: now }
-    const stats = { ...owner.stats, salesCompleted: owner.stats.salesCompleted + 1 }
-    batch.update(doc(db, COLLECTIONS.users, owner.id), { stats })
-    updatedOwner = { ...owner, stats }
+    // Workstream D: increment only the bumped counter (see
+    // markReturned); the returned owner copy is display-only.
+    batch.update(doc(db, COLLECTIONS.users, owner.id), {
+      'stats.salesCompleted': increment(1),
+    })
+    updatedOwner = {
+      ...owner,
+      stats: { ...owner.stats, salesCompleted: owner.stats.salesCompleted + 1 },
+    }
   } else if (listing.listingType === 'rent') {
-    const stats = { ...owner.stats, rentalsHosted: owner.stats.rentalsHosted + 1 }
-    batch.update(doc(db, COLLECTIONS.users, owner.id), { stats })
-    updatedOwner = { ...owner, stats }
+    batch.update(doc(db, COLLECTIONS.users, owner.id), {
+      'stats.rentalsHosted': increment(1),
+    })
+    updatedOwner = {
+      ...owner,
+      stats: { ...owner.stats, rentalsHosted: owner.stats.rentalsHosted + 1 },
+    }
   }
   await batch.commit()
 

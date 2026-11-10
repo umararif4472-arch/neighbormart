@@ -4,6 +4,7 @@ import type { Report, ReportReason, ReportTargetType } from '@/types'
 import { ApiError } from '../errors'
 import { getDb, getFirebaseAuth } from '../firebase'
 import { COLLECTIONS, fromDoc, fromDocs, stripUndefined } from './firestoreData'
+import { privateProfileRef } from './privateProfile'
 import { sanitizeMultiline } from '@/utils/sanitize'
 
 /**
@@ -140,6 +141,9 @@ export async function deleteMyAccount(actorId: string): Promise<void> {
   for (const d of requestsSnap.docs) batch.delete(d.ref)
   for (const d of ownerRequestsSnap.docs) batch.delete(d.ref)
   batch.delete(doc(db, COLLECTIONS.users, actorId))
+  // Privacy split: the private doc (phone/email/block list/location)
+  // is deleted with the profile — the owner may delete it (rules).
+  batch.delete(privateProfileRef(db, actorId))
   await batch.commit()
 
   const auth = getFirebaseAuth()

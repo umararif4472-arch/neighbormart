@@ -14,7 +14,7 @@ import {
   type QueryConstraint,
   type QueryDocumentSnapshot,
 } from 'firebase/firestore/lite'
-import type { ItemListing, LatLng, Listing, ListingFilters, ListingStatus, User } from '@/types'
+import type { ItemListing, LatLng, Listing, ListingFilters, ListingStatus } from '@/types'
 import { EMPTY_LISTING_FILTERS } from '@/types'
 import { DEFAULT_CURRENCY } from '@/config'
 import { filterListings } from '@/utils/filters'
@@ -32,6 +32,7 @@ import {
   type UpdateListingBasicsInput,
 } from '../listingValidation'
 import { COLLECTIONS, fromDoc, fromDocs, stripUndefined } from './firestoreData'
+import { mergeOwnProfile } from './privateProfile'
 
 export type {
   CreateItemListingInput,
@@ -180,11 +181,18 @@ export async function createItemListing(input: CreateItemListingInput): Promise<
   }
 
   await assertNotSuspendedLive(input.ownerId)
+  // The owner is the signed-in caller themselves: read their merged
+  // own profile (public + private) — the listing's location inherits
+  // the precise homeLocation, which lives ONLY in the private doc
+  // after the privacy split.
   const ownerSnap = await getDoc(doc(getDb(), COLLECTIONS.users, input.ownerId))
-  const owner = fromDoc<User>(ownerSnap)
-  if (!owner) {
+  if (!ownerSnap.exists()) {
     throw new ApiError('not-found', 'Your profile could not be found — try signing in again.')
   }
+  const owner = await mergeOwnProfile(getDb(), input.ownerId, {
+    id: input.ownerId,
+    ...(ownerSnap.data() as Record<string, unknown>),
+  })
 
   const now = new Date().toISOString()
   const isRent = input.dailyFee != null && input.dailyFee > 0
@@ -231,11 +239,18 @@ export async function createListing(input: CreateListingInput): Promise<Listing>
     throw new ApiError('invalid', Object.values(errors)[0])
   }
 
+  // The owner is the signed-in caller themselves: read their merged
+  // own profile (public + private) — the listing's location inherits
+  // the precise homeLocation, which lives ONLY in the private doc
+  // after the privacy split.
   const ownerSnap = await getDoc(doc(getDb(), COLLECTIONS.users, input.ownerId))
-  const owner = fromDoc<User>(ownerSnap)
-  if (!owner) {
+  if (!ownerSnap.exists()) {
     throw new ApiError('not-found', 'Your profile could not be found — try signing in again.')
   }
+  const owner = await mergeOwnProfile(getDb(), input.ownerId, {
+    id: input.ownerId,
+    ...(ownerSnap.data() as Record<string, unknown>),
+  })
 
   const now = new Date().toISOString()
   const base = {

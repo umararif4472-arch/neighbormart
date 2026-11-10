@@ -11,8 +11,25 @@ import '../list_item/list_item_screen.dart';
 /// Edit, delete, and pause your own listings — legacy items keep their
 /// editor; Phase 5 section listings (vehicles / properties / arenas)
 /// get status management (pause / resume / mark sold / remove).
-class ManageItemsScreen extends StatelessWidget {
+class ManageItemsScreen extends StatefulWidget {
   const ManageItemsScreen({super.key});
+
+  @override
+  State<ManageItemsScreen> createState() => _ManageItemsScreenState();
+}
+
+class _ManageItemsScreenState extends State<ManageItemsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Part 3a: the browse windows hold active listings only — pull
+    // the owner-scoped set (paused / sold / rented included) so this
+    // screen is complete even right after a restart. No-op in local
+    // mode and while a fetch is already in flight.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppState>().ensureOwnListingsLoaded();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

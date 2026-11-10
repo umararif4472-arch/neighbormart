@@ -302,6 +302,32 @@ class NotificationDoc {
   }
 }
 
+/// Privacy split (Workstream C): the fields of a profile that live
+/// ONLY in `users/{uid}/private/data` — never on the public doc.
+/// Mirrors web `privateProfile.ts` / firestore.rules privateDataValid.
+const List<String> kPrivateProfileFields = [
+  'phone',
+  'email',
+  'blockedUserIds',
+  'homeLocation',
+];
+
+/// Merge a private-doc body over a public-doc body, per-field: a
+/// field present in the private doc wins; a field absent from it
+/// keeps the public (legacy, pre-migration) value. Used ONLY for the
+/// signed-in user's own profile — other users are public-doc only.
+Map<String, dynamic> mergeProfileData(
+  Map<String, dynamic> publicData,
+  Map<String, dynamic>? privateData,
+) {
+  if (privateData == null) return publicData;
+  final merged = Map<String, dynamic>.of(publicData);
+  for (final field in kPrivateProfileFields) {
+    if (privateData.containsKey(field)) merged[field] = privateData[field];
+  }
+  return merged;
+}
+
 extension UserStatsFirestoreMap on UserStats {
   Map<String, dynamic> toFirestoreMap() {
     return <String, dynamic>{

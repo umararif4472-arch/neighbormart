@@ -190,13 +190,19 @@ export async function listAdmins(actorId: string): Promise<User[]> {
 
 export async function addAdmin(actorId: string, email: string): Promise<User> {
   await requireAdmin(actorId)
+  // Privacy split (Workstream C): email now lives in the target's
+  // private doc, which clients never read for another user — so this
+  // lookup only matches accounts whose public doc still carries the
+  // legacy email field (pre-migration). Post-migration accounts must
+  // be promoted via the Admin SDK / console until a server-side
+  // lookup exists (no Cloud Functions on the free tier).
   const snap = await getDocs(query(usersCol(), where('email', '==', email.trim().toLowerCase())))
   const user = fromDocs<User>(snap.docs)[0]
   if (!user) {
     throw new ApiError('not-found', `No NeighborMart account uses ${email.trim()}.`)
   }
   await updateDoc(doc(getDb(), COLLECTIONS.users, user.id), { role: 'admin' })
-  await audit(actorId, 'admin-added', 'user', user.id, `${user.email} made admin.`)
+  await audit(actorId, 'admin-added', 'user', user.id, `${user.email ?? user.name} made admin.`)
   return { ...user, role: 'admin' }
 }
 
@@ -209,5 +215,5 @@ export async function removeAdmin(actorId: string, userId: string): Promise<void
     throw new ApiError('invalid', 'You cannot remove the last admin.')
   }
   await updateDoc(doc(getDb(), COLLECTIONS.users, userId), { role: 'member' })
-  await audit(actorId, 'admin-removed', 'user', userId, `${user.email} is no longer an admin.`)
+  await audit(actorId, 'admin-removed', 'user', userId, `${user.email ?? user.name} is no longer an admin.`)
 }

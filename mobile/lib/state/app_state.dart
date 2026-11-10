@@ -127,6 +127,10 @@ class AppState extends ChangeNotifier {
   final Set<String> _reviewSetsFetched = {};
   final Map<String, Future<void>> _reviewFetches = {};
 
+  /// In-flight owner-scoped listings fetch (Part 3a), so concurrent
+  /// [ensureOwnListingsLoaded] calls share one query.
+  Future<void>? _ownListingsFetch;
+
   void _mirror(Future<void> future) {
     future.catchError((_) {});
   }
@@ -144,6 +148,11 @@ class AppState extends ChangeNotifier {
   void enableLiveMode() {
     if (liveMode) return;
     liveMode = true;
+    // A deferred demo seed (Part 3c) is moot once live: never build
+    // it, and drop any stashed session restore — the live session is
+    // restored by adopting the Firebase user instead.
+    _demoSeedPending = false;
+    _pendingRestorePrefs = null;
     _users = [];
     _items = [];
     _listings = [];
@@ -243,6 +252,54 @@ class AppState extends ChangeNotifier {
     _rebuildItemsFromListings();
     notifyListeners();
     ensureUserLoaded(listing.ownerId);
+  }
+
+  // ---------------- Owner-scoped listings (live mode) ----------------
+
+  /// Make sure the signed-in user's OWN listings — every status,
+  /// newest first, up to 100 — are merged into the catalog union.
+  ///
+  /// The paged browse windows hold ACTIVE listings only, so without
+  /// this an owner's paused / sold / rented listings vanish from
+  /// Manage Items after a restart. The merge touches only [_listings]
+  /// (and the derived legacy item list): the per-section browse
+  /// windows and their pagination state are never polluted, so
+  /// has-more / load-more bookkeeping is unaffected. Called when a
+  /// user is adopted (sign-in / session restore) and again whenever
+  /// Manage Items opens, so status changes made elsewhere show up.
+  /// No-op in local/demo mode (the seed catalog is complete there).
+  Future<void> ensureOwnListingsLoaded() async {
+    if (!liveMode || !firebaseReady || !isLoggedIn) return;
+    final inFlight = _ownListingsFetch;
+    if (inFlight != null) return inFlight;
+    final uid = _currentUserId;
+    final future =
+        () async {
+          try {
+            final mine = await LiveSync.instance.fetchOwnListings(uid);
+            // The session may have changed while the query ran.
+            if (!liveMode || _currentUserId != uid) return;
+            if (mine.isEmpty) return;
+            for (final listing in mine) {
+              final idx = _listings.indexWhere((l) => l.id == listing.id);
+              if (idx >= 0) {
+                _listings[idx] = listing;
+              } else {
+                _listings.add(listing);
+              }
+            }
+            _listings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            _rebuildItemsFromListings();
+            notifyListeners();
+          } catch (_) {
+            // A failed fetch leaves Manage Items with whatever the
+            // browse windows already hold — the next open retries.
+          }
+        }().whenComplete(() {
+          _ownListingsFetch = null;
+        });
+    _ownListingsFetch = future;
+    await future;
   }
 
   // ---------------- On-demand profiles (live mode) ----------------
@@ -411,14 +468,30 @@ class AppState extends ChangeNotifier {
           existing.bio != fresh.bio ||
           existing.neighborhood != fresh.neighborhood ||
           existing.city != fresh.city ||
+          existing.phone != fresh.phone ||
+          existing.email != fresh.email ||
+          existing.homeLocation.lat != fresh.homeLocation.lat ||
+          existing.homeLocation.lng != fresh.homeLocation.lng ||
+          !listEquals(existing.blockedUserIds, fresh.blockedUserIds) ||
           existing.phoneVerified != fresh.phoneVerified ||
           existing.emailVerified != fresh.emailVerified ||
           existing.stats.completedDeals != fresh.stats.completedDeals) {
-        // Keep any device-local block list when the doc predates it.
+        // Privacy split: [data] is the public doc merged with the
+        // private doc (live_sync). A private field ABSENT from both
+        // docs (pre-migration profile) parses as a default on
+        // [fresh] — never let that default wipe a value this device
+        // already holds (e.g. a block list or phone saved locally);
+        // when the key IS present, the merged value is authoritative,
+        // including an explicitly emptied block list.
         cacheUser(
           fresh.copyWith(
-            blockedUserIds: fresh.blockedUserIds.isNotEmpty
-                ? fresh.blockedUserIds
+            phone: data.containsKey('phone') ? null : existing.phone,
+            email: data.containsKey('email') ? null : existing.email,
+            homeLocation: data.containsKey('homeLocation')
+                ? null
+                : existing.homeLocation,
+            blockedUserIds: data.containsKey('blockedUserIds')
+                ? null
                 : existing.blockedUserIds,
           ),
         );
@@ -474,8 +547,53 @@ class AppState extends ChangeNotifier {
   final Set<String> _favoriteItemIds = {};
   SharedPreferences? _prefs;
 
-  AppState() {
+  /// Whether the demo seed still owes a build (Part 3c lazy seed).
+  /// Only ever true for a bootstrap-constructed state created with
+  /// `seedDemoData: false`; [loadLocalDemoData] builds it on entry
+  /// to local mode, [enableLiveMode] cancels it for good.
+  bool _demoSeedPending = false;
+
+  /// Prefs stashed by [restoreFromPrefs] while the seed is deferred:
+  /// the user-dependent half of the restore (saved profile setups +
+  /// session) can only run once seed users exist, so
+  /// [loadLocalDemoData] applies it after building them.
+  SharedPreferences? _pendingRestorePrefs;
+
+  /// With the default (`seedDemoData: true`) the demo catalog is
+  /// built eagerly — every test and direct construction is a
+  /// local/demo user, so nothing changes for them. The app bootstrap
+  /// passes `seedDemoData: false`: a live cold start then never pays
+  /// for seed data it would only discard in [enableLiveMode], and
+  /// the bootstrap calls [loadLocalDemoData] instead when Firebase
+  /// turns out to be absent (local mode actually entered).
+  AppState({bool seedDemoData = true}) {
+    if (seedDemoData) {
+      _seedAll();
+    } else {
+      _demoSeedPending = true;
+      _users = [];
+      _items = [];
+      _listings = [];
+      _requests = [];
+      _reviews = [];
+      _wishlist = [];
+      _messages = [];
+      _reports = [];
+    }
+  }
+
+  /// Build the demo seed for a deferred state entering local/demo
+  /// mode, then apply any session restore [restoreFromPrefs] stashed
+  /// while the seed was pending. No-op when the seed was already
+  /// built (or provided) and in live mode.
+  void loadLocalDemoData() {
+    if (!_demoSeedPending || liveMode) return;
+    _demoSeedPending = false;
     _seedAll();
+    final prefs = _pendingRestorePrefs;
+    _pendingRestorePrefs = null;
+    if (prefs != null) _applyUserRestore(prefs);
+    notifyListeners();
   }
 
   void _seedAll() {
@@ -509,6 +627,7 @@ class AppState extends ChangeNotifier {
     _messages = List.of(messages ?? seedMessages());
     _reports = [];
     _currentUserId = currentUserId;
+    _demoSeedPending = false;
   }
 
   List<AppUser> get users => List.unmodifiable(_users);
@@ -780,14 +899,21 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     if (liveMode) {
       final updated = _requests.firstWhere((x) => x.id == requestId);
-      final borrower = userById(r.borrowerId);
-      final owner = userById(ownerId);
+      // Workstream D: name the counters this return bumps; LiveSync
+      // writes them as FieldValue.increment(1) (the local stats above
+      // were already updated for the UI).
       _mirror(
         LiveSync.instance.transitionRequest(
           request: updated,
           ownerId: ownerId,
           listingStatus: 'active',
-          statsByUserId: {borrower.id: borrower.stats, owner.id: owner.stats},
+          statIncrementsByUserId: {
+            r.borrowerId: [
+              'successfulBorrows',
+              onTime ? 'onTimeReturns' : 'lateReturns',
+            ],
+            ownerId: ['successfulLends'],
+          },
         ),
       );
     }
@@ -957,7 +1083,9 @@ class AppState extends ChangeNotifier {
     if (liveMode) {
       final updated = _requests.firstWhere((x) => x.id == requestId);
       final ownerId = ownerIdFor(updated);
-      final owner = userById(ownerId);
+      // Workstream D: increment only the one counter this completion
+      // bumps (sales for a sale, rentals hosted otherwise) — matching
+      // the local stat update above.
       _mirror(
         LiveSync.instance.transitionRequest(
           request: updated,
@@ -965,7 +1093,13 @@ class AppState extends ChangeNotifier {
           listingStatus: listing?.listingType == ListingType.sell
               ? 'sold'
               : null,
-          statsByUserId: {owner.id: owner.stats},
+          statIncrementsByUserId: {
+            ownerId: [
+              listing?.listingType == ListingType.sell
+                  ? 'salesCompleted'
+                  : 'rentalsHosted',
+            ],
+          },
         ),
       );
     }
@@ -1086,6 +1220,23 @@ class AppState extends ChangeNotifier {
     themePreference = themePreferenceFromStorage(
       prefs.getString(kThemePreferencePrefsKey),
     );
+    if (_demoSeedPending) {
+      // Lazy seed (Part 3c): the user-dependent half below needs the
+      // seed users, which a live cold start never builds. Stash the
+      // prefs — loadLocalDemoData() applies this half if local mode
+      // is entered; enableLiveMode() drops it (live sessions restore
+      // via the Firebase adopt path, not the saved demo id).
+      _pendingRestorePrefs = prefs;
+      notifyListeners();
+      return;
+    }
+    _applyUserRestore(prefs);
+    notifyListeners();
+  }
+
+  /// The user-dependent half of [restoreFromPrefs]: saved profile
+  /// setups layered over the users, then the persisted session.
+  void _applyUserRestore(SharedPreferences prefs) {
     _applySavedProfileSetups(prefs);
     final savedId = prefs.getString(_kSessionUserId);
     if (savedId != null && userByIdOrNull(savedId) != null) {
@@ -1094,7 +1245,6 @@ class AppState extends ChangeNotifier {
     } else {
       isLoggedIn = false;
     }
-    notifyListeners();
   }
 
   Future<void> markOnboardingSeen() async {
@@ -1212,6 +1362,9 @@ class AppState extends ChangeNotifier {
     if (liveMode) {
       _adoptedUser = user;
       _startUserLive(user.id);
+      // Part 3a: their paused/sold listings are not in any browse
+      // window — pull the owner-scoped set for Manage Items.
+      ensureOwnListingsLoaded();
     }
   }
 
@@ -1356,6 +1509,8 @@ class AppState extends ChangeNotifier {
 
   void resetDemoData() {
     if (liveMode) return; // There is no demo data in the live build.
+    _demoSeedPending = false;
+    _pendingRestorePrefs = null;
     _seedAll();
     _currentUserId = 'u-maya';
     notificationsEnabled = true;

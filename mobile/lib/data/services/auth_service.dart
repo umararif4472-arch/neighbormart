@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../core/firebase/firebase_init.dart';
+import '../models/firestore_maps.dart';
 import '../models/user.dart';
 
 /// Firebase Auth + profile service (Phase 3) — the Flutter mirror of the
@@ -47,8 +48,7 @@ class FirebaseAuthService {
       // the generated Android resources, which silently breaks sign-in
       // if the google-services Gradle plugin is ever dropped.
       await googleSignIn.initialize(
-        serverClientId:
-            '1063143466647-qr27rd21pcppuqmg5kms86m2isav15it.apps.googleusercontent.com',
+        serverClientId: '1063143466647-qr27rd21pcppuqmg5kms86m2isav15it.apps.googleusercontent.com',
       );
       final account = await googleSignIn.authenticate();
       final credential = fb.GoogleAuthProvider.credential(
@@ -104,17 +104,41 @@ class FirebaseAuthService {
     await _auth.signOut();
   }
 
+  /// The signed-in user's private profile doc
+  /// (`users/{uid}/private/data`) — phone, email, blockedUserIds and
+  /// the precise homeLocation live ONLY here (privacy split,
+  /// Workstream C). Owner read/write only, per firestore.rules.
+  DocumentReference<Map<String, dynamic>> _privateRef(String uid) =>
+      _db.collection('users').doc(uid).collection('private').doc('data');
+
+  /// Read the private doc body, or null when it does not exist (a
+  /// pre-migration user) or the read fails — own-profile loads then
+  /// fall back per-field to the legacy public-doc copies.
+  Future<Map<String, dynamic>?> _fetchPrivateData(String uid) async {
+    try {
+      final snap = await _privateRef(uid).get();
+      return snap.data();
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Read the profile doc, creating it on first login (same shape the
-  /// web writes: name, photo, phone, location, verification status).
+  /// web writes). Privacy split: display fields go to the public
+  /// `users/{uid}` doc; phone / email / blockedUserIds / homeLocation
+  /// go ONLY to the private doc. The returned [AppUser] is the merged
+  /// own profile (private wins per-field, legacy public fields are
+  /// the fallback).
   Future<AppUser> ensureProfile(fb.User fbUser, {String? nameOverride}) async {
     final ref = _db.collection('users').doc(fbUser.uid);
     final snap = await ref.get();
     if (snap.exists) {
-      return _userFromMap(fbUser.uid, snap.data()!);
+      final private = await _fetchPrivateData(fbUser.uid);
+      return _userFromMap(fbUser.uid, mergeProfileData(snap.data()!, private));
     }
 
     final now = DateTime.now();
-    final data = <String, dynamic>{
+    final publicData = <String, dynamic>{
       'name': (nameOverride?.trim().isNotEmpty ?? false)
           ? nameOverride!.trim()
           : (fbUser.displayName ??
@@ -124,8 +148,6 @@ class FirebaseAuthService {
       'bio': '',
       'city': '',
       'neighborhood': '',
-      // Lahore centre — the user sets their real area in onboarding.
-      'homeLocation': {'lat': 31.5204, 'lng': 74.3587},
       'joinedAt': now.toIso8601String(),
       'phoneVerified': false,
       'emailVerified': fbUser.emailVerified,
@@ -141,15 +163,24 @@ class FirebaseAuthService {
         'lateReturns': 0,
       },
       'badges': <dynamic>[],
-      'phone': '',
-      'email': fbUser.email ?? '',
+      // Phase 5 contact visibility flag — public by design; the
+      // number itself is private (below).
+      'showPhone': false,
       // Phase 6: brand-new profiles go through the 3-step profile
       // setup on first login; the flag flips to true when they finish.
       'onboardingCompleted': false,
       'interests': <dynamic>[],
     };
-    await ref.set(data);
-    return _userFromMap(fbUser.uid, data);
+    final privateData = <String, dynamic>{
+      'phone': '',
+      'email': fbUser.email ?? '',
+      'blockedUserIds': <dynamic>[],
+      // Lahore centre — the user sets their real area in onboarding.
+      'homeLocation': {'lat': 31.5204, 'lng': 74.3587},
+    };
+    await ref.set(publicData);
+    await _privateRef(fbUser.uid).set(privateData);
+    return _userFromMap(fbUser.uid, mergeProfileData(publicData, privateData));
   }
 
   /// Permanently remove the signed-in user's Firebase Auth credential
@@ -173,14 +204,29 @@ class FirebaseAuthService {
   /// UI; this keeps the shared dataset in step when Firebase is live.
   Future<void> saveOnboardingProfile(AppUser user) async {
     if (!firebaseReady) return;
+    // Privacy split: public fields to the public doc; the phone goes
+    // ONLY to the private doc (merge, so sibling private fields —
+    // email, block list, homeLocation — are never clobbered).
     await _db.collection('users').doc(user.id).update({
       'name': user.name,
-      'phone': user.phone,
       'city': user.city,
       'neighborhood': user.neighborhood,
       'interests': user.interests,
       'onboardingCompleted': true,
     });
+    await _privateRef(user.id)
+        .set({'phone': user.phone}, SetOptions(merge: true));
+  }
+
+  /// Write private-doc fields for the signed-in user (merge). Used
+  /// for private data that changes outside onboarding — the block
+  /// list itself is written by SafetyService, which owns that seam.
+  Future<void> savePrivateProfileFields(
+    String uid,
+    Map<String, dynamic> fields,
+  ) async {
+    if (!firebaseReady) return;
+    await _privateRef(uid).set(fields, SetOptions(merge: true));
   }
 
   /// Public entry to the profile parser (the live listeners in

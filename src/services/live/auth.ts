@@ -13,6 +13,12 @@ import type { User } from '@/types'
 import { ApiError } from '../errors'
 import { getDb, getFirebaseAuth } from '../firebase'
 import { COLLECTIONS, stripUndefined } from './firestoreData'
+import {
+  LAHORE_CENTER,
+  mergeOwnProfile,
+  normalizePublicUser,
+  writePrivateProfile,
+} from './privateProfile'
 
 /**
  * Live auth (Firebase Auth) — Google Sign-In + email/password fallback.
@@ -27,9 +33,16 @@ import { COLLECTIONS, stripUndefined } from './firestoreData'
 /** No fixed demo user exists in live mode; kept for barrel shape parity. */
 export const CURRENT_USER_ID = ''
 
-const LAHORE_CENTER = { lat: 31.5204, lng: 74.3587 }
-
-/** Read the profile doc, creating it on first login. */
+/**
+ * Read the profile doc, creating it on first login.
+ *
+ * Privacy split (Workstream C): the profile is stored in two docs —
+ * display fields on the public users/{uid} doc, and phone / email /
+ * blockedUserIds / homeLocation ONLY in users/{uid}/private/data.
+ * The returned User is the merged own profile (private doc wins
+ * per-field, legacy public fields are the fallback — see
+ * privateProfile.ts).
+ */
 export async function ensureUserProfile(
   fbUser: FirebaseUser,
   nameOverride?: string,
@@ -38,18 +51,22 @@ export async function ensureUserProfile(
   const ref = doc(db, COLLECTIONS.users, fbUser.uid)
   const snap = await getDoc(ref)
   if (snap.exists()) {
-    return { id: fbUser.uid, ...(snap.data() as Record<string, unknown>) } as unknown as User
+    return mergeOwnProfile(db, fbUser.uid, {
+      id: fbUser.uid,
+      ...(snap.data() as Record<string, unknown>),
+    })
   }
 
   const now = new Date().toISOString()
-  const profile: User & { phone: string; email: string } = {
-    id: fbUser.uid,
+  // Public doc: display fields only. `showPhone` (Phase 5) is a
+  // public visibility flag and stays here; the number itself is
+  // private (below).
+  const publicProfile = {
     name: nameOverride?.trim() || fbUser.displayName || fbUser.email?.split('@')[0] || 'Neighbor',
     avatarUrl: fbUser.photoURL ?? '',
     bio: '',
     city: '',
     neighborhood: '',
-    homeLocation: LAHORE_CENTER,
     joinedAt: now,
     phoneVerified: false,
     emailVerified: fbUser.emailVerified,
@@ -65,20 +82,29 @@ export async function ensureUserProfile(
       lateReturns: 0,
     },
     badges: [],
-    // Contact prefs (Phase 5): no number yet, and hidden by default —
-    // the user opts in from their profile. `email` is stored alongside
-    // the profile for contact purposes; auth owns the canonical copy.
-    phone: '',
     showPhone: false,
     // Phase 6: a brand-new profile starts with onboarding incomplete —
     // the sign-in flow routes the user through the 3-step setup.
     onboardingCompleted: false,
     interests: [],
-    email: fbUser.email ?? '',
   }
-  const { id: _id, ...docData } = profile
-  await setDoc(ref, stripUndefined(docData))
-  return profile
+  // Private doc: no number yet (the user adds one from their profile);
+  // the auth email — auth owns the canonical copy, this is the
+  // contact copy; Lahore centre until onboarding sets the real area.
+  const privateProfile = {
+    phone: '',
+    email: fbUser.email ?? '',
+    blockedUserIds: [] as string[],
+    homeLocation: LAHORE_CENTER,
+  }
+  await setDoc(ref, stripUndefined(publicProfile))
+  await writePrivateProfile(db, fbUser.uid, privateProfile)
+  // Both docs were just written by us — the merged profile is exactly
+  // the two halves combined, no re-read needed.
+  return {
+    ...normalizePublicUser({ id: fbUser.uid, ...publicProfile }),
+    ...privateProfile,
+  }
 }
 
 /** Resolve the first auth-state emission (session restore on reload). */

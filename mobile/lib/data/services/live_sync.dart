@@ -42,6 +42,7 @@ const Duration kMessageRateWindow = Duration(minutes: 1);
 
 const int kListingPageSize = 24;
 const int kNotificationLimit = 50;
+const int kOwnListingsLimit = 100;
 const int kMessageThreadPageSize = 100;
 
 /// The canonical browse query for one page of listings. [section],
@@ -230,11 +231,19 @@ class LiveSync {
   /// The multi-document transition batches, mirroring web requests.ts:
   /// the request, the listing's status flip, and both parties' stats
   /// land atomically or not at all.
+  ///
+  /// Stats (Workstream D) move by [FieldValue.increment] on the
+  /// dotted counter paths — [statIncrementsByUserId] maps a user id
+  /// to the counter NAMES this deal bumps (each by exactly 1). No
+  /// read-modify-write of a whole stats object, and unchanged
+  /// counters are never written; the rules' stats-delta branch
+  /// (diff limited to stats, each counter old-or-old+1) is satisfied
+  /// by construction.
   Future<void> transitionRequest({
     required BorrowRequest request,
     required String ownerId,
     String? listingStatus,
-    Map<String, UserStats> statsByUserId = const {},
+    Map<String, List<String>> statIncrementsByUserId = const {},
   }) async {
     if (!active) return;
     final batch = _db.batch();
@@ -248,9 +257,11 @@ class LiveSync {
         'updatedAt': DateTime.now().toIso8601String(),
       });
     }
-    for (final entry in statsByUserId.entries) {
+    for (final entry in statIncrementsByUserId.entries) {
+      if (entry.value.isEmpty) continue;
       batch.update(_db.collection('users').doc(entry.key), {
-        'stats': entry.value.toFirestoreMap(),
+        for (final counter in entry.value)
+          'stats.$counter': FieldValue.increment(1),
       });
     }
     await batch.commit();
@@ -389,6 +400,16 @@ class LiveSync {
   // listened to or downloaded wholesale.
 
   /// One user profile by id, or null when it does not exist.
+  ///
+  /// PUBLIC doc only — this feeds the on-demand cache for OTHER
+  /// users (owner cards, chat counterparts, profile screens), and
+  /// the privacy contract forbids reading another user's private
+  /// doc. Missing private fields parse as safe defaults (no phone,
+  /// empty block list, Lahore-centre placeholder location — never
+  /// used for display or distance; distances use listing.location).
+  /// The signed-in user's own merged profile comes from
+  /// [FirebaseAuthService.ensureProfile] and the own-profile
+  /// listener in [LiveSession.listenUserActivity] instead.
   Future<AppUser?> fetchUserById(String uid) async {
     if (!active || uid.isEmpty) return null;
     final snap = await _db.collection('users').doc(uid).get();
@@ -403,6 +424,26 @@ class LiveSync {
     final snap = await _db.collection('listings').doc(id).get();
     if (!snap.exists || snap.data() == null) return null;
     return ListingFirestoreMap.fromMap(snap.id, snap.data()!);
+  }
+
+  /// ALL of one owner's listings, any status, newest first, capped
+  /// at [kOwnListingsLimit] (Part 3a): the paged browse windows hold
+  /// ACTIVE listings only, so an owner's paused / sold / rented
+  /// listings would otherwise vanish from Manage Items after a
+  /// restart. Served by the existing ownerId + createdAt composite
+  /// index. This is a one-shot fetch for the signed-in user's own
+  /// listings — it never touches the browse windows' state.
+  Future<List<Listing>> fetchOwnListings(String uid) async {
+    if (!active || uid.isEmpty) return const [];
+    final snap = await _db
+        .collection('listings')
+        .where('ownerId', isEqualTo: uid)
+        .orderBy('createdAt', descending: true)
+        .limit(kOwnListingsLimit)
+        .get();
+    return snap.docs
+        .map((d) => ListingFirestoreMap.fromMap(d.id, d.data()))
+        .toList();
   }
 
   /// Reviews for one reviewee, newest first (profile / trust screens).
@@ -727,15 +768,37 @@ class LiveSession {
             onError: (_) {},
           ),
     );
+    // Own profile (privacy split): the public doc and the private
+    // doc are listened to separately and emitted MERGED (private
+    // wins per-field, legacy public fields are the fallback — see
+    // mergeProfileData). Nothing is emitted until the public doc has
+    // arrived; a missing private doc (pre-migration user) simply
+    // contributes nothing.
+    Map<String, dynamic>? ownPublic;
+    Map<String, dynamic>? ownPrivate;
+    void emitOwnProfile() {
+      final pub = ownPublic;
+      if (pub == null) return;
+      onOwnProfile(mergeProfileData(pub, ownPrivate));
+    }
+
+    _add(
+      _db.collection('users').doc(uid).snapshots().listen((snap) {
+        ownPublic = snap.data() ?? const {};
+        emitOwnProfile();
+      }, onError: (_) {}),
+    );
     _add(
       _db
           .collection('users')
           .doc(uid)
+          .collection('private')
+          .doc('data')
           .snapshots()
-          .listen(
-            (snap) => onOwnProfile(snap.data() ?? const {}),
-            onError: (_) {},
-          ),
+          .listen((snap) {
+            ownPrivate = snap.data();
+            emitOwnProfile();
+          }, onError: (_) {}),
     );
   }
 }

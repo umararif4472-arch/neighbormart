@@ -20,10 +20,18 @@ class SafetyService {
     await _db.collection('reports').add(report.toFirestoreMap());
   }
 
-  /// Mirror the signed-in user's block list onto their profile doc.
+  /// Mirror the signed-in user's block list into their PRIVATE
+  /// profile doc (`users/{uid}/private/data`, merge) — blockedUserIds
+  /// is a private field after the Workstream C split and must never
+  /// be written to the public doc.
   Future<void> saveBlockedUserIds(String userId, List<String> ids) async {
     if (!firebaseReady) return;
-    await _db.collection('users').doc(userId).update({'blockedUserIds': ids});
+    await _db
+        .collection('users')
+        .doc(userId)
+        .collection('private')
+        .doc('data')
+        .set({'blockedUserIds': ids}, SetOptions(merge: true));
   }
 
   /// Delete the user's remote data ahead of an account deletion: their
@@ -37,6 +45,11 @@ class SafetyService {
       batch.delete(_db.collection('listings').doc(id));
     }
     batch.delete(_db.collection('users').doc(userId));
+    // Privacy split: the private doc goes with the profile (the
+    // owner may delete it, per firestore.rules).
+    batch.delete(
+      _db.collection('users').doc(userId).collection('private').doc('data'),
+    );
     await batch.commit();
   }
 }
