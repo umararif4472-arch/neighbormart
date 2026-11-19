@@ -1,7 +1,7 @@
 name: neighbor_mart
 description: "NeighborMart - local marketplace to borrow, rent, buy and sell near you"
 publish_to: 'none'
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: ^3.13.7
@@ -46,6 +46,7 @@ flutter:
   # icon / native splash generators below, not app assets.
   assets:
     - assets/brand/
+    - assets/icons/
 
 # Launcher icons from the brand kit's flutter/ PNGs (Open Door).
 # Regenerate with: dart run flutter_launcher_icons

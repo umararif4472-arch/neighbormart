@@ -23,3 +23,11 @@ const String kBrandSymbolAsset = 'assets/brand/logo-symbol.svg';
 const String kBrandSymbolDarkAsset = 'assets/brand/logo-symbol-dark.svg';
 const String kBrandSymbolSimpleAsset = 'assets/brand/logo-symbol-simple.svg';
 const String kBrandOneColorCreamAsset = 'assets/brand/logo-onecolor-cream.svg';
+
+/// Google's official multicolour "G" logo — the canonical artwork
+/// from Google's Sign in with Google branding guidelines
+/// (viewBox 0 0 24 24, fills #4285F4 / #34A853 / #FBBC05 / #EA4335).
+/// Never redraw, recolour or replace this with a hand-painted
+/// approximation — use this asset verbatim wherever the Google
+/// sign-in option is shown.
+const String kGoogleGLogoAsset = 'assets/icons/google_g_logo.svg';
