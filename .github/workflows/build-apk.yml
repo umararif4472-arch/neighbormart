@@ -41,6 +41,11 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Pinned: unpinned stable drifted past the SDK this codebase
+          # is verified against and its analyzer now fails the build on
+          # info-level material.dart deprecations. Keep in step with
+          # the local SDK (see AGENTS.md) and bump deliberately.
+          flutter-version: '3.47.9'
           cache: true
 
       - name: Install dependencies
